@@ -21,11 +21,7 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
   void initState() {
     super.initState();
 
-    _tabController = TabController(
-      length: 2,
-      vsync: this,
-      animationDuration: Duration(seconds: 10),
-    );
+    _tabController = TabController(length: 2, vsync: this);
 
     _tabController.animation!.addListener(() {
       if (_tabController.indexIsChanging) {

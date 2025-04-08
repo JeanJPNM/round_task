@@ -186,6 +186,7 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
                       final rule = await showRecurrencePicker(context,
                           initialRecurrenceRule: recurrenceRule);
 
+                      if (rule == null) return;
                       setState(() {
                         recurrenceRule = rule;
                       });

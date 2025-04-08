@@ -57,61 +57,54 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
       body: TabBarView(
         controller: _tabController,
         children: [
-          Builder(builder: (context) {
-            return StreamBuilder<List<UserTask>>(
-              stream: repository.getQueuedTasksStream(),
-              builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  return const Center(child: Text("An error occurred."));
-                }
+          Consumer(builder: (context, ref, child) {
+            final queuedTasks = ref.watch(queuedTasksPod);
+            return queuedTasks.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stackTrace) =>
+                  const Center(child: Text("An error occurred.")),
+              data: (tasks) => ReorderableListView.builder(
+                padding: EdgeInsets.only(bottom: 100),
+                shrinkWrap: true,
+                itemCount: tasks.length,
+                onReorder: (oldIndex, newIndex) async {
+                  if (oldIndex < newIndex) {
+                    newIndex--;
+                  }
 
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+                  // modifying the list directly is a big no-no
+                  // but this is kind of fine because
+                  // a new list is produced a few milliseconds later
+                  // TODO: find a better way to do this
+                  final task = tasks.removeAt(oldIndex);
+                  tasks.insert(newIndex, task);
 
-                final tasks = snapshot.data!;
-                return ReorderableListView.builder(
-                  padding: EdgeInsets.only(bottom: 100),
-                  shrinkWrap: true,
-                  itemCount: tasks.length,
-                  onReorder: (oldIndex, newIndex) async {
-                    if (oldIndex < newIndex) {
-                      newIndex--;
-                    }
+                  await repository.reorderTasks(tasks);
+                },
+                itemBuilder: (context, index) {
+                  final task = tasks[index];
 
-                    final task = tasks.removeAt(oldIndex);
-                    tasks.insert(newIndex, task);
-
-                    await repository.reorderTasks(tasks);
-                  },
-                  itemBuilder: (context, index) {
-                    final task = tasks[index];
-
-                    return SizedBox(
-                      key: ValueKey(task.id),
-                      width: double.infinity,
-                      child: TaskCard(task: task),
-                    );
-                  },
-                );
-              },
+                  return SizedBox(
+                    key: ValueKey(task.id),
+                    width: double.infinity,
+                    child: TaskCard(task: task),
+                  );
+                },
+              ),
             );
           }),
-          Builder(builder: (context) {
-            return StreamBuilder(
-              stream: repository.getPendingTasksStream(),
-              builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  return const Center(child: Text("An error occurred."));
-                }
+          Consumer(
+            builder: (context, ref, child) {
+              final pendingTasks = ref.watch(pendingTasksPod);
 
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                final tasks = snapshot.data!;
-
-                return ListView.builder(
+              return pendingTasks.when(
+                loading: () => const Center(
+                  child: CircularProgressIndicator(),
+                ),
+                error: (error, stackTrace) => const Center(
+                  child: Text("An error occurred."),
+                ),
+                data: (tasks) => ListView.builder(
                   padding: EdgeInsets.only(bottom: 100),
                   shrinkWrap: true,
                   itemCount: tasks.length,
@@ -119,10 +112,10 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
                     final task = tasks[index];
                     return TaskCard(key: ValueKey(task.id), task: task);
                   },
-                );
-              },
-            );
-          }),
+                ),
+              );
+            },
+          ),
         ],
       ),
       floatingActionButton: FloatingActionButton(

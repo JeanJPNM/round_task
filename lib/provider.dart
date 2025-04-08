@@ -16,21 +16,20 @@ final isarPod = FutureProvider((ref) async {
   return isar;
 });
 
-final taskPod = FutureProvider.family.autoDispose((ref, int taskId) async {
-  final value = ref.read(isarPod);
-  final Isar isar;
-  if (value.hasValue) {
-    isar = value.value!;
-  } else {
-    isar = await ref.read(isarPod.future);
-  }
+final repositoryPod = Provider(Repository.new);
 
-  final task = await isar.userTasks.get(taskId);
+// no need to dispose, since they are used in the main screen of the app
+final queuedTasksPod = StreamProvider((ref) {
+  final repository = ref.watch(repositoryPod);
 
-  return task;
+  return repository.getQueuedTasksStream();
 });
 
-final repositoryPod = Provider(Repository.new);
+final pendingTasksPod = StreamProvider((ref) {
+  final repository = ref.watch(repositoryPod);
+
+  return repository.getPendingTasksStream();
+});
 
 class AutomaticTaskQueuer {
   AutomaticTaskQueuer(this.repository);
@@ -105,11 +104,11 @@ class Repository {
 
   Stream<List<UserTask>> getQueuedTasksStream() async* {
     final isar = await _isar;
-    // isar.userTasks.where().anyReference().filter().referenceIsNotNull();
 
-    await for (final _ in isar.userTasks.watchLazy(fireImmediately: true)) {
-      yield await isar.userTasks.where().referenceIsNotNull().findAll();
-    }
+    yield* isar.userTasks
+        .where()
+        .referenceIsNotNull()
+        .watch(fireImmediately: true);
   }
 
   Stream<List<UserTask>> getPendingTasksStream() async* {

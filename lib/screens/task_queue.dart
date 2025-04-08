@@ -16,11 +16,25 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
     with TickerProviderStateMixin {
   late final TabController _tabController;
 
+  bool _addToQueue = true;
   @override
   void initState() {
     super.initState();
 
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(
+      length: 2,
+      vsync: this,
+      animationDuration: Duration(seconds: 10),
+    );
+
+    _tabController.animation!.addListener(() {
+      if (_tabController.indexIsChanging) {
+        _addToQueue = _tabController.index == 0;
+      } else {
+        final index = _tabController.animation!.value.round();
+        _addToQueue = index == 0;
+      }
+    });
   }
 
   @override
@@ -52,7 +66,6 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
               stream: repository.getQueuedTasksStream(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
-                  print(snapshot.error);
                   return const Center(child: Text("An error occurred."));
                 }
 
@@ -93,7 +106,6 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
               stream: repository.getPendingTasksStream(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
-                  print(snapshot.error);
                   return const Center(child: Text("An error occurred."));
                 }
 
@@ -128,7 +140,7 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
                 lastTouched: DateTime.now(),
                 creationDate: DateTime.now(),
               ),
-              _tabController.index == 0,
+              _addToQueue,
             ),
           );
         },

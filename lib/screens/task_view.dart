@@ -122,6 +122,15 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
               await repository.deleteTask(task);
 
               if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text("Task deleted"),
+                  action: SnackBarAction(
+                    label: "Undo",
+                    onPressed: () => repository.updateTask(task),
+                  ),
+                ),
+              );
               context.pop();
             },
             icon: const Icon(Icons.delete),

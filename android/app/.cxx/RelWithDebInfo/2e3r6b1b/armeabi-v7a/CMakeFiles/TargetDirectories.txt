@@ -1,0 +1,2 @@
+C:/devenv/projects/round_task/android/app/.cxx/RelWithDebInfo/2e3r6b1b/armeabi-v7a/CMakeFiles/edit_cache.dir
+C:/devenv/projects/round_task/android/app/.cxx/RelWithDebInfo/2e3r6b1b/armeabi-v7a/CMakeFiles/rebuild_cache.dir

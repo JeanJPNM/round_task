@@ -141,6 +141,15 @@ class Repository {
     });
   }
 
+  Future<void> removeTaskFromQueue(UserTask task) async {
+    final isar = await _isar;
+
+    await isar.writeTxn(() async {
+      task.reference = null;
+      await isar.userTasks.put(task);
+    });
+  }
+
   Future<void> addScheduledTasks() async {
     final isar = await _isar;
 

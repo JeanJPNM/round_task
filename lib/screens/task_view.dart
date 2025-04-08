@@ -72,7 +72,7 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
     task.lastTouched = DateTime.now();
   }
 
-  void showMenu() {
+  void showMenu(Repository repository) {
     showModalBottomSheet(
       context: context,
       builder: (context) {
@@ -83,7 +83,10 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
               ListTile(
                 leading: const Icon(Icons.remove),
                 title: const Text("Remove from queue"),
-                onTap: () {
+                onTap: () async {
+                  await repository.removeTaskFromQueue(widget.task);
+
+                  if (!context.mounted) return;
                   context.pop();
                 },
               ),
@@ -91,17 +94,13 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
               ListTile(
                 leading: const Icon(Icons.add),
                 title: const Text("Add to queue"),
-                onTap: () {
+                onTap: () async {
+                  await repository.addTaskToQueue(widget.task);
+
+                  if (!context.mounted) return;
                   context.pop();
                 },
               ),
-            ListTile(
-              leading: const Icon(Icons.delete),
-              title: const Text("Delete"),
-              onTap: () {
-                context.pop();
-              },
-            ),
           ],
         );
       },
@@ -129,7 +128,7 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
           ),
           IconButton(
             onPressed: () {
-              showMenu();
+              showMenu(repository);
             },
             icon: Icon(Icons.more_vert),
           )

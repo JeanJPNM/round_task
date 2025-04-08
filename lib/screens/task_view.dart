@@ -42,9 +42,6 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
     endDateController.value = widget.task.endDate;
     recurrenceRule = widget.task.recurrence;
 
-    // TODO: hack severo
-    startDateController.addListener(() => setState(() {}));
-
     endDateController.addListener(() {
       final value = endDateController.value;
       if (value == null) return;
@@ -148,44 +145,62 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
             decoration: const InputDecoration(labelText: "Description"),
             maxLines: null,
           ),
-          DateTimePicker(
-            label: const Text("Start date"),
-            controller: startDateController,
+          ValueListenableBuilder(
+            valueListenable: endDateController,
+            builder: (context, endDate, child) {
+              return DateTimePicker(
+                label: const Text("Start date"),
+                controller: startDateController,
+                lastDate: endDate,
+              );
+            },
           ),
-          DateTimePicker(
-            label: const Text("End date"),
-            controller: endDateController,
-            defaultHour: 23,
-            defaultMinute: 59,
+          ValueListenableBuilder(
+            valueListenable: startDateController,
+            builder: (context, startDate, child) {
+              return DateTimePicker(
+                label: const Text("End date"),
+                controller: endDateController,
+                firstDate: startDate,
+                defaultHour: 23,
+                defaultMinute: 59,
+              );
+            },
           ),
-          if (startDateController.value != null)
-            Row(
-              children: [
-                const Text("Recurrence"),
-                TextButton(
-                  onPressed: () async {
-                    final rule = await showRecurrencePicker(context,
-                        initialRecurrenceRule: recurrenceRule);
+          ValueListenableBuilder(
+            valueListenable: startDateController,
+            builder: (context, startDate, child) {
+              if (startDate == null) return const SizedBox.shrink();
 
-                    setState(() {
-                      recurrenceRule = rule;
-                    });
-                  },
-                  child: Text(recurrenceRule == null
-                      ? "Add recurrence"
-                      : "Edit recurrence"),
-                ),
-                if (recurrenceRule != null)
-                  IconButton(
-                    onPressed: () {
+              return Row(
+                children: [
+                  const Text("Recurrence"),
+                  TextButton(
+                    onPressed: () async {
+                      final rule = await showRecurrencePicker(context,
+                          initialRecurrenceRule: recurrenceRule);
+
                       setState(() {
-                        recurrenceRule = null;
+                        recurrenceRule = rule;
                       });
                     },
-                    icon: const Icon(Icons.delete),
+                    child: Text(recurrenceRule == null
+                        ? "Add recurrence"
+                        : "Edit recurrence"),
                   ),
-              ],
-            ),
+                  if (recurrenceRule != null)
+                    IconButton(
+                      onPressed: () {
+                        setState(() {
+                          recurrenceRule = null;
+                        });
+                      },
+                      icon: const Icon(Icons.delete),
+                    ),
+                ],
+              );
+            },
+          ),
         ],
       ),
       bottomNavigationBar: Row(children: [
@@ -292,15 +307,20 @@ class DateTimeEditingController extends ValueNotifier<DateTime?> {
 }
 
 class DateTimePicker extends StatefulWidget {
-  const DateTimePicker({
+  DateTimePicker({
     super.key,
     required this.label,
     required this.controller,
     this.defaultHour = 0,
     this.defaultMinute = 0,
-  });
+    DateTime? firstDate,
+    DateTime? lastDate,
+  })  : firstDate = firstDate ?? DateTime(2000),
+        lastDate = lastDate ?? DateTime(2100);
   final DateTimeEditingController? controller;
   final Widget label;
+  final DateTime firstDate;
+  final DateTime lastDate;
   final int defaultHour;
   final int defaultMinute;
   @override
@@ -341,12 +361,11 @@ class _DateTimePickerState extends State<DateTimePicker> {
             widget.label,
             TextButton(
               onPressed: () async {
-                final now = DateTime.now();
                 final date = await showDatePicker(
                   context: context,
-                  initialDate: value ?? now,
-                  firstDate: DateTime(2000),
-                  lastDate: DateTime(2100),
+                  initialDate: value,
+                  firstDate: widget.firstDate,
+                  lastDate: widget.lastDate,
                 );
 
                 if (date != null) {

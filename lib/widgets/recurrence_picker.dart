@@ -254,7 +254,6 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
               ),
               FilledButton(
                 onPressed: () {
-                  print("Recurrence rule: ${_getRecurrenceRule()}");
                   Navigator.of(context).pop(_getRecurrenceRule());
                 },
                 child: const Text("Concluir"),

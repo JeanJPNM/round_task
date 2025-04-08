@@ -114,7 +114,6 @@ class Repository {
 
   Stream<List<UserTask>> getPendingTasksStream() async* {
     final isar = await _isar;
-    print(await getNextPendingTaskDate());
     final query = isar.userTasks
         .where()
         .referenceIsNull()

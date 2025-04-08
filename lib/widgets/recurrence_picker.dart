@@ -37,6 +37,14 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
       numberController.text = recurrenceRule.actualInterval.toString();
       endDate = recurrenceRule.until;
       occurrences = recurrenceRule.count;
+
+      endOption = switch ((endDate, occurrences)) {
+        (null, null) => _EndOption.never,
+        (null, _) => _EndOption.afterOccurrences,
+        (_, null) => _EndOption.onDate,
+        _ => _EndOption.never,
+      };
+
       weekSelection = _getWeekSelection(recurrenceRule.byWeekDays);
     } else {
       numberController.text = "1";
@@ -125,7 +133,7 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
               DropdownMenu(
                 enableFilter: false,
                 enableSearch: false,
-                initialSelection: Frequency.daily,
+                initialSelection: frequency,
                 onSelected: (value) {
                   setState(() {
                     frequency = value ?? Frequency.daily;

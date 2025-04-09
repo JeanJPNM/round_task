@@ -253,15 +253,13 @@ class Repository {
 
   Future<DateTime?> getNextPendingTaskDate() async {
     final isar = await _isar;
-    final task = await isar.userTasks
+    return await isar.userTasks
         .where()
-        .referenceIsNull()
+        .startDateIsNotNull()
         .filter()
-        .startDateGreaterThan(DateTime.now())
-        .sortByStartDate()
+        .referenceIsNull()
+        .startDateProperty()
         .findFirst();
-
-    return task?.startDate;
   }
 
   //  TODO: use the reference to only update one task

@@ -49,8 +49,28 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
         bottom: TabBar(
           controller: _tabController,
           tabs: [
-            Tab(text: "Queued"),
-            Tab(text: "Pending"),
+            Consumer(
+              builder: (context, ref, child) {
+                final queuedTasks = ref.watch(queuedTasksPod);
+
+                return switch (queuedTasks) {
+                  AsyncData(:final value) =>
+                    Tab(text: "Queued (${value.length})"),
+                  _ => Tab(text: "Queued"),
+                };
+              },
+            ),
+            Consumer(
+              builder: (context, ref, child) {
+                final pendingTasks = ref.watch(pendingTasksPod);
+
+                return switch (pendingTasks) {
+                  AsyncData(:final value) =>
+                    Tab(text: "Pending (${value.length})"),
+                  _ => Tab(text: "Pending"),
+                };
+              },
+            ),
           ],
         ),
       ),

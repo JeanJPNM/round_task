@@ -247,28 +247,25 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
 
                 switch (task) {
                   case UserTask(
-                      startDate: DateTime start,
-                      endDate: DateTime end,
-                      recurrence: RecurrenceRule rule
+                      :final startDate?,
+                      :final endDate,
+                      :final recurrence?,
                     ):
-                    final newStart = rule
-                        .getInstances(start: start.copyWith(isUtc: true))
-                        .map((date) => date.copyWith(isUtc: false))
-                        .where((date) => date.isAfter(DateTime.now()))
-                        .first;
+                    final newStart = _nextDate(recurrence, startDate);
                     task.startDate = newStart;
-                    task.endDate = newStart.add(end.difference(start));
+                    task.endDate = switch ((newStart, endDate)) {
+                      (final newStart?, final endDate?) =>
+                        newStart.add(endDate.difference(startDate)),
+                      _ => null,
+                    };
                     break;
                   case UserTask(
-                      startDate: DateTime start,
-                      recurrence: RecurrenceRule rule
+                      :final endDate?,
+                      :final recurrence?,
                     ):
-                    final newStart = rule
-                        .getInstances(start: start.copyWith(isUtc: true))
-                        .map((date) => date.copyWith(isUtc: false))
-                        .where((date) => date.isAfter(DateTime.now()))
-                        .first;
-                    task.startDate = newStart;
+                    final newEnd = _nextDate(recurrence, endDate);
+
+                    task.endDate = newEnd;
                     break;
                   default:
                     task.recurrence = null;
@@ -430,4 +427,12 @@ class _DateTimePickerState extends State<DateTimePicker> {
       },
     );
   }
+}
+
+DateTime? _nextDate(RecurrenceRule rule, DateTime date) {
+  return rule
+      .getInstances(start: date.copyWith(isUtc: true))
+      .map((date) => date.copyWith(isUtc: false))
+      .where((date) => date.isAfter(DateTime.now()))
+      .firstOrNull;
 }

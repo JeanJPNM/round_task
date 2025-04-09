@@ -82,10 +82,11 @@ class AutomaticTaskQueuer {
 
 class Repository {
   Repository(this.ref) {
-    unawaited(taskQueuer.init());
+    _queueInitFuture = taskQueuer.init();
     ref.onDispose(taskQueuer.dispose);
   }
 
+  late final Future<void> _queueInitFuture;
   late final AutomaticTaskQueuer taskQueuer = AutomaticTaskQueuer(this);
   final Ref ref;
 
@@ -104,6 +105,7 @@ class Repository {
 
   Stream<List<UserTask>> getQueuedTasksStream() async* {
     final isar = await _isar;
+    await _queueInitFuture;
 
     yield* isar.userTasks
         .where()
@@ -113,6 +115,8 @@ class Repository {
 
   Stream<List<UserTask>> getPendingTasksStream() async* {
     final isar = await _isar;
+    await _queueInitFuture;
+
     final query = isar.userTasks
         .where()
         .referenceIsNull()

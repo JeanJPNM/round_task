@@ -5,6 +5,8 @@ import 'package:round_task/models/task.dart';
 import 'package:round_task/provider.dart';
 import 'package:round_task/widgets/task_card.dart';
 
+const _listPadding = EdgeInsets.only(bottom: 100, top: 40);
+
 class TaskQueueScreen extends ConsumerStatefulWidget {
   const TaskQueueScreen({super.key});
 
@@ -47,35 +49,6 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
     final repository = ref.watch(repositoryPod);
 
     return Scaffold(
-      appBar: AppBar(
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: [
-            Consumer(
-              builder: (context, ref, child) {
-                final queuedTasks = ref.watch(queuedTasksPod);
-
-                return switch (queuedTasks) {
-                  AsyncData(:final value) =>
-                    Tab(text: "Queued (${value.length})"),
-                  _ => Tab(text: "Queued"),
-                };
-              },
-            ),
-            Consumer(
-              builder: (context, ref, child) {
-                final pendingTasks = ref.watch(pendingTasksPod);
-
-                return switch (pendingTasks) {
-                  AsyncData(:final value) =>
-                    Tab(text: "Pending (${value.length})"),
-                  _ => Tab(text: "Pending"),
-                };
-              },
-            ),
-          ],
-        ),
-      ),
       body: PageStorage(
         bucket: _bucket,
         child: TabBarView(
@@ -89,7 +62,7 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
                     const Center(child: Text("An error occurred.")),
                 data: (tasks) => ReorderableListView.builder(
                   key: const PageStorageKey("queuedTasks"),
-                  padding: EdgeInsets.only(bottom: 100),
+                  padding: _listPadding,
                   shrinkWrap: true,
                   itemCount: tasks.length,
                   onReorder: (oldIndex, newIndex) async {
@@ -131,7 +104,7 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
                   ),
                   data: (tasks) => ListView.builder(
                     key: const PageStorageKey("pendingTasks"),
-                    padding: EdgeInsets.only(bottom: 100),
+                    padding: _listPadding,
                     shrinkWrap: true,
                     itemCount: tasks.length,
                     itemBuilder: (context, index) {
@@ -145,6 +118,48 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
           ],
         ),
       ),
+      bottomNavigationBar: ListenableBuilder(
+          listenable: _tabController,
+          builder: (context, child) {
+            return NavigationBar(
+              selectedIndex: _tabController.index,
+              onDestinationSelected: (value) {
+                _tabController.index = value;
+              },
+              destinations: [
+                Consumer(
+                  builder: (context, ref, child) {
+                    final queuedTasks = ref.watch(queuedTasksPod);
+
+                    final label = switch (queuedTasks) {
+                      AsyncData(:final value) => "Queued (${value.length})",
+                      _ => "Queued",
+                    };
+
+                    return NavigationDestination(
+                      icon: const Icon(Icons.done),
+                      label: label,
+                    );
+                  },
+                ),
+                Consumer(
+                  builder: (context, ref, child) {
+                    final pendingTasks = ref.watch(pendingTasksPod);
+
+                    final label = switch (pendingTasks) {
+                      AsyncData(:final value) => "Pending (${value.length})",
+                      _ => "Pending",
+                    };
+
+                    return NavigationDestination(
+                      icon: const Icon(Icons.pending_actions),
+                      label: label,
+                    );
+                  },
+                ),
+              ],
+            );
+          }),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           context.push(

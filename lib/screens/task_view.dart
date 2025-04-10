@@ -219,98 +219,104 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: Row(children: [
-        Expanded(
-          flex: 2,
-          child: ElevatedButton(
-            onPressed: () async {
-              _applyChanges();
-
-              if (widget.addToQueue) {
-                await repository.addTaskToQueue(task);
-              } else {
-                await repository.updateTask(task);
-              }
-              if (!context.mounted) return;
-              context.pop();
-            },
-            child: const Text("Save"),
-          ),
-        ),
-        if (task.reference != null) ...[
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Row(children: [
           Expanded(
             flex: 2,
-            child: FilledButton(
+            child: ElevatedButton(
               onPressed: () async {
                 _applyChanges();
-                task.reference = null;
 
-                switch (task) {
-                  case UserTask(
-                      :final startDate?,
-                      :final endDate,
-                      :final recurrence?,
-                    ):
-                    final newStart = _nextDate(recurrence, startDate);
-                    task.startDate = newStart;
-                    task.endDate = switch ((newStart, endDate)) {
-                      (final newStart?, final endDate?) =>
-                        newStart.add(endDate.difference(startDate)),
-                      _ => null,
-                    };
-                    break;
-                  case UserTask(
-                      :final endDate?,
-                      :final recurrence?,
-                    ):
-                    final newEnd = _nextDate(recurrence, endDate);
-
-                    task.endDate = newEnd;
-                    break;
-                  default:
-                    task.recurrence = null;
-                    task.startDate = null;
-                    task.endDate = null;
-                    break;
+                if (widget.addToQueue) {
+                  await repository.addTaskToQueue(task);
+                } else {
+                  await repository.updateTask(task);
                 }
-
-                await repository.updateTask(task);
                 if (!context.mounted) return;
                 context.pop();
               },
-              child: const Text("Done"),
+              child: const Text("Save"),
             ),
           ),
-          Expanded(
-            flex: 1,
-            child: IconButton.outlined(
-              onPressed: () async {
-                _applyChanges();
+          if (task.reference != null) ...[
+            const SizedBox(width: 8),
+            Expanded(
+              flex: 2,
+              child: FilledButton(
+                onPressed: () async {
+                  _applyChanges();
+                  task.reference = null;
 
-                await repository.moveTaskToStartOfQueue(task);
+                  switch (task) {
+                    case UserTask(
+                        :final startDate?,
+                        :final endDate,
+                        :final recurrence?,
+                      ):
+                      final newStart = _nextDate(recurrence, startDate);
+                      task.startDate = newStart;
+                      task.endDate = switch ((newStart, endDate)) {
+                        (final newStart?, final endDate?) =>
+                          newStart.add(endDate.difference(startDate)),
+                        _ => null,
+                      };
+                      break;
+                    case UserTask(
+                        :final endDate?,
+                        :final recurrence?,
+                      ):
+                      final newEnd = _nextDate(recurrence, endDate);
 
-                if (!context.mounted) return;
-                context.pop();
-              },
-              icon: const Icon(Icons.arrow_upward),
+                      task.endDate = newEnd;
+                      break;
+                    default:
+                      task.recurrence = null;
+                      task.startDate = null;
+                      task.endDate = null;
+                      break;
+                  }
+
+                  await repository.updateTask(task);
+                  if (!context.mounted) return;
+                  context.pop();
+                },
+                child: const Text("Done"),
+              ),
             ),
-          ),
-          Expanded(
-            flex: 1,
-            child: IconButton.outlined(
-              onPressed: () async {
-                _applyChanges();
+            const SizedBox(width: 8),
+            Expanded(
+              flex: 1,
+              child: IconButton.outlined(
+                onPressed: () async {
+                  _applyChanges();
 
-                await repository.moveTaskToEndOfQueue(task);
+                  await repository.moveTaskToStartOfQueue(task);
 
-                if (!context.mounted) return;
-                context.pop();
-              },
-              icon: const Icon(Icons.arrow_downward),
+                  if (!context.mounted) return;
+                  context.pop();
+                },
+                icon: const Icon(Icons.arrow_upward),
+              ),
             ),
-          ),
-        ],
-      ]),
+            const SizedBox(width: 8),
+            Expanded(
+              flex: 1,
+              child: IconButton.outlined(
+                onPressed: () async {
+                  _applyChanges();
+
+                  await repository.moveTaskToEndOfQueue(task);
+
+                  if (!context.mounted) return;
+                  context.pop();
+                },
+                icon: const Icon(Icons.arrow_downward),
+              ),
+            ),
+          ],
+        ]),
+      ),
     );
   }
 }

@@ -96,9 +96,8 @@ class Repository {
     await isar.writeTxn(() async {
       await isar.userTasks.put(task);
     });
-    taskQueuer.tryUpdate(
-      task.startDate ?? task.endDate?.subtract(const Duration(days: 1)),
-    );
+
+    taskQueuer.tryUpdate(task.autoInsertDate);
   }
 
   Stream<List<UserTask>> getQueuedTasksStream() async* {
@@ -157,27 +156,13 @@ class Repository {
       final now = DateTime.now();
       final tasks = await isar.userTasks
           .where()
-          .referenceIsNull()
+          .autoInsertDateBetween(null, now, includeLower: false)
           .filter()
-          .group(
-            (q) => q.startDateIsNotNull().startDateLessThan(now, include: true),
-          )
-          .or()
-          .group(
-            (q) => q.startDateIsNull().endDateIsNotNull().endDateLessThan(
-                  now.add(const Duration(days: 1)),
-                  include: true,
-                ),
-          )
-          .sortByStartDate()
-          .thenByEndDate()
+          .referenceIsNull()
           .findAll();
 
-      final firstTask = await isar.userTasks
-          .where()
-          .referenceIsNotNull()
-          .sortByReference()
-          .findFirst();
+      final firstTask =
+          await isar.userTasks.where().referenceIsNotNull().findFirst();
 
       var current = 0;
       var increment = _defaultSkipSize;
@@ -204,9 +189,8 @@ class Repository {
   Future<void> moveTaskToEndOfQueue(UserTask task) async {
     final isar = await _isar;
     final lastTask = await isar.userTasks
-        .where()
+        .where(sort: Sort.desc)
         .referenceIsNotNull()
-        .sortByReferenceDesc()
         .findFirst();
 
     if (lastTask == null) {
@@ -223,11 +207,8 @@ class Repository {
 
   Future<void> moveTaskToStartOfQueue(UserTask task) async {
     final isar = await _isar;
-    final firstTask = await isar.userTasks
-        .where()
-        .referenceIsNotNull()
-        .sortByReference()
-        .findFirst();
+    final firstTask =
+        await isar.userTasks.where().referenceIsNotNull().findFirst();
 
     if (firstTask == null) {
       task.reference = 0;
@@ -253,10 +234,10 @@ class Repository {
     final isar = await _isar;
     return await isar.userTasks
         .where()
-        .startDateIsNotNull()
+        .autoInsertDateIsNotNull()
         .filter()
         .referenceIsNull()
-        .startDateProperty()
+        .autoInsertDateProperty()
         .findFirst();
   }
 

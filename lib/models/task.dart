@@ -31,6 +31,10 @@ class UserTask {
   DateTime? startDate;
   DateTime? endDate;
 
+  @Index(unique: false)
+  DateTime? get autoInsertDate =>
+      startDate ?? endDate?.subtract(const Duration(days: 1));
+
   @ignore
   RecurrenceRule? recurrence;
 

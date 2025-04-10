@@ -126,14 +126,20 @@ class Repository {
   Future<void> addTaskToQueue(UserTask task) async {
     final isar = await _isar;
     await isar.writeTxn(() async {
-      final lastTask = await isar.userTasks
-          .where()
+      final insertAtStart =
+          task.autoInsertDate?.isBefore(DateTime.now()) ?? false;
+
+      final precedingTask = await isar.userTasks
+          .where(sort: insertAtStart ? Sort.asc : Sort.desc)
           .referenceIsNotNull()
-          .sortByReferenceDesc()
           .findFirst();
 
-      if (lastTask != null) {
-        task.reference = lastTask.reference! + _defaultSkipSize;
+      if (precedingTask == null) {
+        task.reference = 0;
+      } else if (insertAtStart) {
+        task.reference = precedingTask.reference! - _defaultSkipSize;
+      } else {
+        task.reference = precedingTask.reference! + _defaultSkipSize;
       }
 
       await isar.userTasks.put(task);

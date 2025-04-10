@@ -64,8 +64,8 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
 
   void _applyChanges() {
     final task = widget.task;
-    task.title = titleController.text;
-    task.description = descriptionController.text;
+    task.title = titleController.text.trim();
+    task.description = descriptionController.text.trim();
     task.startDate = startDateController.value;
     task.endDate = endDateController.value;
     task.recurrence = recurrenceRule;

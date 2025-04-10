@@ -48,9 +48,7 @@ class AutomaticTaskQueuer {
   void tryUpdate(DateTime? date) {
     if (date == null) return;
 
-    if (value == null) {
-      value = date;
-    } else if (date.isBefore(value!)) {
+    if (value == null || date.isBefore(value!)) {
       value = date;
     }
   }

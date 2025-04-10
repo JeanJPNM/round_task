@@ -21,6 +21,7 @@ class _TaskCardState extends State<TaskCard> {
     final task = widget.task;
     // TODO: add quick actions: start, send to end of queue, archive, delete
     return Card.outlined(
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () {
           context.push("/task", extra: (widget.task, false));

@@ -260,4 +260,22 @@ class Repository {
       await isar.userTasks.putAll(tasks);
     });
   }
+
+  Future<List<UserTask>> searchTasks(bool queued, String searchText) async {
+    final isar = await _isar;
+
+    QueryBuilder<UserTask, UserTask, QFilterCondition> query;
+    if (queued) {
+      query = isar.userTasks.where().referenceIsNotNull().filter();
+    } else {
+      query = isar.userTasks.where().referenceIsNull().filter();
+    }
+
+    return await query
+        .group((q) => q
+            .titleContains(searchText, caseSensitive: false)
+            .or()
+            .descriptionContains(searchText, caseSensitive: false))
+        .findAll();
+  }
 }

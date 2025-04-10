@@ -49,6 +49,18 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
     final repository = ref.watch(repositoryPod);
 
     return Scaffold(
+      appBar: AppBar(
+        flexibleSpace: SearchAnchor.bar(
+          isFullScreen: true,
+          suggestionsBuilder: (context, controller) async {
+            final tasks = await repository.searchTasks(
+              _addToQueue,
+              controller.text,
+            );
+            return tasks.map((task) => TaskCard(task: task));
+          },
+        ),
+      ),
       body: PageStorage(
         bucket: _bucket,
         child: TabBarView(

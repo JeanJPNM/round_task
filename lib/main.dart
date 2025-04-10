@@ -16,14 +16,6 @@ final _router = GoRouter(
     ),
     GoRoute(
       path: "/task",
-      // builder: (context, state) {
-      //   final (task, addToQueue) = state.extra as TaskViewParams;
-
-      //   return TaskViewScreen(
-      //     task: task,
-      //     addToQueue: addToQueue,
-      //   );
-      // },
       pageBuilder: (context, state) {
         final (task, addToQueue) = state.extra as TaskViewParams;
 

@@ -51,6 +51,7 @@ dependencies:
   rrule: ^0.2.17
   rrule_generator: ^0.9.2
   collection: ^1.19.1
+  dynamic_color: ^1.7.0
 
 dev_dependencies:
   flutter_test:

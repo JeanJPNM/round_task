@@ -18,6 +18,8 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
     with TickerProviderStateMixin {
   final _bucket = PageStorageBucket();
   late final TabController _tabController;
+  final _searchFocusNode = FocusNode();
+  final _searchController = SearchController();
 
   bool _addToQueue = true;
 
@@ -40,8 +42,17 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    _searchFocusNode.dispose();
+    _searchController.dispose();
 
     super.dispose();
+  }
+
+  void _unfocusSearchBar() {
+    _searchFocusNode.unfocus();
+    _searchController.selection = TextSelection.collapsed(
+      offset: _searchController.text.length,
+    );
   }
 
   @override
@@ -49,83 +60,126 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
     final repository = ref.watch(repositoryPod);
 
     return Scaffold(
-      appBar: AppBar(
-        flexibleSpace: SearchAnchor.bar(
-          isFullScreen: true,
-          suggestionsBuilder: (context, controller) async {
-            final tasks = await repository.searchTasks(
-              _addToQueue,
-              controller.text,
-            );
-            return tasks.map((task) => TaskCard(task: task));
-          },
-        ),
-      ),
-      body: PageStorage(
-        bucket: _bucket,
-        child: TabBarView(
-          controller: _tabController,
+      body: SafeArea(
+        child: Column(
           children: [
-            Consumer(builder: (context, ref, child) {
-              final queuedTasks = ref.watch(queuedTasksPod);
-              return queuedTasks.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, stackTrace) =>
-                    const Center(child: Text("An error occurred.")),
-                data: (tasks) => ReorderableListView.builder(
-                  key: const PageStorageKey("queuedTasks"),
-                  padding: _listPadding,
-                  shrinkWrap: true,
-                  itemCount: tasks.length,
-                  onReorder: (oldIndex, newIndex) async {
-                    if (oldIndex < newIndex) {
-                      newIndex--;
-                    }
-
-                    // modifying the list directly is a big no-no
-                    // but this is kind of fine because
-                    // a new list is produced a few milliseconds later
-                    // TODO: find a better way to do this
-                    final task = tasks.removeAt(oldIndex);
-                    tasks.insert(newIndex, task);
-
-                    await repository.reorderTasks(tasks);
-                  },
-                  itemBuilder: (context, index) {
-                    final task = tasks[index];
-
-                    return SizedBox(
-                      key: ValueKey(task.id),
-                      width: double.infinity,
-                      child: TaskCard(task: task),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: SizedBox(
+                width: double.infinity,
+                child: SearchAnchor(
+                  searchController: _searchController,
+                  isFullScreen: true,
+                  builder: (context, controller) {
+                    return SearchBar(
+                      controller: controller,
+                      focusNode: _searchFocusNode,
+                      hintText: "Search",
+                      leading: const Icon(Icons.search),
+                      onTapOutside: (event) {
+                        _unfocusSearchBar();
+                      },
+                      onTap: () {
+                        _unfocusSearchBar();
+                        controller.openView();
+                      },
+                      onChanged: (value) {
+                        _unfocusSearchBar();
+                        controller.openView();
+                      },
                     );
                   },
-                ),
-              );
-            }),
-            Consumer(
-              builder: (context, ref, child) {
-                final pendingTasks = ref.watch(pendingTasksPod);
-
-                return pendingTasks.when(
-                  loading: () => const Center(
-                    child: CircularProgressIndicator(),
-                  ),
-                  error: (error, stackTrace) => const Center(
-                    child: Text("An error occurred."),
-                  ),
-                  data: (tasks) => ListView.builder(
-                    key: const PageStorageKey("pendingTasks"),
-                    padding: _listPadding,
-                    shrinkWrap: true,
-                    itemCount: tasks.length,
-                    itemBuilder: (context, index) {
-                      final task = tasks[index];
-                      return TaskCard(key: ValueKey(task.id), task: task);
+                  suggestionsBuilder: (context, controller) async {
+                    final tasks = await repository.searchTasks(
+                      _addToQueue,
+                      controller.text,
+                    );
+                    return tasks.map((task) => TaskCard(task: task));
+                  },
+                  viewLeading: BackButton(
+                    style: const ButtonStyle(
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      _unfocusSearchBar();
                     },
                   ),
-                );
-              },
+                ),
+              ),
+            ),
+            Expanded(
+              child: PageStorage(
+                bucket: _bucket,
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    Consumer(builder: (context, ref, child) {
+                      final queuedTasks = ref.watch(queuedTasksPod);
+                      return queuedTasks.when(
+                        loading: () =>
+                            const Center(child: CircularProgressIndicator()),
+                        error: (error, stackTrace) =>
+                            const Center(child: Text("An error occurred.")),
+                        data: (tasks) => ReorderableListView.builder(
+                          key: const PageStorageKey("queuedTasks"),
+                          padding: _listPadding,
+                          shrinkWrap: true,
+                          itemCount: tasks.length,
+                          onReorder: (oldIndex, newIndex) async {
+                            if (oldIndex < newIndex) {
+                              newIndex--;
+                            }
+
+                            // modifying the list directly is a big no-no
+                            // but this is kind of fine because
+                            // a new list is produced a few milliseconds later
+                            // TODO: find a better way to do this
+                            final task = tasks.removeAt(oldIndex);
+                            tasks.insert(newIndex, task);
+
+                            await repository.reorderTasks(tasks);
+                          },
+                          itemBuilder: (context, index) {
+                            final task = tasks[index];
+
+                            return SizedBox(
+                              key: ValueKey(task.id),
+                              width: double.infinity,
+                              child: TaskCard(task: task),
+                            );
+                          },
+                        ),
+                      );
+                    }),
+                    Consumer(
+                      builder: (context, ref, child) {
+                        final pendingTasks = ref.watch(pendingTasksPod);
+
+                        return pendingTasks.when(
+                          loading: () => const Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                          error: (error, stackTrace) => const Center(
+                            child: Text("An error occurred."),
+                          ),
+                          data: (tasks) => ListView.builder(
+                            key: const PageStorageKey("pendingTasks"),
+                            padding: _listPadding,
+                            shrinkWrap: true,
+                            itemCount: tasks.length,
+                            itemBuilder: (context, index) {
+                              final task = tasks[index];
+                              return TaskCard(
+                                  key: ValueKey(task.id), task: task);
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),

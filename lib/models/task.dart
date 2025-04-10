@@ -27,11 +27,11 @@ class UserTask {
   DateTime creationDate;
   DateTime lastTouched;
 
-  @Index(unique: false)
+  @Index()
   DateTime? startDate;
   DateTime? endDate;
 
-  @Index(unique: false)
+  @Index()
   DateTime? get autoInsertDate =>
       startDate ?? endDate?.subtract(const Duration(days: 1));
 

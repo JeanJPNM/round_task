@@ -144,6 +144,7 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
         ],
       ),
       body: ListView(
+        padding: const EdgeInsets.all(8.0),
         children: [
           TextField(
             controller: titleController,

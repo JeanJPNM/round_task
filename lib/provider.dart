@@ -138,6 +138,8 @@ class Repository {
 
       await isar.userTasks.put(task);
     });
+
+    taskQueuer.tryUpdate(task.autoInsertDate);
   }
 
   Future<void> removeTaskFromQueue(UserTask task) async {
@@ -147,6 +149,8 @@ class Repository {
       task.reference = null;
       await isar.userTasks.put(task);
     });
+
+    taskQueuer.tryUpdate(task.autoInsertDate);
   }
 
   Future<void> addScheduledTasks() async {
@@ -203,6 +207,8 @@ class Repository {
     await isar.writeTxn(() async {
       await isar.userTasks.put(task);
     });
+
+    taskQueuer.tryUpdate(task.autoInsertDate);
   }
 
   Future<void> moveTaskToStartOfQueue(UserTask task) async {
@@ -220,6 +226,8 @@ class Repository {
     await isar.writeTxn(() async {
       await isar.userTasks.put(task);
     });
+
+    taskQueuer.tryUpdate(task.autoInsertDate);
   }
 
   Future<void> deleteTask(UserTask task) async {

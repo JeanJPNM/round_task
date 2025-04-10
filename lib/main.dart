@@ -11,7 +11,7 @@ final _router = GoRouter(
       path: "/",
       pageBuilder: (context, state) => MaterialPage<void>(
         key: state.pageKey,
-        child: TaskQueueScreen(),
+        child: const TaskQueueScreen(),
       ),
     ),
     GoRoute(
@@ -41,7 +41,7 @@ final _router = GoRouter(
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting();
-  runApp(ProviderScope(child: const MyApp()));
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {

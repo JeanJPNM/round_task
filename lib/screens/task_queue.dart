@@ -88,7 +88,7 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
                 error: (error, stackTrace) =>
                     const Center(child: Text("An error occurred.")),
                 data: (tasks) => ReorderableListView.builder(
-                  key: PageStorageKey("queuedTasks"),
+                  key: const PageStorageKey("queuedTasks"),
                   padding: EdgeInsets.only(bottom: 100),
                   shrinkWrap: true,
                   itemCount: tasks.length,
@@ -130,7 +130,7 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
                     child: Text("An error occurred."),
                   ),
                   data: (tasks) => ListView.builder(
-                    key: PageStorageKey("pendingTasks"),
+                    key: const PageStorageKey("pendingTasks"),
                     padding: EdgeInsets.only(bottom: 100),
                     shrinkWrap: true,
                     itemCount: tasks.length,

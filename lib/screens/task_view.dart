@@ -139,7 +139,7 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
             onPressed: () {
               showMenu(repository);
             },
-            icon: Icon(Icons.more_vert),
+            icon: const Icon(Icons.more_vert),
           )
         ],
       ),
@@ -234,7 +234,7 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
               if (!context.mounted) return;
               context.pop();
             },
-            child: Text("Save"),
+            child: const Text("Save"),
           ),
         ),
         if (task.reference != null) ...[
@@ -292,7 +292,7 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
                 if (!context.mounted) return;
                 context.pop();
               },
-              icon: Icon(Icons.arrow_upward),
+              icon: const Icon(Icons.arrow_upward),
             ),
           ),
           Expanded(
@@ -306,7 +306,7 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
                 if (!context.mounted) return;
                 context.pop();
               },
-              icon: Icon(Icons.arrow_downward),
+              icon: const Icon(Icons.arrow_downward),
             ),
           ),
         ],
@@ -416,7 +416,7 @@ class _DateTimePickerState extends State<DateTimePicker> {
                 child: Text(DateFormat.jm("pt_BR").format(value)),
               ),
               IconButton(
-                icon: Icon(Icons.delete),
+                icon: const Icon(Icons.delete),
                 onPressed: () {
                   _controller.value = null;
                 },

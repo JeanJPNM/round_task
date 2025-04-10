@@ -116,7 +116,7 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text("Repeat every"),
+              const Text("Repeat every"),
               const SizedBox(width: 10),
               SizedBox(
                 width: 40,
@@ -140,10 +140,13 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
                   });
                 },
                 dropdownMenuEntries: [
-                  DropdownMenuEntry(value: Frequency.daily, label: "Dia"),
-                  DropdownMenuEntry(value: Frequency.weekly, label: "Semana"),
-                  DropdownMenuEntry(value: Frequency.monthly, label: "Mês"),
-                  DropdownMenuEntry(value: Frequency.yearly, label: "Ano"),
+                  const DropdownMenuEntry(value: Frequency.daily, label: "Dia"),
+                  const DropdownMenuEntry(
+                      value: Frequency.weekly, label: "Semana"),
+                  const DropdownMenuEntry(
+                      value: Frequency.monthly, label: "Mês"),
+                  const DropdownMenuEntry(
+                      value: Frequency.yearly, label: "Ano"),
                 ],
               ),
             ],

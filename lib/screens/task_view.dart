@@ -361,6 +361,12 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
                           newStart.add(endDate.difference(startDate)),
                         _ => null,
                       };
+
+                      if (recurrence.count case final count?) {
+                        task.recurrence = count > 1
+                            ? recurrence.copyWith(count: count - 1)
+                            : null;
+                      }
                       break;
                     case UserTask(
                         :final endDate?,
@@ -369,6 +375,12 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
                       final newEnd = _nextDate(recurrence, endDate);
 
                       task.endDate = newEnd;
+
+                      if (recurrence.count case final count?) {
+                        task.recurrence = count > 1
+                            ? recurrence.copyWith(count: count - 1)
+                            : null;
+                      }
                       break;
                     default:
                       task.recurrence = null;

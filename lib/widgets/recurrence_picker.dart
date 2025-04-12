@@ -18,12 +18,12 @@ class RecurrencePicker extends StatefulWidget {
 }
 
 class _RecurrencePickerState extends State<RecurrencePicker> {
-  final numberController = TextEditingController();
+  final intervalController = TextEditingController();
+  final limitController = TextEditingController();
   Frequency frequency = Frequency.daily;
 
   List<bool> weekSelection = List.generate(7, (index) => false);
   DateTime? endDate;
-  int? occurrences;
 
   _EndOption endOption = _EndOption.never;
 
@@ -34,9 +34,12 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
     final recurrenceRule = widget.initialRecurrenceRule;
     if (recurrenceRule != null) {
       frequency = recurrenceRule.frequency;
-      numberController.text = recurrenceRule.actualInterval.toString();
+      intervalController.text = recurrenceRule.actualInterval.toString();
       endDate = recurrenceRule.until;
-      occurrences = recurrenceRule.count;
+      final occurrences = recurrenceRule.count;
+      if (occurrences != null) {
+        limitController.text = occurrences.toString();
+      }
 
       endOption = switch ((endDate, occurrences)) {
         (null, null) => _EndOption.never,
@@ -47,7 +50,7 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
 
       weekSelection = _getWeekSelection(recurrenceRule.byWeekDays);
     } else {
-      numberController.text = "1";
+      intervalController.text = "1";
     }
   }
 
@@ -89,13 +92,15 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
   RecurrenceRule _getRecurrenceRule() {
     RecurrenceRule rule = RecurrenceRule(
       frequency: frequency,
-      interval: int.parse(numberController.text),
+      interval: int.parse(intervalController.text),
       byWeekDays: switch (frequency) {
         Frequency.weekly => _getByWeekDays(),
         _ => [],
       },
       until: endOption == _EndOption.onDate ? endDate?.toUtc() : null,
-      count: endOption == _EndOption.afterOccurrences ? occurrences : null,
+      count: endOption == _EndOption.afterOccurrences
+          ? int.tryParse(limitController.text)
+          : null,
     );
 
     return rule;
@@ -122,7 +127,7 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
                 width: 40,
                 child: TextField(
                   textAlign: TextAlign.center,
-                  controller: numberController,
+                  controller: intervalController,
                   keyboardType: TextInputType.number,
                   inputFormatters: [
                     FilteringTextInputFormatter.digitsOnly,
@@ -242,6 +247,8 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
               SizedBox(
                 width: 100,
                 child: TextField(
+                  textAlign: TextAlign.center,
+                  controller: limitController,
                   enabled: endOption == _EndOption.afterOccurrences,
                   keyboardType: TextInputType.number,
                   inputFormatters: [

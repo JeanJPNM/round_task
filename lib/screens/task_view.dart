@@ -716,8 +716,12 @@ class __SubTaskDialogState extends State<_SubTaskDialog> {
 
 DateTime? _nextDate(RecurrenceRule rule, DateTime date) {
   return rule
-      .getInstances(start: date.copyWith(isUtc: true))
-      .map((date) => date.copyWith(isUtc: false))
-      .where((date) => date.isAfter(DateTime.now()))
-      .firstOrNull;
+      .copyWith(count: null) // we do our own count tracking
+      .getInstances(
+        start: date.copyWith(isUtc: true),
+        after: DateTime.now().copyWith(isUtc: true),
+        includeAfter: true,
+      )
+      .firstOrNull
+      ?.copyWith(isUtc: false);
 }

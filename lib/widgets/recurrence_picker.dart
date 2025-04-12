@@ -221,11 +221,10 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
                           });
                         }
                       },
-                child: Text(
-                  endDate == null
-                      ? "Selecione uma data"
-                      : DateFormat.yMMMMd("pt_BR").format(endDate!),
-                ),
+                child: Text(switch (endDate) {
+                  final endDate? => DateFormat.yMMMMd("pt_BR").format(endDate),
+                  null => "Selecione uma data",
+                }),
               ),
             ],
           ),

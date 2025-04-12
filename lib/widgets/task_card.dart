@@ -26,26 +26,33 @@ class _TaskCardState extends State<TaskCard> {
         onTap: () {
           context.push("/task", extra: (widget.task, false));
         },
-        child: Padding(
-          padding: const EdgeInsets.all(15.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                task.title,
-                style: Theme.of(context).textTheme.labelLarge,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(15.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    task.title,
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ),
+                  if (task.description.isNotEmpty)
+                    Text(
+                      task.description,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelMedium,
+                    ),
+                  if (task.endDate case final endDate?)
+                    Text(DateFormat.yMMMMd("pt_BR").add_jm().format(endDate))
+                ],
               ),
-              if (task.description.isNotEmpty)
-                Text(
-                  task.description,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelMedium,
-                ),
-              if (task.endDate != null)
-                Text(DateFormat.yMMMMd("pt_BR").add_jm().format(task.endDate!))
-            ],
-          ),
+            ),
+            if (task.progress case final progress?)
+              LinearProgressIndicator(value: progress)
+          ],
         ),
       ),
     );

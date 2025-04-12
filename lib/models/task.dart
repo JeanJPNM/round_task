@@ -16,6 +16,7 @@ class UserTask {
     this.reference,
     this.recurrence,
     required this.creationDate,
+    this.progress,
   });
 
   Id id;
@@ -23,7 +24,7 @@ class UserTask {
   String description;
 
   bool archived;
-
+  double? progress;
   DateTime creationDate;
   DateTime lastTouched;
 
@@ -67,11 +68,16 @@ class SubTask {
     this.id = Isar.autoIncrement,
     required this.name,
     required this.done,
+    required this.reference,
   });
 
   Id id;
   String name;
   bool done;
+  int reference;
+
+  @Backlink(to: "subTasks")
+  final task = IsarLink<UserTask>();
 }
 
 @collection

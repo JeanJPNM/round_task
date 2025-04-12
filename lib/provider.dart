@@ -90,14 +90,48 @@ class Repository {
 
   Future<Isar> get _isar => ref.read(isarPod.future);
 
+  Future<void> _saveTask(Isar isar, UserTask task) async {
+    // the task needs to be in the database
+    // before saving the subtasks link
+    await isar.userTasks.put(task);
+    // we need to save the links, otherwise they won't be considered
+    // by the iterator methods to calculate the progress
+    await task.subTasks.save();
+
+    task.progress = task.subTasks.isEmpty
+        ? null
+        : task.subTasks.where((subTask) => subTask.done).length /
+            task.subTasks.length;
+
+    await isar.userTasks.put(task);
+  }
+
   Future<void> updateTask(UserTask task) async {
     final isar = await _isar;
 
     await isar.writeTxn(() async {
-      await isar.userTasks.put(task);
+      await _saveTask(isar, task);
     });
 
     taskQueuer.tryUpdate(task.autoInsertDate);
+  }
+
+  Future<void> updateSubTasks(List<SubTask> subTasks) async {
+    final isar = await _isar;
+
+    await isar.writeTxn(() async {
+      await isar.subTasks.putAll(subTasks);
+    });
+  }
+
+  Future<void> deleteSubTasks(List<SubTask> subTasks) async {
+    final isar = await _isar;
+
+    await isar.writeTxn(() async {
+      await isar.subTasks.deleteAll(
+        subTasks.map((subTask) => subTask.id).toList(),
+      );
+    });
   }
 
   Stream<List<UserTask>> getQueuedTasksStream() async* {
@@ -129,22 +163,24 @@ class Repository {
       final insertAtStart =
           task.autoInsertDate?.isBefore(DateTime.now()) ?? false;
 
-      final precedingTask = await isar.userTasks
+      final reference = await isar.userTasks
           .where(sort: insertAtStart ? Sort.asc : Sort.desc)
           .referenceIsNotNull()
+          .referenceProperty()
           .findFirst();
 
-      if (precedingTask == null) {
+      if (reference == null) {
         task.reference = 0;
       } else if (insertAtStart) {
-        task.reference = precedingTask.reference! - _defaultSkipSize;
+        task.reference = reference - _defaultSkipSize;
       } else {
-        task.reference = precedingTask.reference! + _defaultSkipSize;
+        task.reference = reference + _defaultSkipSize;
       }
 
-      await isar.userTasks.put(task);
+      await _saveTask(isar, task);
     });
 
+    // TODO: is this even required anymore?
     taskQueuer.tryUpdate(task.autoInsertDate);
   }
 
@@ -153,7 +189,7 @@ class Repository {
 
     await isar.writeTxn(() async {
       task.reference = null;
-      await isar.userTasks.put(task);
+      await _saveTask(isar, task);
     });
 
     taskQueuer.tryUpdate(task.autoInsertDate);
@@ -171,16 +207,19 @@ class Repository {
           .referenceIsNull()
           .findAll();
 
-      final firstTask =
-          await isar.userTasks.where().referenceIsNotNull().findFirst();
+      final firstReference = await isar.userTasks
+          .where()
+          .referenceIsNotNull()
+          .referenceProperty()
+          .findFirst();
 
       var current = 0;
       var increment = _defaultSkipSize;
       Iterable<UserTask> taskIterable = tasks;
 
-      if (firstTask != null) {
+      if (firstReference != null) {
         increment = -increment;
-        current = firstTask.reference! + increment;
+        current = firstReference + increment;
 
         // in this mode, the tasks are added to the beginning of the queue
         // so we need to reverse the iteration order
@@ -211,7 +250,7 @@ class Repository {
     }
 
     await isar.writeTxn(() async {
-      await isar.userTasks.put(task);
+      await _saveTask(isar, task);
     });
 
     taskQueuer.tryUpdate(task.autoInsertDate);
@@ -230,7 +269,7 @@ class Repository {
     }
 
     await isar.writeTxn(() async {
-      await isar.userTasks.put(task);
+      await _saveTask(isar, task);
     });
 
     taskQueuer.tryUpdate(task.autoInsertDate);
@@ -240,6 +279,9 @@ class Repository {
     final isar = await _isar;
 
     await isar.writeTxn(() async {
+      await isar.subTasks.deleteAll(
+        task.subTasks.map((subTask) => subTask.id).toList(),
+      );
       await isar.userTasks.delete(task.id);
     });
   }

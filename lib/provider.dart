@@ -78,6 +78,38 @@ class AutomaticTaskQueuer {
   }
 }
 
+enum QueueInsertionPosition {
+  start,
+  end,
+  preferred,
+}
+
+sealed class TaskEditAction {
+  const TaskEditAction();
+}
+
+class PutTaskInQueue extends TaskEditAction {
+  PutTaskInQueue(this.position);
+
+  final QueueInsertionPosition position;
+}
+
+class RemoveTaskFromQueue extends TaskEditAction {
+  const RemoveTaskFromQueue();
+}
+
+class PutSubTasks extends TaskEditAction {
+  PutSubTasks(this.subTasks);
+
+  final List<SubTask> subTasks;
+}
+
+class RemoveSubTasks extends TaskEditAction {
+  RemoveSubTasks(this.subTasks);
+
+  final List<SubTask> subTasks;
+}
+
 class Repository {
   Repository(this.ref) {
     _queueInitFuture = taskQueuer.init();
@@ -90,48 +122,60 @@ class Repository {
 
   Future<Isar> get _isar => ref.read(isarPod.future);
 
-  Future<void> _saveTask(Isar isar, UserTask task) async {
-    // the task needs to be in the database
-    // before saving the subtasks link
-    await isar.userTasks.put(task);
-    // we need to save the links, otherwise they won't be considered
-    // by the iterator methods to calculate the progress
-    await task.subTasks.save();
-
-    task.progress = task.subTasks.isEmpty
-        ? null
-        : task.subTasks.where((subTask) => subTask.done).length /
-            task.subTasks.length;
-
-    await isar.userTasks.put(task);
-  }
-
-  Future<void> updateTask(UserTask task) async {
+  Future<void> writeTask(
+    UserTask task, [
+    List<TaskEditAction> actions = const [],
+  ]) async {
     final isar = await _isar;
 
     await isar.writeTxn(() async {
-      await _saveTask(isar, task);
+      for (final action in actions) {
+        switch (action) {
+          case PutTaskInQueue(:final position):
+            await _putTaskInQueue(isar, task, position);
+          case RemoveTaskFromQueue():
+            task.reference = null;
+          case PutSubTasks(:final subTasks):
+            await isar.subTasks.putAll(subTasks);
+          case RemoveSubTasks(:final subTasks):
+            await isar.subTasks.deleteAll(
+              subTasks.map((subTask) => subTask.id).toList(),
+            );
+        }
+      }
+
+      await isar.userTasks.put(task);
+      await task.subTasks.save();
     });
 
     taskQueuer.tryUpdate(task.autoInsertDate);
   }
 
-  Future<void> updateSubTasks(List<SubTask> subTasks) async {
-    final isar = await _isar;
+  Future<void> _putTaskInQueue(
+    Isar isar,
+    UserTask task,
+    QueueInsertionPosition position,
+  ) async {
+    final insertAtStart = switch (position) {
+      QueueInsertionPosition.start => true,
+      QueueInsertionPosition.end => false,
+      QueueInsertionPosition.preferred =>
+        task.autoInsertDate?.isBefore(DateTime.now()) ?? false,
+    };
 
-    await isar.writeTxn(() async {
-      await isar.subTasks.putAll(subTasks);
-    });
-  }
+    final reference = await isar.userTasks
+        .where(sort: insertAtStart ? Sort.asc : Sort.desc)
+        .referenceIsNotNull()
+        .referenceProperty()
+        .findFirst();
 
-  Future<void> deleteSubTasks(List<SubTask> subTasks) async {
-    final isar = await _isar;
-
-    await isar.writeTxn(() async {
-      await isar.subTasks.deleteAll(
-        subTasks.map((subTask) => subTask.id).toList(),
-      );
-    });
+    if (reference == null) {
+      task.reference = 0;
+    } else if (insertAtStart) {
+      task.reference = reference - _defaultSkipSize;
+    } else {
+      task.reference = reference + _defaultSkipSize;
+    }
   }
 
   Stream<List<UserTask>> getQueuedTasksStream() async* {
@@ -155,44 +199,6 @@ class Repository {
         .archivedEqualTo(false)
         .sortByCreationDate();
     yield* query.watch(fireImmediately: true);
-  }
-
-  Future<void> addTaskToQueue(UserTask task) async {
-    final isar = await _isar;
-    await isar.writeTxn(() async {
-      final insertAtStart =
-          task.autoInsertDate?.isBefore(DateTime.now()) ?? false;
-
-      final reference = await isar.userTasks
-          .where(sort: insertAtStart ? Sort.asc : Sort.desc)
-          .referenceIsNotNull()
-          .referenceProperty()
-          .findFirst();
-
-      if (reference == null) {
-        task.reference = 0;
-      } else if (insertAtStart) {
-        task.reference = reference - _defaultSkipSize;
-      } else {
-        task.reference = reference + _defaultSkipSize;
-      }
-
-      await _saveTask(isar, task);
-    });
-
-    // TODO: is this even required anymore?
-    taskQueuer.tryUpdate(task.autoInsertDate);
-  }
-
-  Future<void> removeTaskFromQueue(UserTask task) async {
-    final isar = await _isar;
-
-    await isar.writeTxn(() async {
-      task.reference = null;
-      await _saveTask(isar, task);
-    });
-
-    taskQueuer.tryUpdate(task.autoInsertDate);
   }
 
   Future<void> addScheduledTasks() async {
@@ -233,46 +239,6 @@ class Repository {
 
       await isar.userTasks.putAll(tasks);
     });
-  }
-
-  Future<void> moveTaskToEndOfQueue(UserTask task) async {
-    final isar = await _isar;
-    final lastTask = await isar.userTasks
-        .where(sort: Sort.desc)
-        .referenceIsNotNull()
-        .findFirst();
-
-    if (lastTask == null) {
-      task.reference = 0;
-    } else {
-      if (lastTask.id == task.id) return;
-      task.reference = lastTask.reference! + _defaultSkipSize;
-    }
-
-    await isar.writeTxn(() async {
-      await _saveTask(isar, task);
-    });
-
-    taskQueuer.tryUpdate(task.autoInsertDate);
-  }
-
-  Future<void> moveTaskToStartOfQueue(UserTask task) async {
-    final isar = await _isar;
-    final firstTask =
-        await isar.userTasks.where().referenceIsNotNull().findFirst();
-
-    if (firstTask == null) {
-      task.reference = 0;
-    } else {
-      if (firstTask.id == task.id) return;
-      task.reference = firstTask.reference! - _defaultSkipSize;
-    }
-
-    await isar.writeTxn(() async {
-      await _saveTask(isar, task);
-    });
-
-    taskQueuer.tryUpdate(task.autoInsertDate);
   }
 
   Future<void> deleteTask(UserTask task) async {

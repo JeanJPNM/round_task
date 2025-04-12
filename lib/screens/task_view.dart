@@ -91,8 +91,7 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
     }
   }
 
-  Future<void> _updateSubTasks() async {
-    final repository = ref.read(repositoryPod);
+  ({List<SubTask> put, List<SubTask> remove}) _updateSubTasks() {
     final task = widget.task;
     final removedSubTasks = _subTaskControllers
         .where((controller) => controller.removed)
@@ -109,21 +108,20 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
       subTask.reference = i;
     }
 
-    await repository.updateSubTasks(subTasks);
-    await repository.deleteSubTasks(removedSubTasks);
-
     task.subTasks.removeAll(removedSubTasks);
     task.subTasks.addAll(subTasks);
+    return (put: subTasks, remove: removedSubTasks);
   }
 
   Future<void> _restoreTask(Repository repository) async {
     final task = widget.task;
 
-    await repository.updateSubTasks(_originalSubTasks);
-
     task.subTasks.clear();
     task.subTasks.addAll(_originalSubTasks);
-    await repository.updateTask(task);
+
+    await repository.writeTask(task, [
+      PutSubTasks(_originalSubTasks),
+    ]);
   }
 
   void showMenu(Repository repository) {
@@ -138,7 +136,9 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
                 leading: const Icon(Icons.remove),
                 title: const Text("Remove from queue"),
                 onTap: () async {
-                  await repository.removeTaskFromQueue(widget.task);
+                  await repository.writeTask(widget.task, [
+                    const RemoveTaskFromQueue(),
+                  ]);
 
                   if (!context.mounted) return;
                   context.pop();
@@ -149,7 +149,9 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
                 leading: const Icon(Icons.add),
                 title: const Text("Add to queue"),
                 onTap: () async {
-                  await repository.addTaskToQueue(widget.task);
+                  await repository.writeTask(widget.task, [
+                    PutTaskInQueue(QueueInsertionPosition.preferred),
+                  ]);
 
                   if (!context.mounted) return;
                   context.pop();
@@ -159,6 +161,71 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
         );
       },
     );
+  }
+
+  Future<void> _save(
+    Repository repository, [
+    List<TaskEditAction> extra = const [],
+  ]) async {
+    final task = widget.task;
+    final (:put, :remove) = _updateSubTasks();
+
+    task.progress = put.isEmpty
+        ? null
+        : put.where((subTask) => subTask.done).length / put.length;
+
+    await repository.writeTask(task, [
+      PutSubTasks(put),
+      RemoveSubTasks(remove),
+      ...extra,
+    ]);
+  }
+
+  void _markAsDone(Repository repository) {
+    final task = widget.task;
+
+    switch (task) {
+      case UserTask(
+          :final startDate?,
+          :final endDate,
+          :final recurrence?,
+        ):
+        final newStart = _nextDate(recurrence, startDate);
+        task.startDate = newStart;
+        task.endDate = switch ((newStart, endDate)) {
+          (final newStart?, final endDate?) =>
+            newStart.add(endDate.difference(startDate)),
+          _ => null,
+        };
+
+        if (recurrence.count case final count?) {
+          task.recurrence =
+              count > 1 ? recurrence.copyWith(count: count - 1) : null;
+        }
+        break;
+      case UserTask(
+          :final endDate?,
+          :final recurrence?,
+        ):
+        final newEnd = _nextDate(recurrence, endDate);
+
+        task.endDate = newEnd;
+
+        if (recurrence.count case final count?) {
+          task.recurrence =
+              count > 1 ? recurrence.copyWith(count: count - 1) : null;
+        }
+        break;
+      default:
+        task.recurrence = null;
+        task.startDate = null;
+        task.endDate = null;
+        break;
+    }
+
+    for (final controller in _subTaskControllers) {
+      controller.subTask.done = false;
+    }
   }
 
   @override
@@ -326,13 +393,10 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
             child: ElevatedButton(
               onPressed: () async {
                 _applyChanges();
-                await _updateSubTasks();
-
-                if (widget.addToQueue) {
-                  await repository.addTaskToQueue(task);
-                } else {
-                  await repository.updateTask(task);
-                }
+                await _save(repository, [
+                  if (widget.addToQueue)
+                    PutTaskInQueue(QueueInsertionPosition.preferred),
+                ]);
                 if (!context.mounted) return;
                 context.pop();
               },
@@ -346,55 +410,12 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
               child: FilledButton(
                 onPressed: () async {
                   _applyChanges();
-                  task.reference = null;
+                  _markAsDone(repository);
 
-                  switch (task) {
-                    case UserTask(
-                        :final startDate?,
-                        :final endDate,
-                        :final recurrence?,
-                      ):
-                      final newStart = _nextDate(recurrence, startDate);
-                      task.startDate = newStart;
-                      task.endDate = switch ((newStart, endDate)) {
-                        (final newStart?, final endDate?) =>
-                          newStart.add(endDate.difference(startDate)),
-                        _ => null,
-                      };
+                  await _save(repository, [
+                    const RemoveTaskFromQueue(),
+                  ]);
 
-                      if (recurrence.count case final count?) {
-                        task.recurrence = count > 1
-                            ? recurrence.copyWith(count: count - 1)
-                            : null;
-                      }
-                      break;
-                    case UserTask(
-                        :final endDate?,
-                        :final recurrence?,
-                      ):
-                      final newEnd = _nextDate(recurrence, endDate);
-
-                      task.endDate = newEnd;
-
-                      if (recurrence.count case final count?) {
-                        task.recurrence = count > 1
-                            ? recurrence.copyWith(count: count - 1)
-                            : null;
-                      }
-                      break;
-                    default:
-                      task.recurrence = null;
-                      task.startDate = null;
-                      task.endDate = null;
-                      break;
-                  }
-
-                  for (final controller in _subTaskControllers) {
-                    controller.subTask.done = false;
-                  }
-
-                  await _updateSubTasks();
-                  await repository.updateTask(task);
                   if (!context.mounted) return;
                   context.pop();
                 },
@@ -408,8 +429,9 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
                 onPressed: () async {
                   _applyChanges();
 
-                  await _updateSubTasks();
-                  await repository.moveTaskToStartOfQueue(task);
+                  await _save(repository, [
+                    PutTaskInQueue(QueueInsertionPosition.start),
+                  ]);
 
                   if (!context.mounted) return;
                   context.pop();
@@ -424,8 +446,9 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
                 onPressed: () async {
                   _applyChanges();
 
-                  await _updateSubTasks();
-                  await repository.moveTaskToEndOfQueue(task);
+                  await _save(repository, [
+                    PutTaskInQueue(QueueInsertionPosition.end),
+                  ]);
 
                   if (!context.mounted) return;
                   context.pop();

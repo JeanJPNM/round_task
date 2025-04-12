@@ -282,9 +282,13 @@ Future<RecurrenceRule?> showRecurrencePicker(
 }) async {
   return await showModalBottomSheet<RecurrenceRule>(
     context: context,
+    isScrollControlled: true,
     builder: (context) {
+      final viewInsets = EdgeInsets.only(
+        bottom: MediaQuery.viewInsetsOf(context).bottom,
+      );
       return Padding(
-        padding: const EdgeInsets.all(15.0),
+        padding: const EdgeInsets.all(15.0) + viewInsets,
         child: RecurrencePicker(
           initialRecurrenceRule: initialRecurrenceRule,
         ),

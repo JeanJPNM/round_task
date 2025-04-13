@@ -139,6 +139,7 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
                   await repository.writeTask(widget.task, [
                     const RemoveTaskFromQueue(),
                   ]);
+                  setState(() {});
 
                   if (!context.mounted) return;
                   context.pop();
@@ -152,6 +153,7 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
                   await repository.writeTask(widget.task, [
                     PutTaskInQueue(QueueInsertionPosition.preferred),
                   ]);
+                  setState(() {});
 
                   if (!context.mounted) return;
                   context.pop();

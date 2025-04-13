@@ -317,6 +317,7 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
                       final rule = await showRecurrencePicker(
                         context,
                         initialRecurrenceRule: recurrenceRule,
+                        initialWeekDays: [startDate.weekday],
                       );
 
                       if (rule == null) return;

@@ -10,9 +10,14 @@ enum _EndOption {
 }
 
 class RecurrencePicker extends StatefulWidget {
-  const RecurrencePicker({super.key, this.initialRecurrenceRule});
+  const RecurrencePicker({
+    super.key,
+    this.initialRecurrenceRule,
+    this.initialWeekDays = const [],
+  });
 
   final RecurrenceRule? initialRecurrenceRule;
+  final List<int> initialWeekDays;
   @override
   State<RecurrencePicker> createState() => _RecurrencePickerState();
 }
@@ -51,6 +56,8 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
       weekSelection = _getWeekSelection(recurrenceRule.byWeekDays);
     } else {
       intervalController.text = "1";
+      weekSelection = _getWeekSelection(
+          widget.initialWeekDays.map(ByWeekDayEntry.new).toList());
     }
   }
 
@@ -286,6 +293,7 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
 Future<RecurrenceRule?> showRecurrencePicker(
   BuildContext context, {
   RecurrenceRule? initialRecurrenceRule,
+  List<int> initialWeekDays = const [],
 }) async {
   return await showModalBottomSheet<RecurrenceRule>(
     context: context,
@@ -298,6 +306,7 @@ Future<RecurrenceRule?> showRecurrencePicker(
         padding: const EdgeInsets.all(15.0) + viewInsets,
         child: RecurrencePicker(
           initialRecurrenceRule: initialRecurrenceRule,
+          initialWeekDays: initialWeekDays,
         ),
       );
     },

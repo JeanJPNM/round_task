@@ -232,6 +232,7 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
   Widget build(BuildContext context) {
     final task = widget.task;
     final repository = ref.watch(repositoryPod);
+    final tertiaryColor = Theme.of(context).colorScheme.tertiary;
 
     return Scaffold(
       appBar: AppBar(
@@ -349,14 +350,18 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
             children: _subTaskControllers
                 .whereNot((controller) => controller.removed)
                 .map(
-                  (controller) => _SubTaskEditor(
+                  (controller) => Dismissible(
                     key: ObjectKey(controller),
-                    controller: controller,
-                    onDelete: () {
-                      setState(() {
-                        controller.removed = true;
-                      });
+                    onDismissed: (direction) {
+                      setState(() => controller.removed = true);
                     },
+                    background: Container(color: tertiaryColor),
+                    child: _SubTaskEditor(
+                      controller: controller,
+                      onDelete: () {
+                        setState(() => controller.removed = true);
+                      },
+                    ),
                   ),
                 )
                 .toList(),

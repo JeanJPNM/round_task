@@ -207,7 +207,7 @@ class Repository {
     await isar.writeTxn(() async {
       final now = DateTime.now();
       final tasks = await isar.userTasks
-          .where()
+          .where(sort: Sort.desc)
           .autoInsertDateBetween(null, now, includeLower: false)
           .filter()
           .referenceIsNull()

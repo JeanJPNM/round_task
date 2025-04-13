@@ -115,6 +115,7 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
 
   @override
   Widget build(BuildContext context) {
+    final weekLetterStyle = Theme.of(context).textTheme.labelLarge;
     return IntrinsicWidth(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -173,14 +174,14 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
                       weekSelection[index] = !weekSelection[index];
                     });
                   },
-                  children: const [
-                    Text("D"),
-                    Text("S"),
-                    Text("T"),
-                    Text("Q"),
-                    Text("Q"),
-                    Text("S"),
-                    Text("S"),
+                  children: [
+                    Text("D", style: weekLetterStyle),
+                    Text("S", style: weekLetterStyle),
+                    Text("T", style: weekLetterStyle),
+                    Text("Q", style: weekLetterStyle),
+                    Text("Q", style: weekLetterStyle),
+                    Text("S", style: weekLetterStyle),
+                    Text("S", style: weekLetterStyle),
                   ],
                 ),
               ],

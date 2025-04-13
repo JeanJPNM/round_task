@@ -607,7 +607,6 @@ class _SubTaskController {
 
 class _SubTaskEditor extends StatefulWidget {
   const _SubTaskEditor({
-    super.key,
     required this.controller,
     required this.onDelete,
   });

@@ -53,11 +53,16 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
         _ => _EndOption.never,
       };
 
-      weekSelection = _getWeekSelection(recurrenceRule.byWeekDays);
+      weekSelection = _getWeekSelection(
+        recurrenceRule.byWeekDays.isNotEmpty
+            ? recurrenceRule.byWeekDays
+            : widget.initialWeekDays.map(ByWeekDayEntry.new),
+      );
     } else {
       intervalController.text = "1";
       weekSelection = _getWeekSelection(
-          widget.initialWeekDays.map(ByWeekDayEntry.new).toList());
+        widget.initialWeekDays.map(ByWeekDayEntry.new),
+      );
     }
   }
 
@@ -73,25 +78,21 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
     return entries;
   }
 
-  List<bool> _getWeekSelection(List<ByWeekDayEntry> entries) {
+  List<bool> _getWeekSelection(Iterable<ByWeekDayEntry> entries) {
     final selection = List.generate(7, (index) => false);
     for (final entry in entries) {
-      switch (entry.day) {
-        case DateTime.sunday:
-          selection[0] = true;
-        case DateTime.monday:
-          selection[1] = true;
-        case DateTime.tuesday:
-          selection[2] = true;
-        case DateTime.wednesday:
-          selection[3] = true;
-        case DateTime.thursday:
-          selection[4] = true;
-        case DateTime.friday:
-          selection[5] = true;
-        case DateTime.saturday:
-          selection[6] = true;
-      }
+      final index = switch (entry.day) {
+        DateTime.sunday => 0,
+        DateTime.monday => 1,
+        DateTime.tuesday => 2,
+        DateTime.wednesday => 3,
+        DateTime.thursday => 4,
+        DateTime.friday => 5,
+        DateTime.saturday => 6,
+        _ => null,
+      };
+      if (index == null) continue;
+      selection[index] = true;
     }
     return selection;
   }

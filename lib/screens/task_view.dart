@@ -522,6 +522,7 @@ class _DateTimePickerState extends State<DateTimePicker> {
 
   @override
   Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context).toLanguageTag();
     return ValueListenableBuilder(
       valueListenable: _controller,
       builder: (context, value, child) {
@@ -549,7 +550,7 @@ class _DateTimePickerState extends State<DateTimePicker> {
               },
               child: Text(switch (value) {
                 null => "Select date",
-                _ => DateFormat.yMMMMd("pt_BR").format(value),
+                _ => DateFormat.yMMMMEEEEd(locale).format(value),
               }),
             ),
             if (value != null) ...[
@@ -569,7 +570,7 @@ class _DateTimePickerState extends State<DateTimePicker> {
                     );
                   }
                 },
-                child: Text(DateFormat.jm("pt_BR").format(value)),
+                child: Text(DateFormat.jm(locale).format(value)),
               ),
               IconButton(
                 icon: const Icon(Icons.delete),

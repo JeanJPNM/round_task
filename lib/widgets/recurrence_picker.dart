@@ -117,6 +117,7 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
   @override
   Widget build(BuildContext context) {
     final weekLetterStyle = Theme.of(context).textTheme.labelLarge;
+    final locale = Localizations.localeOf(context).languageCode;
     return IntrinsicWidth(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -236,7 +237,8 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
                         }
                       },
                 child: Text(switch (endDate) {
-                  final endDate? => DateFormat.yMMMMd("pt_BR").format(endDate),
+                  final endDate? =>
+                    DateFormat.yMMMMEEEEd(locale).format(endDate),
                   null => "Selecione uma data",
                 }),
               ),

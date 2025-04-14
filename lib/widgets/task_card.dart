@@ -19,6 +19,7 @@ class _TaskCardState extends State<TaskCard> {
   @override
   Widget build(BuildContext context) {
     final task = widget.task;
+    final locale = Localizations.localeOf(context).toLanguageTag();
     // TODO: add quick actions: start, send to end of queue, archive, delete
     return Card.outlined(
       clipBehavior: Clip.antiAlias,
@@ -46,7 +47,9 @@ class _TaskCardState extends State<TaskCard> {
                       style: Theme.of(context).textTheme.labelMedium,
                     ),
                   if (task.endDate case final endDate?)
-                    Text(DateFormat.yMMMMd("pt_BR").add_jm().format(endDate))
+                    Text(
+                      DateFormat.yMMMMEEEEd(locale).add_jm().format(endDate),
+                    )
                 ],
               ),
             ),

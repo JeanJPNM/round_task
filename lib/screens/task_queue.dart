@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -74,7 +75,7 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
                     return SearchBar(
                       controller: controller,
                       focusNode: _searchFocusNode,
-                      hintText: "Search",
+                      hintText: context.tr("search"),
                       leading: const Icon(Icons.search),
                       onTapOutside: (event) {
                         _unfocusSearchBar();
@@ -119,8 +120,9 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
                       return queuedTasks.when(
                         loading: () =>
                             const Center(child: CircularProgressIndicator()),
-                        error: (error, stackTrace) =>
-                            const Center(child: Text("An error occurred.")),
+                        error: (error, stackTrace) => Center(
+                          child: Text(context.tr("general_error")),
+                        ),
                         data: (tasks) => ReorderableListView.builder(
                           key: const PageStorageKey("queuedTasks"),
                           padding: _listPadding,
@@ -160,8 +162,8 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
                           loading: () => const Center(
                             child: CircularProgressIndicator(),
                           ),
-                          error: (error, stackTrace) => const Center(
-                            child: Text("An error occurred."),
+                          error: (error, stackTrace) => Center(
+                            child: Text(context.tr("general_error")),
                           ),
                           data: (tasks) => ListView.builder(
                             key: const PageStorageKey("pendingTasks"),
@@ -198,8 +200,12 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
                     final queuedTasks = ref.watch(queuedTasksPod);
 
                     final label = switch (queuedTasks) {
-                      AsyncData(:final value) => "Queued (${value.length})",
-                      _ => "Queued",
+                      AsyncData(value: List(isNotEmpty: true, :final length)) =>
+                        context.tr(
+                          "queued.amount",
+                          args: [length.toString()],
+                        ),
+                      _ => context.tr("queued.none"),
                     };
 
                     return NavigationDestination(
@@ -213,8 +219,12 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
                     final pendingTasks = ref.watch(pendingTasksPod);
 
                     final label = switch (pendingTasks) {
-                      AsyncData(:final value) => "Pending (${value.length})",
-                      _ => "Pending",
+                      AsyncData(value: List(isNotEmpty: true, :final length)) =>
+                        context.tr(
+                          "pending.amount",
+                          args: [length.toString()],
+                        ),
+                      _ => context.tr("pending.none"),
                     };
 
                     return NavigationDestination(

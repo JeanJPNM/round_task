@@ -1,9 +1,9 @@
 import 'package:collection/collection.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import 'package:isar/isar.dart';
 import 'package:round_task/models/task.dart';
 import 'package:round_task/provider.dart';
@@ -134,7 +134,7 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
             if (reference != null)
               ListTile(
                 leading: const Icon(Icons.remove),
-                title: const Text("Remove from queue"),
+                title: Text(context.tr("remove_from_queue")),
                 onTap: () async {
                   await repository.writeTask(widget.task, [
                     const RemoveTaskFromQueue(),
@@ -148,7 +148,7 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
             if (reference == null)
               ListTile(
                 leading: const Icon(Icons.add),
-                title: const Text("Add to queue"),
+                title: Text(context.tr("add_to_queue")),
                 onTap: () async {
                   await repository.writeTask(widget.task, [
                     PutTaskInQueue(QueueInsertionPosition.preferred),
@@ -238,8 +238,9 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title:
-            Text(task.id == Isar.autoIncrement ? "Create task" : "Edit task"),
+        title: Text(context.tr(
+          task.id == Isar.autoIncrement ? "create_task" : "edit_task",
+        )),
         actions: [
           IconButton(
             onPressed: () async {
@@ -248,9 +249,9 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
               if (!context.mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: const Text("Task deleted"),
+                  content: Text(context.tr("task_deleted")),
                   action: SnackBarAction(
-                    label: "Undo",
+                    label: context.tr("undo"),
                     onPressed: () => _restoreTask(repository),
                   ),
                 ),
@@ -272,7 +273,7 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
         children: [
           TextField(
             controller: titleController,
-            decoration: const InputDecoration(labelText: "Title"),
+            decoration: InputDecoration(labelText: context.tr("title")),
             keyboardType: TextInputType.multiline,
             maxLines: null,
             textInputAction: TextInputAction.done,
@@ -282,14 +283,14 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
           ),
           TextField(
             controller: descriptionController,
-            decoration: const InputDecoration(labelText: "Description"),
+            decoration: InputDecoration(labelText: context.tr("description")),
             maxLines: null,
           ),
           ValueListenableBuilder(
             valueListenable: endDateController,
             builder: (context, endDate, child) {
               return DateTimePicker(
-                label: const Text("Start date"),
+                label: Text(context.tr("start_date")),
                 controller: startDateController,
                 lastDate: endDate,
               );
@@ -299,7 +300,7 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
             valueListenable: startDateController,
             builder: (context, startDate, child) {
               return DateTimePicker(
-                label: const Text("End date"),
+                label: Text(context.tr("end_date")),
                 controller: endDateController,
                 firstDate: startDate,
                 defaultHour: 23,
@@ -314,7 +315,7 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
 
               return Row(
                 children: [
-                  const Text("Recurrence"),
+                  Text(context.tr("recurrence")),
                   TextButton(
                     onPressed: () async {
                       final rule = await showRecurrencePicker(
@@ -328,9 +329,9 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
                         recurrenceRule = rule;
                       });
                     },
-                    child: Text(recurrenceRule == null
-                        ? "Add recurrence"
-                        : "Edit recurrence"),
+                    child: Text(context.tr(recurrenceRule == null
+                        ? "add_recurrence"
+                        : "edit_recurrence")),
                   ),
                   if (recurrenceRule != null)
                     IconButton(
@@ -386,7 +387,7 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
                 ));
               });
             },
-            child: const Text("Add subtask"),
+            child: Text(context.tr("add_subtask")),
           ),
           const SizedBox(height: 8),
           const Divider(),
@@ -408,7 +409,7 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
                 if (!context.mounted) return;
                 context.pop();
               },
-              child: const Text("Save"),
+              child: Text(context.tr("save")),
             ),
           ),
           if (task.reference != null) ...[
@@ -427,7 +428,7 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
                   if (!context.mounted) return;
                   context.pop();
                 },
-                child: const Text("Done"),
+                child: Text(context.tr("done")),
               ),
             ),
             const SizedBox(width: 8),
@@ -549,7 +550,7 @@ class _DateTimePickerState extends State<DateTimePicker> {
                 }
               },
               child: Text(switch (value) {
-                null => "Select date",
+                null => context.tr("select_date"),
                 _ => DateFormat.yMMMEd(locale).format(value),
               }),
             ),
@@ -727,14 +728,14 @@ class __SubTaskDialogState extends State<_SubTaskDialog> {
                   onPressed: () {
                     Navigator.of(context).pop();
                   },
-                  child: const Text("Cancel"),
+                  child: Text(context.tr("cancel")),
                 ),
                 const SizedBox(width: 8),
                 FilledButton(
                   onPressed: () {
                     Navigator.of(context).pop(controller.text.trim());
                   },
-                  child: const Text("Ok"),
+                  child: Text(context.tr("ok")),
                 ),
               ],
             )

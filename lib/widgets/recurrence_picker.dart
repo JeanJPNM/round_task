@@ -1,6 +1,6 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
 import 'package:rrule/rrule.dart';
 
 enum _EndOption {
@@ -125,13 +125,13 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Recurrence",
+            context.tr("recurrence"),
             style: Theme.of(context).textTheme.titleSmall,
           ),
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text("Repeat every"),
+              Text(context.tr("repeat_every")),
               const SizedBox(width: 10),
               SizedBox(
                 width: 40,
@@ -155,20 +155,29 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
                   });
                 },
                 dropdownMenuEntries: [
-                  const DropdownMenuEntry(value: Frequency.daily, label: "Dia"),
-                  const DropdownMenuEntry(
-                      value: Frequency.weekly, label: "Semana"),
-                  const DropdownMenuEntry(
-                      value: Frequency.monthly, label: "Mês"),
-                  const DropdownMenuEntry(
-                      value: Frequency.yearly, label: "Ano"),
+                  DropdownMenuEntry(
+                    value: Frequency.daily,
+                    label: context.tr("repeat_menu.day"),
+                  ),
+                  DropdownMenuEntry(
+                    value: Frequency.weekly,
+                    label: context.tr("repeat_menu.week"),
+                  ),
+                  DropdownMenuEntry(
+                    value: Frequency.monthly,
+                    label: context.tr("repeat_menu.month"),
+                  ),
+                  DropdownMenuEntry(
+                    value: Frequency.yearly,
+                    label: context.tr("repeat_menu.year"),
+                  ),
                 ],
               ),
             ],
           ),
           ...switch (frequency) {
             Frequency.weekly => [
-                const Text("Repetir"),
+                Text(context.tr("repeat")),
                 ToggleButtons(
                   isSelected: weekSelection,
                   onPressed: (index) {
@@ -177,13 +186,19 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
                     });
                   },
                   children: [
-                    Text("D", style: weekLetterStyle),
-                    Text("S", style: weekLetterStyle),
-                    Text("T", style: weekLetterStyle),
-                    Text("Q", style: weekLetterStyle),
-                    Text("Q", style: weekLetterStyle),
-                    Text("S", style: weekLetterStyle),
-                    Text("S", style: weekLetterStyle),
+                    for (final day in [
+                      "weekday_letter.sunday",
+                      "weekday_letter.monday",
+                      "weekday_letter.tuesday",
+                      "weekday_letter.wednesday",
+                      "weekday_letter.thursday",
+                      "weekday_letter.friday",
+                      "weekday_letter.saturday",
+                    ])
+                      Text(
+                        context.tr(day),
+                        style: weekLetterStyle,
+                      ),
                   ],
                 ),
               ],
@@ -192,7 +207,7 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
             _ => [],
           },
           Text(
-            "Termina em:",
+            context.tr("ends"),
             style: Theme.of(context).textTheme.titleSmall,
           ),
           Row(
@@ -205,7 +220,7 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
                   setState(() => endOption = value ?? _EndOption.never);
                 },
               ),
-              const Text("Nunca")
+              Text(context.tr("end_option.never"))
             ],
           ),
           Row(
@@ -218,7 +233,7 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
                   setState(() => endOption = value ?? _EndOption.never);
                 },
               ),
-              const Text("Em"),
+              Text(context.tr("end_option.on_date")),
               TextButton(
                 onPressed: endOption != _EndOption.onDate
                     ? null
@@ -238,7 +253,7 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
                       },
                 child: Text(switch (endDate) {
                   final endDate? => DateFormat.yMMMEd(locale).format(endDate),
-                  null => "Selecione uma data",
+                  null => context.tr("select_date"),
                 }),
               ),
             ],
@@ -253,7 +268,7 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
                   setState(() => endOption = value ?? _EndOption.never);
                 },
               ),
-              const Text("Após"),
+              Text(context.tr("end_option.after_first")),
               SizedBox(
                 width: 100,
                 child: TextField(
@@ -266,7 +281,7 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
                   ],
                 ),
               ),
-              const Text("ocorrências"),
+              Text(context.tr("end_option.after_second")),
             ],
           ),
           const SizedBox(height: 15),
@@ -277,13 +292,13 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
                 onPressed: () {
                   Navigator.of(context).pop();
                 },
-                child: const Text("Cancelar"),
+                child: Text(context.tr("cancel")),
               ),
               FilledButton(
                 onPressed: () {
                   Navigator.of(context).pop(_getRecurrenceRule());
                 },
-                child: const Text("Concluir"),
+                child: Text(context.tr("done")),
               ),
             ],
           ),

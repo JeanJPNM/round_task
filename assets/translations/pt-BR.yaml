@@ -1,0 +1,57 @@
+queued:
+  none: Na fila
+  amount: Na fila ({})
+
+pending:
+  none: Pendente
+  amount: Pendente ({})
+
+search: Buscar
+general_error: Ocorreu um erro.
+save: Salvar
+done: Concluir
+
+remove_from_queue: Remover da fila
+add_to_queue: Adicionar à fila
+create_task: Criar tarefa
+edit_task: Editar tarefa
+task_deleted: Tarefa excluída
+undo: Desfazer
+
+title: Título
+description: Descrição
+start_date: Data de início
+end_date: Data de término
+recurrence: Recorrência
+add_recurrence: Adicionar recorrência
+edit_recurrence: Editar recorrência
+add_subtask: Adicionar subtarefa
+
+
+select_date: Selecionar data
+repeat_every: Repetir a cada
+repeat: Repetir
+repeat_menu:
+  day: Dia
+  week: Semana
+  month: Mês
+  year: Ano
+
+weekday_letter:
+  sunday: D
+  monday: S
+  tuesday: T
+  wednesday: Q
+  thursday: Q
+  friday: S
+  saturday: S
+
+ends: 'Termina:'
+end_option:
+  never: Nunca
+  on_date: Em
+  after_first: Após
+  after_second: ocorrências
+
+cancel: Cancelar
+ok: Ok

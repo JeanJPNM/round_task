@@ -1,6 +1,7 @@
 import 'package:dynamic_color/dynamic_color.dart';
+import 'package:easy_localization/easy_localization.dart';
+import 'package:easy_localization_loader/easy_localization_loader.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -35,7 +36,20 @@ final _router = GoRouter(
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting();
-  runApp(const ProviderScope(child: MyApp()));
+
+  await EasyLocalization.ensureInitialized();
+  runApp(ProviderScope(
+    child: EasyLocalization(
+      supportedLocales: const [
+        Locale("en", "US"),
+        Locale("pt", "BR"),
+      ],
+      fallbackLocale: const Locale("en", "US"),
+      path: "assets/translations",
+      assetLoader: const YamlAssetLoader(),
+      child: const MyApp(),
+    ),
+  ));
 }
 
 class MyApp extends StatelessWidget {
@@ -64,15 +78,9 @@ class MyApp extends StatelessWidget {
           themeMode: ThemeMode.system,
           theme: ThemeData(colorScheme: lightScheme, useMaterial3: true),
           darkTheme: ThemeData(colorScheme: darkScheme, useMaterial3: true),
-          localizationsDelegates: const [
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          supportedLocales: const [
-            Locale("en", "US"),
-            Locale("pt", "BR"),
-          ],
+          localizationsDelegates: context.localizationDelegates,
+          supportedLocales: context.supportedLocales,
+          locale: context.locale,
         );
       },
     );

@@ -1,0 +1,57 @@
+queued:
+  none: Queued
+  amount: Queued ({})
+
+pending:
+  none: Pending
+  amount: Pending ({})
+
+search: Search
+general_error: An error occurred.
+save: Save
+done: Done
+
+remove_from_queue: Remove from queue
+add_to_queue: Add to queue
+create_task: Create task
+edit_task: Edit task
+task_deleted: Task deleted
+undo: Undo
+
+title: Title
+description: Description
+start_date: Start date
+end_date: End date
+recurrence: Recurrence
+add_recurrence: Add recurrence
+edit_recurrence: Edit recurrence
+add_subtask: Add subtask
+
+
+select_date: Select date
+repeat_every: Repeat every
+repeat: Repeat
+repeat_menu:
+  day: Dia
+  week: Semana
+  month: Mês
+  year: Ano
+
+weekday_letter:
+  sunday: S
+  monday: M
+  tuesday: T
+  wednesday: W
+  thursday: T
+  friday: F
+  saturday: S
+
+ends: 'Ends:'
+end_option:
+  never: Never
+  on_date: On
+  after_first: After
+  after_second: occurrences
+
+cancel: Cancel
+ok: Ok

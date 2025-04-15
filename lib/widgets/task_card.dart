@@ -48,7 +48,7 @@ class _TaskCardState extends State<TaskCard> {
                     ),
                   if (task.endDate case final endDate?)
                     Text(
-                      DateFormat.yMMMMEEEEd(locale).add_jm().format(endDate),
+                      DateFormat.yMMMEd(locale).add_jm().format(endDate),
                     )
                 ],
               ),

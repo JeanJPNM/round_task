@@ -237,8 +237,7 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
                         }
                       },
                 child: Text(switch (endDate) {
-                  final endDate? =>
-                    DateFormat.yMMMMEEEEd(locale).format(endDate),
+                  final endDate? => DateFormat.yMMMEd(locale).format(endDate),
                   null => "Selecione uma data",
                 }),
               ),

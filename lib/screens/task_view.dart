@@ -550,7 +550,7 @@ class _DateTimePickerState extends State<DateTimePicker> {
               },
               child: Text(switch (value) {
                 null => "Select date",
-                _ => DateFormat.yMMMMEEEEd(locale).format(value),
+                _ => DateFormat.yMMMEd(locale).format(value),
               }),
             ),
             if (value != null) ...[

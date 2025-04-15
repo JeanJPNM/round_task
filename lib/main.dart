@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:round_task/custom_colors.dart';
 import 'package:round_task/screens/task_queue.dart';
 import 'package:round_task/screens/task_view.dart';
 
@@ -72,12 +73,23 @@ class MyApp extends StatelessWidget {
           );
         }
 
+        final lightCustomColors = CustomColors.light.harmonized(lightScheme);
+        final darkCustomColors = CustomColors.dark.harmonized(darkScheme);
+
         return MaterialApp.router(
           routerConfig: _router,
           title: 'Round Task',
           themeMode: ThemeMode.system,
-          theme: ThemeData(colorScheme: lightScheme, useMaterial3: true),
-          darkTheme: ThemeData(colorScheme: darkScheme, useMaterial3: true),
+          theme: ThemeData(
+            colorScheme: lightScheme,
+            useMaterial3: true,
+            extensions: [lightCustomColors],
+          ),
+          darkTheme: ThemeData(
+            colorScheme: darkScheme,
+            useMaterial3: true,
+            extensions: [darkCustomColors],
+          ),
           localizationsDelegates: context.localizationDelegates,
           supportedLocales: context.supportedLocales,
           locale: context.locale,

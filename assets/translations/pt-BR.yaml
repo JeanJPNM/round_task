@@ -16,6 +16,7 @@ add_to_queue: Adicionar à fila
 create_task: Criar tarefa
 edit_task: Editar tarefa
 task_deleted: Tarefa excluída
+subtask_deleted: Subtarefa excluída
 undo: Desfazer
 
 title: Título

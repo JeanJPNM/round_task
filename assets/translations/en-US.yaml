@@ -16,6 +16,7 @@ add_to_queue: Add to queue
 create_task: Create task
 edit_task: Edit task
 task_deleted: Task deleted
+subtask_deleted: Subtask deleted
 undo: Undo
 
 title: Title

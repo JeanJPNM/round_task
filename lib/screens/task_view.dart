@@ -27,6 +27,7 @@ class TaskViewScreen extends ConsumerStatefulWidget {
 }
 
 class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
+  final scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
   final titleController = TextEditingController(),
       descriptionController = TextEditingController();
 
@@ -34,6 +35,9 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
   final endDateController = DateTimeEditingController();
 
   late final List<SubTask> _originalSubTasks;
+  late ScaffoldMessengerState parentScaffoldMessenger;
+  ScaffoldMessengerState get childScaffoldMessenger =>
+      scaffoldMessengerKey.currentState!;
   List<_SubTaskController> _subTaskControllers = const [];
 
   RecurrenceRule? recurrenceRule;
@@ -61,6 +65,12 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
 
       startDateController.value = DateTime(value.year, value.month, value.day);
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    parentScaffoldMessenger = ScaffoldMessenger.of(context);
   }
 
   @override
@@ -230,243 +240,260 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
     }
   }
 
+  void _removeSubTask(_SubTaskController controller) {
+    setState(() {
+      controller.removed = true;
+    });
+
+    childScaffoldMessenger.showSnackBar(SnackBar(
+      content: Text(context.tr('subtask_deleted')),
+      action: SnackBarAction(
+        label: context.tr('undo'),
+        onPressed: () {
+          setState(() {
+            controller.removed = false;
+          });
+        },
+      ),
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     final task = widget.task;
     final repository = ref.watch(repositoryPod);
     final tertiaryColor = Theme.of(context).colorScheme.tertiary;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(context.tr(
-          task.id == Isar.autoIncrement ? "create_task" : "edit_task",
-        )),
-        actions: [
-          IconButton(
-            onPressed: () async {
-              await repository.deleteTask(task);
-
-              if (!context.mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(context.tr("task_deleted")),
-                  action: SnackBarAction(
-                    label: context.tr("undo"),
-                    onPressed: () => _restoreTask(repository),
-                  ),
-                ),
-              );
-              context.pop();
-            },
-            icon: const Icon(Icons.delete),
-          ),
-          IconButton(
-            onPressed: () {
-              showMenu(repository);
-            },
-            icon: const Icon(Icons.more_vert),
-          )
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(8.0),
-        children: [
-          TextField(
-            controller: titleController,
-            decoration: InputDecoration(labelText: context.tr("title")),
-            keyboardType: TextInputType.multiline,
-            maxLines: null,
-            textInputAction: TextInputAction.done,
-            inputFormatters: [
-              FilteringTextInputFormatter.singleLineFormatter,
-            ],
-          ),
-          TextField(
-            controller: descriptionController,
-            decoration: InputDecoration(labelText: context.tr("description")),
-            maxLines: null,
-          ),
-          ValueListenableBuilder(
-            valueListenable: endDateController,
-            builder: (context, endDate, child) {
-              return DateTimePicker(
-                label: Text(context.tr("start_date")),
-                controller: startDateController,
-                lastDate: endDate,
-              );
-            },
-          ),
-          ValueListenableBuilder(
-            valueListenable: startDateController,
-            builder: (context, startDate, child) {
-              return DateTimePicker(
-                label: Text(context.tr("end_date")),
-                controller: endDateController,
-                firstDate: startDate,
-                defaultHour: 23,
-                defaultMinute: 59,
-              );
-            },
-          ),
-          ValueListenableBuilder(
-            valueListenable: startDateController,
-            builder: (context, startDate, child) {
-              if (startDate == null) return const SizedBox.shrink();
-
-              return Row(
-                children: [
-                  Text(context.tr("recurrence")),
-                  TextButton(
-                    onPressed: () async {
-                      final rule = await showRecurrencePicker(
-                        context,
-                        initialRecurrenceRule: recurrenceRule,
-                        initialWeekDays: [startDate.weekday],
-                      );
-
-                      if (rule == null) return;
-                      setState(() {
-                        recurrenceRule = rule;
-                      });
-                    },
-                    child: Text(context.tr(recurrenceRule == null
-                        ? "add_recurrence"
-                        : "edit_recurrence")),
-                  ),
-                  if (recurrenceRule != null)
-                    IconButton(
-                      onPressed: () {
-                        setState(() {
-                          recurrenceRule = null;
-                        });
-                      },
-                      icon: const Icon(Icons.delete),
-                    ),
-                ],
-              );
-            },
-          ),
-          const Divider(),
-          ReorderableListView(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            children: _subTaskControllers
-                .whereNot((controller) => controller.removed)
-                .map(
-                  (controller) => Dismissible(
-                    key: ObjectKey(controller),
-                    onDismissed: (direction) {
-                      setState(() => controller.removed = true);
-                    },
-                    background: Container(color: tertiaryColor),
-                    child: _SubTaskEditor(
-                      controller: controller,
-                      onDelete: () {
-                        setState(() => controller.removed = true);
-                      },
-                    ),
-                  ),
-                )
-                .toList(),
-            onReorder: (oldIndex, newIndex) {
-              if (oldIndex < newIndex) {
-                newIndex--;
-              }
-
-              setState(() {
-                final controller = _subTaskControllers.removeAt(oldIndex);
-                _subTaskControllers.insert(newIndex, controller);
-              });
-            },
-          ),
-          TextButton(
-            onPressed: () {
-              setState(() {
-                _subTaskControllers.add(_SubTaskController(
-                  SubTask(name: "", done: false, reference: 0),
-                ));
-              });
-            },
-            child: Text(context.tr("add_subtask")),
-          ),
-          const SizedBox(height: 8),
-          const Divider(),
-          const SizedBox(height: 8),
-        ],
-      ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(8),
-        child: Row(children: [
-          Expanded(
-            flex: 2,
-            child: ElevatedButton(
+    return ScaffoldMessenger(
+      key: scaffoldMessengerKey,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(context.tr(
+            task.id == Isar.autoIncrement ? "create_task" : "edit_task",
+          )),
+          actions: [
+            IconButton(
               onPressed: () async {
-                _applyChanges();
-                await _save(repository, [
-                  if (widget.addToQueue)
-                    PutTaskInQueue(QueueInsertionPosition.preferred),
-                ]);
+                await repository.deleteTask(task);
+
                 if (!context.mounted) return;
+                parentScaffoldMessenger.showSnackBar(
+                  SnackBar(
+                    content: Text(context.tr("task_deleted")),
+                    action: SnackBarAction(
+                      label: context.tr("undo"),
+                      onPressed: () => _restoreTask(repository),
+                    ),
+                  ),
+                );
                 context.pop();
               },
-              child: Text(context.tr("save")),
+              icon: const Icon(Icons.delete),
             ),
-          ),
-          if (task.reference != null) ...[
-            const SizedBox(width: 8),
+            IconButton(
+              onPressed: () {
+                showMenu(repository);
+              },
+              icon: const Icon(Icons.more_vert),
+            )
+          ],
+        ),
+        body: ListView(
+          padding: const EdgeInsets.all(8.0),
+          children: [
+            TextField(
+              controller: titleController,
+              decoration: InputDecoration(labelText: context.tr("title")),
+              keyboardType: TextInputType.multiline,
+              maxLines: null,
+              textInputAction: TextInputAction.done,
+              inputFormatters: [
+                FilteringTextInputFormatter.singleLineFormatter,
+              ],
+            ),
+            TextField(
+              controller: descriptionController,
+              decoration: InputDecoration(labelText: context.tr("description")),
+              maxLines: null,
+            ),
+            ValueListenableBuilder(
+              valueListenable: endDateController,
+              builder: (context, endDate, child) {
+                return DateTimePicker(
+                  label: Text(context.tr("start_date")),
+                  controller: startDateController,
+                  lastDate: endDate,
+                );
+              },
+            ),
+            ValueListenableBuilder(
+              valueListenable: startDateController,
+              builder: (context, startDate, child) {
+                return DateTimePicker(
+                  label: Text(context.tr("end_date")),
+                  controller: endDateController,
+                  firstDate: startDate,
+                  defaultHour: 23,
+                  defaultMinute: 59,
+                );
+              },
+            ),
+            ValueListenableBuilder(
+              valueListenable: startDateController,
+              builder: (context, startDate, child) {
+                if (startDate == null) return const SizedBox.shrink();
+
+                return Row(
+                  children: [
+                    Text(context.tr("recurrence")),
+                    TextButton(
+                      onPressed: () async {
+                        final rule = await showRecurrencePicker(
+                          context,
+                          initialRecurrenceRule: recurrenceRule,
+                          initialWeekDays: [startDate.weekday],
+                        );
+
+                        if (rule == null) return;
+                        setState(() {
+                          recurrenceRule = rule;
+                        });
+                      },
+                      child: Text(context.tr(recurrenceRule == null
+                          ? "add_recurrence"
+                          : "edit_recurrence")),
+                    ),
+                    if (recurrenceRule != null)
+                      IconButton(
+                        onPressed: () {
+                          setState(() {
+                            recurrenceRule = null;
+                          });
+                        },
+                        icon: const Icon(Icons.delete),
+                      ),
+                  ],
+                );
+              },
+            ),
+            const Divider(),
+            ReorderableListView(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              children: _subTaskControllers
+                  .whereNot((controller) => controller.removed)
+                  .map(
+                    (controller) => Dismissible(
+                      key: ObjectKey(controller),
+                      onDismissed: (direction) => _removeSubTask(controller),
+                      background: Container(color: tertiaryColor),
+                      child: _SubTaskEditor(
+                        controller: controller,
+                        onDelete: () => _removeSubTask(controller),
+                      ),
+                    ),
+                  )
+                  .toList(),
+              onReorder: (oldIndex, newIndex) {
+                if (oldIndex < newIndex) {
+                  newIndex--;
+                }
+
+                setState(() {
+                  final controller = _subTaskControllers.removeAt(oldIndex);
+                  _subTaskControllers.insert(newIndex, controller);
+                });
+              },
+            ),
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  _subTaskControllers.add(_SubTaskController(
+                    SubTask(name: "", done: false, reference: 0),
+                  ));
+                });
+              },
+              child: Text(context.tr("add_subtask")),
+            ),
+            const SizedBox(height: 8),
+            const Divider(),
+            const SizedBox(height: 8),
+          ],
+        ),
+        bottomNavigationBar: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Row(children: [
             Expanded(
               flex: 2,
-              child: FilledButton(
+              child: ElevatedButton(
                 onPressed: () async {
                   _applyChanges();
-                  _markAsDone(repository);
-
                   await _save(repository, [
-                    const RemoveTaskFromQueue(),
+                    if (widget.addToQueue)
+                      PutTaskInQueue(QueueInsertionPosition.preferred),
                   ]);
-
                   if (!context.mounted) return;
                   context.pop();
                 },
-                child: Text(context.tr("done")),
+                child: Text(context.tr("save")),
               ),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              flex: 1,
-              child: IconButton.outlined(
-                onPressed: () async {
-                  _applyChanges();
+            if (task.reference != null) ...[
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 2,
+                child: FilledButton(
+                  onPressed: () async {
+                    _applyChanges();
+                    _markAsDone(repository);
 
-                  await _save(repository, [
-                    PutTaskInQueue(QueueInsertionPosition.start),
-                  ]);
+                    await _save(repository, [
+                      const RemoveTaskFromQueue(),
+                    ]);
 
-                  if (!context.mounted) return;
-                  context.pop();
-                },
-                icon: const Icon(Icons.arrow_upward),
+                    if (!context.mounted) return;
+                    context.pop();
+                  },
+                  child: Text(context.tr("done")),
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              flex: 1,
-              child: IconButton.outlined(
-                onPressed: () async {
-                  _applyChanges();
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 1,
+                child: IconButton.outlined(
+                  onPressed: () async {
+                    _applyChanges();
 
-                  await _save(repository, [
-                    PutTaskInQueue(QueueInsertionPosition.end),
-                  ]);
+                    await _save(repository, [
+                      PutTaskInQueue(QueueInsertionPosition.start),
+                    ]);
 
-                  if (!context.mounted) return;
-                  context.pop();
-                },
-                icon: const Icon(Icons.arrow_downward),
+                    if (!context.mounted) return;
+                    context.pop();
+                  },
+                  icon: const Icon(Icons.arrow_upward),
+                ),
               ),
-            ),
-          ],
-        ]),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 1,
+                child: IconButton.outlined(
+                  onPressed: () async {
+                    _applyChanges();
+
+                    await _save(repository, [
+                      PutTaskInQueue(QueueInsertionPosition.end),
+                    ]);
+
+                    if (!context.mounted) return;
+                    context.pop();
+                  },
+                  icon: const Icon(Icons.arrow_downward),
+                ),
+              ),
+            ],
+          ]),
+        ),
       ),
     );
   }

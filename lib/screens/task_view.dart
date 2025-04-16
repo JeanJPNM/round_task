@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:isar/isar.dart';
+import 'package:round_task/custom_colors.dart';
 import 'package:round_task/models/task.dart';
 import 'package:round_task/provider.dart';
 import 'package:round_task/widgets/recurrence_picker.dart';
@@ -262,7 +263,8 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
   Widget build(BuildContext context) {
     final task = widget.task;
     final repository = ref.watch(repositoryPod);
-    final tertiaryColor = Theme.of(context).colorScheme.tertiary;
+    final deleteSurface =
+        Theme.of(context).extension<CustomColors>()!.deleteSurface;
 
     return ScaffoldMessenger(
       key: scaffoldMessengerKey,
@@ -387,7 +389,7 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
                     (controller) => Dismissible(
                       key: ObjectKey(controller),
                       onDismissed: (direction) => _removeSubTask(controller),
-                      background: Container(color: tertiaryColor),
+                      background: Container(color: deleteSurface),
                       child: _SubTaskEditor(
                         controller: controller,
                         onDelete: () => _removeSubTask(controller),

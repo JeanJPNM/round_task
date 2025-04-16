@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:round_task/custom_colors.dart';
 import 'package:round_task/models/task.dart';
+import 'package:round_task/widgets/animated_progress_bar.dart';
 
 class TaskCard extends StatefulWidget {
   const TaskCard({
@@ -82,7 +83,11 @@ class _TaskCardState extends State<TaskCard> {
               ),
             ),
             if (task.progress case final progress?)
-              LinearProgressIndicator(value: progress)
+              AnimatedProgressBar(
+                value: progress,
+                duration: const Duration(milliseconds: 500),
+                curve: Curves.easeInOut,
+              )
           ],
         ),
       ),

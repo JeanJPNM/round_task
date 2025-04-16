@@ -343,7 +343,8 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
               builder: (context, startDate, child) {
                 if (startDate == null) return const SizedBox.shrink();
 
-                return Row(
+                return Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(context.tr("recurrence")),
                     TextButton(
@@ -554,59 +555,65 @@ class _DateTimePickerState extends State<DateTimePicker> {
     return ValueListenableBuilder(
       valueListenable: _controller,
       builder: (context, value, child) {
-        return Row(
+        return Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             widget.label,
-            TextButton(
-              onPressed: () async {
-                final date = await showDatePicker(
-                  context: context,
-                  initialDate: value,
-                  firstDate: widget.firstDate,
-                  lastDate: widget.lastDate,
-                );
-
-                if (date != null) {
-                  _controller.value = DateTime(
-                    date.year,
-                    date.month,
-                    date.day,
-                    value?.hour ?? widget.defaultHour,
-                    value?.minute ?? widget.defaultMinute,
-                  );
-                }
-              },
-              child: Text(switch (value) {
-                null => context.tr("select_date"),
-                _ => DateFormat.yMMMEd(locale).format(value),
-              }),
-            ),
-            if (value != null) ...[
-              TextButton(
-                onPressed: () async {
-                  final time = await showTimePicker(
-                    context: context,
-                    initialTime: TimeOfDay.fromDateTime(value),
-                  );
-                  if (time != null) {
-                    _controller.value = DateTime(
-                      value.year,
-                      value.month,
-                      value.day,
-                      time.hour,
-                      time.minute,
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                TextButton(
+                  onPressed: () async {
+                    final date = await showDatePicker(
+                      context: context,
+                      initialDate: value,
+                      firstDate: widget.firstDate,
+                      lastDate: widget.lastDate,
                     );
-                  }
-                },
-                child: Text(DateFormat.jm(locale).format(value)),
-              ),
-              IconButton(
-                icon: const Icon(Icons.delete),
-                onPressed: () {
-                  _controller.value = null;
-                },
-              ),
-            ],
+
+                    if (date != null) {
+                      _controller.value = DateTime(
+                        date.year,
+                        date.month,
+                        date.day,
+                        value?.hour ?? widget.defaultHour,
+                        value?.minute ?? widget.defaultMinute,
+                      );
+                    }
+                  },
+                  child: Text(switch (value) {
+                    null => context.tr("select_date"),
+                    _ => DateFormat.yMMMEd(locale).format(value),
+                  }),
+                ),
+                if (value != null) ...[
+                  TextButton(
+                    onPressed: () async {
+                      final time = await showTimePicker(
+                        context: context,
+                        initialTime: TimeOfDay.fromDateTime(value),
+                      );
+                      if (time != null) {
+                        _controller.value = DateTime(
+                          value.year,
+                          value.month,
+                          value.day,
+                          time.hour,
+                          time.minute,
+                        );
+                      }
+                    },
+                    child: Text(DateFormat.jm(locale).format(value)),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete),
+                    onPressed: () {
+                      _controller.value = null;
+                    },
+                  ),
+                ],
+              ],
+            ),
           ],
         );
       },

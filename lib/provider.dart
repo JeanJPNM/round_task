@@ -40,9 +40,7 @@ class AutomaticTaskQueuer {
   Timer? _timer;
 
   Future<void> init() async {
-    await repository.addScheduledTasks();
-    value = await repository.getNextPendingTaskDate();
-    return;
+    await _runUpdate();
   }
 
   void tryUpdate(DateTime? date) {
@@ -56,21 +54,27 @@ class AutomaticTaskQueuer {
   DateTime? get value => _value;
   set value(DateTime? date) {
     _value = date;
-    _updateTimer(date);
+
+    if (date?.isBefore(DateTime.now()) ?? false) {
+      _runUpdate();
+    }
   }
 
-  void _updateTimer(DateTime? date) {
-    if (date == null) return;
+  // we check for pending tasks every 5 seconds
+  // because a fixed timer to the next task
+  // can be delayed if the app is put in the background
+  // and reopened later
+  Future<void> _runUpdate() async {
+    _timer?.cancel();
 
     final now = DateTime.now();
-    var duration = date.difference(now);
-    if (duration.isNegative) duration = Duration.zero;
 
-    _timer?.cancel();
-    _timer = Timer(duration, () async {
+    if (value?.isBefore(now) ?? false) {
       await repository.addScheduledTasks();
       value = await repository.getNextPendingTaskDate();
-    });
+    }
+
+    _timer = Timer(const Duration(seconds: 5), _runUpdate);
   }
 
   void dispose() {

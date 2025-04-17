@@ -66,15 +66,18 @@ class AutomaticTaskQueuer {
   // and reopened later
   Future<void> _runUpdate({bool force = false}) async {
     _timer?.cancel();
+    const duration = Duration(seconds: 5);
 
     final now = DateTime.now();
 
     if (value?.isBefore(now) ?? force) {
       await repository.addScheduledTasks();
-      value = await repository.getNextPendingTaskDate();
+      final date = await repository.getNextPendingTaskDate();
+      _timer = Timer(duration, _runUpdate);
+      value = date;
+    } else {
+      _timer = Timer(duration, _runUpdate);
     }
-
-    _timer = Timer(const Duration(seconds: 5), _runUpdate);
   }
 
   void dispose() {

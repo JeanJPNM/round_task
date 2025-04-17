@@ -40,7 +40,7 @@ class AutomaticTaskQueuer {
   Timer? _timer;
 
   Future<void> init() async {
-    await _runUpdate();
+    await _runUpdate(force: true);
   }
 
   void tryUpdate(DateTime? date) {
@@ -64,12 +64,12 @@ class AutomaticTaskQueuer {
   // because a fixed timer to the next task
   // can be delayed if the app is put in the background
   // and reopened later
-  Future<void> _runUpdate() async {
+  Future<void> _runUpdate({bool force = false}) async {
     _timer?.cancel();
 
     final now = DateTime.now();
 
-    if (value?.isBefore(now) ?? false) {
+    if (value?.isBefore(now) ?? force) {
       await repository.addScheduledTasks();
       value = await repository.getNextPendingTaskDate();
     }

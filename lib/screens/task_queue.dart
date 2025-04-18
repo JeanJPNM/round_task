@@ -131,10 +131,6 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
                           items: tasks,
                           isSameItem: (a, b) => a.id == b.id,
                           onReorder: (oldIndex, newIndex) async {
-                            if (oldIndex < newIndex) {
-                              newIndex--;
-                            }
-
                             // modifying the list directly is a big no-no
                             // but this is kind of fine because
                             // a new list is produced a few milliseconds later

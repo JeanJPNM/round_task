@@ -15,7 +15,7 @@ class TaskCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final locale = Localizations.localeOf(context).toLanguageTag();
+    late final locale = Localizations.localeOf(context).toLanguageTag();
     late final customColors = Theme.of(context).extension<CustomColors>()!;
     final ColorScheme(:outlineVariant, :surfaceContainerLow) =
         ColorScheme.of(context);

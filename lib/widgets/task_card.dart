@@ -79,7 +79,7 @@ class TaskCard extends StatelessWidget {
             if (task.progress case final progress?)
               AnimatedProgressBar(
                 value: progress,
-                duration: const Duration(milliseconds: 500),
+                duration: const Duration(milliseconds: 750),
                 curve: Curves.easeInOut,
               )
           ],

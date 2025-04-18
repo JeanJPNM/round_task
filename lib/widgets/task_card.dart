@@ -5,7 +5,7 @@ import 'package:round_task/custom_colors.dart';
 import 'package:round_task/models/task.dart';
 import 'package:round_task/widgets/animated_progress_bar.dart';
 
-class TaskCard extends StatefulWidget {
+class TaskCard extends StatelessWidget {
   const TaskCard({
     super.key,
     required this.task,
@@ -14,13 +14,7 @@ class TaskCard extends StatefulWidget {
   final UserTask task;
 
   @override
-  State<TaskCard> createState() => _TaskCardState();
-}
-
-class _TaskCardState extends State<TaskCard> {
-  @override
   Widget build(BuildContext context) {
-    final task = widget.task;
     final locale = Localizations.localeOf(context).toLanguageTag();
     late final customColors = Theme.of(context).extension<CustomColors>()!;
     final ColorScheme(:outlineVariant, :surfaceContainerLow) =
@@ -54,7 +48,7 @@ class _TaskCardState extends State<TaskCard> {
       color: backgroundColor,
       child: InkWell(
         onTap: () {
-          context.push("/task", extra: (widget.task, false));
+          context.push("/task", extra: (task, false));
         },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

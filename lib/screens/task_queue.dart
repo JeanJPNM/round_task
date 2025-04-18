@@ -1,3 +1,4 @@
+import 'package:animated_reorderable_list/animated_reorderable_list.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -123,11 +124,12 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
                         error: (error, stackTrace) => Center(
                           child: Text(context.tr("general_error")),
                         ),
-                        data: (tasks) => ReorderableListView.builder(
+                        data: (tasks) => AnimatedReorderableListView(
                           key: const PageStorageKey("queuedTasks"),
                           padding: _listPadding,
                           shrinkWrap: true,
-                          itemCount: tasks.length,
+                          items: tasks,
+                          isSameItem: (a, b) => a.id == b.id,
                           onReorder: (oldIndex, newIndex) async {
                             if (oldIndex < newIndex) {
                               newIndex--;
@@ -165,15 +167,24 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
                           error: (error, stackTrace) => Center(
                             child: Text(context.tr("general_error")),
                           ),
-                          data: (tasks) => ListView.builder(
+                          data: (tasks) => AnimatedReorderableListView(
                             key: const PageStorageKey("pendingTasks"),
                             padding: _listPadding,
                             shrinkWrap: true,
-                            itemCount: tasks.length,
+                            items: tasks,
+                            isSameItem: (a, b) => a.id == b.id,
+                            onReorder: (oldIndex, newIndex) {},
+                            nonDraggableItems: tasks,
                             itemBuilder: (context, index) {
                               final task = tasks[index];
-                              return TaskCard(
-                                  key: ValueKey(task.id), task: task);
+                              return SizedBox(
+                                key: ValueKey(task.id),
+                                width: double.infinity,
+                                child: TaskCard(
+                                  key: ValueKey(task.id),
+                                  task: task,
+                                ),
+                              );
                             },
                           ),
                         );

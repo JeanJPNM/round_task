@@ -11,6 +11,9 @@ general_error: An error occurred.
 save: Save
 done: Done
 
+task_card_start: 'Start: {}'
+task_card_end: 'End: {}'
+
 remove_from_queue: Remove from queue
 add_to_queue: Add to queue
 create_task: Create task

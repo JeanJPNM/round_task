@@ -1,6 +1,6 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import 'package:round_task/custom_colors.dart';
 import 'package:round_task/models/task.dart';
 import 'package:round_task/widgets/animated_progress_bar.dart';
@@ -16,6 +16,7 @@ class TaskCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     late final locale = Localizations.localeOf(context).toLanguageTag();
+    late final dateFormatter = DateFormat.yMMMEd(locale).add_jm();
     late final customColors = Theme.of(context).extension<CustomColors>()!;
     final ColorScheme(:outlineVariant, :surfaceContainerLow) =
         ColorScheme.of(context);
@@ -69,10 +70,19 @@ class TaskCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.labelMedium,
                     ),
-                  if (task.endDate case final endDate?)
+                  if (task case UserTask(:final endDate?, reference: _?))
                     Text(
-                      DateFormat.yMMMEd(locale).add_jm().format(endDate),
+                      context.tr("task_card_end", args: [
+                        dateFormatter.format(endDate),
+                      ]),
                     )
+                  else if (task
+                      case UserTask(:final autoInsertDate?, reference: null))
+                    Text(
+                      context.tr("task_card_start", args: [
+                        dateFormatter.format(autoInsertDate),
+                      ]),
+                    ),
                 ],
               ),
             ),

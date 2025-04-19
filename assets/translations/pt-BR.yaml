@@ -11,6 +11,9 @@ general_error: Ocorreu um erro.
 save: Salvar
 done: Concluir
 
+task_card_start: 'Início: {}'
+task_card_end: 'Término: {}'
+
 remove_from_queue: Remover da fila
 add_to_queue: Adicionar à fila
 create_task: Criar tarefa

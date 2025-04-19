@@ -13,10 +13,23 @@ class TaskCard extends StatelessWidget {
 
   final UserTask task;
 
+  String _formatDate(String locale, DateTime now, DateTime date) {
+    if (now.year != date.year) {
+      return DateFormat.yMMMEd(locale).add_jm().format(date);
+    }
+    if (now.month != date.month) {
+      return DateFormat.MMMEd(locale).add_jm().format(date);
+    }
+    if (now.day != date.day) {
+      return DateFormat("E d,", locale).add_jm().format(date);
+    }
+
+    return DateFormat.jm(locale).format(date);
+  }
+
   @override
   Widget build(BuildContext context) {
     late final locale = Localizations.localeOf(context).toLanguageTag();
-    late final dateFormatter = DateFormat.yMMMEd(locale).add_jm();
     late final customColors = Theme.of(context).extension<CustomColors>()!;
     final ColorScheme(:outlineVariant, :surfaceContainerLow) =
         ColorScheme.of(context);
@@ -73,14 +86,14 @@ class TaskCard extends StatelessWidget {
                   if (task case UserTask(:final endDate?, reference: _?))
                     Text(
                       context.tr("task_card_end", args: [
-                        dateFormatter.format(endDate),
+                        _formatDate(locale, now, endDate),
                       ]),
                     )
                   else if (task
                       case UserTask(:final autoInsertDate?, reference: null))
                     Text(
                       context.tr("task_card_start", args: [
-                        dateFormatter.format(autoInsertDate),
+                        _formatDate(locale, now, autoInsertDate),
                       ]),
                     ),
                 ],

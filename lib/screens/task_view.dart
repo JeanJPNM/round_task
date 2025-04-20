@@ -35,6 +35,9 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
   final startDateController = DateTimeEditingController();
   final endDateController = DateTimeEditingController();
 
+  QueueInsertionPosition? queuePosition;
+  bool lockTaskInQueue = false;
+
   late final List<SubTask> _originalSubTasks;
   late ScaffoldMessengerState parentScaffoldMessenger;
   ScaffoldMessengerState get childScaffoldMessenger =>
@@ -54,6 +57,10 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
     startDateController.value = task.startDate;
     endDateController.value = task.endDate;
     recurrenceRule = task.recurrence;
+    queuePosition = task.reference != null || widget.addToQueue
+        ? QueueInsertionPosition.preferred
+        : null;
+    lockTaskInQueue = task.autoInsertDate?.isBefore(DateTime.now()) ?? false;
 
     _subTaskControllers = _originalSubTasks
         .map((subTask) => _SubTaskController(subTask))
@@ -133,47 +140,6 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
     await repository.writeTask(task, [
       PutSubTasks(_originalSubTasks),
     ]);
-  }
-
-  void showMenu(Repository repository) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        final reference = widget.task.reference;
-        return Column(
-          children: [
-            if (reference != null)
-              ListTile(
-                leading: const Icon(Icons.remove),
-                title: Text(context.tr("remove_from_queue")),
-                onTap: () async {
-                  await repository.writeTask(widget.task, [
-                    const RemoveTaskFromQueue(),
-                  ]);
-                  setState(() {});
-
-                  if (!context.mounted) return;
-                  context.pop();
-                },
-              ),
-            if (reference == null)
-              ListTile(
-                leading: const Icon(Icons.add),
-                title: Text(context.tr("add_to_queue")),
-                onTap: () async {
-                  await repository.writeTask(widget.task, [
-                    PutTaskInQueue(QueueInsertionPosition.preferred),
-                  ]);
-                  setState(() {});
-
-                  if (!context.mounted) return;
-                  context.pop();
-                },
-              ),
-          ],
-        );
-      },
-    );
   }
 
   Future<void> _save(
@@ -259,6 +225,17 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
     ));
   }
 
+  TaskEditAction? _getTaskEditAction() {
+    return switch ((queuePosition, widget.task.reference)) {
+      // remove from queue + already not in queue
+      (null, null) => null,
+      // put somewhere in queue + already in queue
+      (QueueInsertionPosition.preferred, _?) => null,
+      (final position?, _) => PutTaskInQueue(position),
+      (null, _?) => const RemoveTaskFromQueue(),
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final task = widget.task;
@@ -292,12 +269,6 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
               },
               icon: const Icon(Icons.delete),
             ),
-            IconButton(
-              onPressed: () {
-                showMenu(repository);
-              },
-              icon: const Icon(Icons.more_vert),
-            )
           ],
         ),
         body: ListView(
@@ -379,6 +350,15 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
                 );
               },
             ),
+            const SizedBox(height: 8),
+            _QueuePositionPicker(
+              initialValue: queuePosition,
+              mustBeInQueue: lockTaskInQueue,
+              onChanged: (value) {
+                queuePosition = value;
+              },
+            ),
+            const SizedBox(height: 8),
             const Divider(),
             ReorderableListView(
               shrinkWrap: true,
@@ -427,13 +407,11 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
           padding: const EdgeInsets.all(8),
           child: Row(children: [
             Expanded(
-              flex: 2,
               child: ElevatedButton(
                 onPressed: () async {
                   _applyChanges();
                   await _save(repository, [
-                    if (widget.addToQueue)
-                      PutTaskInQueue(QueueInsertionPosition.preferred),
+                    if (_getTaskEditAction() case final action?) action,
                   ]);
                   if (!context.mounted) return;
                   context.pop();
@@ -444,7 +422,6 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
             if (task.reference != null) ...[
               const SizedBox(width: 8),
               Expanded(
-                flex: 2,
                 child: FilledButton(
                   onPressed: () async {
                     _applyChanges();
@@ -458,40 +435,6 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
                     context.pop();
                   },
                   child: Text(context.tr("done")),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                flex: 1,
-                child: IconButton.outlined(
-                  onPressed: () async {
-                    _applyChanges();
-
-                    await _save(repository, [
-                      PutTaskInQueue(QueueInsertionPosition.start),
-                    ]);
-
-                    if (!context.mounted) return;
-                    context.pop();
-                  },
-                  icon: const Icon(Icons.arrow_upward),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                flex: 1,
-                child: IconButton.outlined(
-                  onPressed: () async {
-                    _applyChanges();
-
-                    await _save(repository, [
-                      PutTaskInQueue(QueueInsertionPosition.end),
-                    ]);
-
-                    if (!context.mounted) return;
-                    context.pop();
-                  },
-                  icon: const Icon(Icons.arrow_downward),
                 ),
               ),
             ],
@@ -619,6 +562,86 @@ class _DateTimePickerState extends State<DateTimePicker> {
           ],
         );
       },
+    );
+  }
+}
+
+class _QueuePositionPicker extends StatefulWidget {
+  const _QueuePositionPicker({
+    this.initialValue,
+    required this.onChanged,
+    this.mustBeInQueue = false,
+  });
+
+  final QueueInsertionPosition? initialValue;
+  final ValueChanged<QueueInsertionPosition?> onChanged;
+  final bool mustBeInQueue;
+  @override
+  State<_QueuePositionPicker> createState() => __QueuePositionPickerState();
+}
+
+class __QueuePositionPickerState extends State<_QueuePositionPicker> {
+  QueueInsertionPosition? position;
+
+  @override
+  void initState() {
+    super.initState();
+    position = widget.initialValue;
+
+    if (widget.mustBeInQueue && position == null) {
+      position = QueueInsertionPosition.preferred;
+      widget.onChanged(position);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        ChoiceChip(
+          label: Text(context.tr("queued.none")),
+          selected: position != null,
+          onSelected: widget.mustBeInQueue
+              ? null
+              : (value) {
+                  setState(() {
+                    position = value ? QueueInsertionPosition.preferred : null;
+                  });
+                  widget.onChanged(position);
+                },
+        ),
+        const SizedBox(width: 8),
+        ChoiceChip(
+          label: Text(context.tr("queue_position.start")),
+          selected: position == QueueInsertionPosition.start,
+          onSelected: position == null
+              ? null
+              : (value) {
+                  setState(() {
+                    position = value
+                        ? QueueInsertionPosition.start
+                        : QueueInsertionPosition.preferred;
+                  });
+                  widget.onChanged(position);
+                },
+        ),
+        const SizedBox(width: 8),
+        ChoiceChip(
+          label: Text(context.tr("queue_position.end")),
+          selected: position == QueueInsertionPosition.end,
+          onSelected: position == null
+              ? null
+              : (value) {
+                  setState(() {
+                    position = value
+                        ? QueueInsertionPosition.end
+                        : QueueInsertionPosition.preferred;
+                  });
+                  widget.onChanged(position);
+                },
+        ),
+      ],
     );
   }
 }

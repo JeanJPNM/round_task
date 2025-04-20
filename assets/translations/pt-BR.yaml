@@ -14,8 +14,6 @@ done: Concluir
 task_card_start: 'Início: {}'
 task_card_end: 'Término: {}'
 
-remove_from_queue: Remover da fila
-add_to_queue: Adicionar à fila
 create_task: Criar tarefa
 edit_task: Editar tarefa
 task_deleted: Tarefa excluída
@@ -29,6 +27,9 @@ end_date: Data de término
 recurrence: Recorrência
 add_recurrence: Adicionar recorrência
 edit_recurrence: Editar recorrência
+queue_position:
+  start: No início
+  end: No fim
 add_subtask: Adicionar subtarefa
 
 

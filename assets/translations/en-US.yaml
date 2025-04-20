@@ -14,8 +14,6 @@ done: Done
 task_card_start: 'Start: {}'
 task_card_end: 'End: {}'
 
-remove_from_queue: Remove from queue
-add_to_queue: Add to queue
 create_task: Create task
 edit_task: Edit task
 task_deleted: Task deleted
@@ -29,6 +27,9 @@ end_date: End date
 recurrence: Recurrence
 add_recurrence: Add recurrence
 edit_recurrence: Edit recurrence
+queue_position:
+  start: At the start
+  end: At the end
 add_subtask: Add subtask
 
 

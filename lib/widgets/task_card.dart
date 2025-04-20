@@ -83,14 +83,14 @@ class TaskCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.labelMedium,
                     ),
-                  if (task case UserTask(:final endDate?, reference: _?))
+                  if (task case UserTask(reference: _?, :final endDate?))
                     Text(
                       context.tr("task_card_end", args: [
                         _formatDate(locale, now, endDate),
                       ]),
                     )
                   else if (task
-                      case UserTask(:final autoInsertDate?, reference: null))
+                      case UserTask(reference: null, :final autoInsertDate?))
                     Text(
                       context.tr("task_card_start", args: [
                         _formatDate(locale, now, autoInsertDate),

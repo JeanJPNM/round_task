@@ -27,7 +27,7 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
   final limitController = TextEditingController();
   Frequency frequency = Frequency.daily;
 
-  List<bool> weekSelection = List.generate(7, (index) => false);
+  Set<int> weekSelection = {};
   DateTime? endDate;
 
   _EndOption endOption = _EndOption.never;
@@ -68,31 +68,26 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
 
   List<ByWeekDayEntry> _getByWeekDays() {
     final entries = <ByWeekDayEntry>[];
-    if (weekSelection[0]) entries.add(ByWeekDayEntry(DateTime.sunday));
-    if (weekSelection[1]) entries.add(ByWeekDayEntry(DateTime.monday));
-    if (weekSelection[2]) entries.add(ByWeekDayEntry(DateTime.tuesday));
-    if (weekSelection[3]) entries.add(ByWeekDayEntry(DateTime.wednesday));
-    if (weekSelection[4]) entries.add(ByWeekDayEntry(DateTime.thursday));
-    if (weekSelection[5]) entries.add(ByWeekDayEntry(DateTime.friday));
-    if (weekSelection[6]) entries.add(ByWeekDayEntry(DateTime.saturday));
+    for (final day in const [
+      DateTime.sunday,
+      DateTime.monday,
+      DateTime.tuesday,
+      DateTime.wednesday,
+      DateTime.thursday,
+      DateTime.friday,
+      DateTime.saturday,
+    ]) {
+      if (weekSelection.contains(day)) {
+        entries.add(ByWeekDayEntry(day));
+      }
+    }
     return entries;
   }
 
-  List<bool> _getWeekSelection(Iterable<ByWeekDayEntry> entries) {
-    final selection = List.generate(7, (index) => false);
+  Set<int> _getWeekSelection(Iterable<ByWeekDayEntry> entries) {
+    final selection = <int>{};
     for (final entry in entries) {
-      final index = switch (entry.day) {
-        DateTime.sunday => 0,
-        DateTime.monday => 1,
-        DateTime.tuesday => 2,
-        DateTime.wednesday => 3,
-        DateTime.thursday => 4,
-        DateTime.friday => 5,
-        DateTime.saturday => 6,
-        _ => null,
-      };
-      if (index == null) continue;
-      selection[index] = true;
+      selection.add(entry.day);
     }
     return selection;
   }
@@ -116,7 +111,6 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
 
   @override
   Widget build(BuildContext context) {
-    final weekLetterStyle = Theme.of(context).textTheme.labelLarge;
     final locale = Localizations.localeOf(context).languageCode;
     return IntrinsicWidth(
       child: Column(
@@ -178,28 +172,31 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
           ...switch (frequency) {
             Frequency.weekly => [
                 Text(context.tr("repeat")),
-                ToggleButtons(
-                  isSelected: weekSelection,
-                  onPressed: (index) {
-                    setState(() {
-                      weekSelection[index] = !weekSelection[index];
-                    });
-                  },
-                  children: [
-                    for (final day in [
-                      "weekday_letter.sunday",
-                      "weekday_letter.monday",
-                      "weekday_letter.tuesday",
-                      "weekday_letter.wednesday",
-                      "weekday_letter.thursday",
-                      "weekday_letter.friday",
-                      "weekday_letter.saturday",
+                SegmentedButton(
+                  showSelectedIcon: false,
+                  multiSelectionEnabled: true,
+                  expandedInsets: const EdgeInsets.symmetric(vertical: 10),
+                  segments: [
+                    for (final (day, string) in const [
+                      (DateTime.sunday, "weekday_letter.sunday"),
+                      (DateTime.monday, "weekday_letter.monday"),
+                      (DateTime.tuesday, "weekday_letter.tuesday"),
+                      (DateTime.wednesday, "weekday_letter.wednesday"),
+                      (DateTime.thursday, "weekday_letter.thursday"),
+                      (DateTime.friday, "weekday_letter.friday"),
+                      (DateTime.saturday, "weekday_letter.saturday"),
                     ])
-                      Text(
-                        context.tr(day),
-                        style: weekLetterStyle,
+                      ButtonSegment(
+                        value: day,
+                        label: Text(context.tr(string)),
                       ),
                   ],
+                  selected: weekSelection,
+                  onSelectionChanged: (value) {
+                    setState(() {
+                      weekSelection = value;
+                    });
+                  },
                 ),
               ],
             // TODO: handle montly on same day and montly

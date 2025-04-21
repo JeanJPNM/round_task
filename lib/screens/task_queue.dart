@@ -216,7 +216,7 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
                     };
 
                     return NavigationDestination(
-                      icon: const Icon(Icons.done),
+                      icon: const Icon(Icons.low_priority),
                       label: label,
                     );
                   },

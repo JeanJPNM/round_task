@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:collection/collection.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -34,8 +36,9 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
 
   final startDateController = DateTimeEditingController();
   final endDateController = DateTimeEditingController();
+  final autoInserDateController = ValueNotifier<DateTime?>(null);
 
-  QueueInsertionPosition? queuePosition;
+  final positionController = ValueNotifier<QueueInsertionPosition?>(null);
   bool lockTaskInQueue = false;
 
   late final List<SubTask> _originalSubTasks;
@@ -56,8 +59,9 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
     descriptionController.text = task.description;
     startDateController.value = task.startDate;
     endDateController.value = task.endDate;
+    autoInserDateController.value = task.autoInsertDate;
     recurrenceRule = task.recurrence;
-    queuePosition = task.reference != null || widget.addToQueue
+    positionController.value = task.reference != null || widget.addToQueue
         ? QueueInsertionPosition.preferred
         : null;
     lockTaskInQueue = task.autoInsertDate?.isBefore(DateTime.now()) ?? false;
@@ -66,8 +70,18 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
         .map((subTask) => _SubTaskController(subTask))
         .toList();
 
+    startDateController.addListener(() {
+      autoInserDateController.value = UserTask.getAutoInsertDate(
+        startDateController.value,
+        endDateController.value,
+      );
+    });
     endDateController.addListener(() {
       final value = endDateController.value;
+      autoInserDateController.value = UserTask.getAutoInsertDate(
+        startDateController.value,
+        value,
+      );
       if (value == null) return;
       if (startDateController.value != null) return;
 
@@ -226,7 +240,7 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
   }
 
   TaskEditAction? _getTaskEditAction() {
-    return switch ((queuePosition, widget.task.reference)) {
+    return switch ((positionController.value, widget.task.reference)) {
       // remove from queue + already not in queue
       (null, null) => null,
       // put somewhere in queue + already in queue
@@ -351,11 +365,13 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
               },
             ),
             const SizedBox(height: 8),
-            _QueuePositionPicker(
-              initialValue: queuePosition,
-              mustBeInQueue: lockTaskInQueue,
-              onChanged: (value) {
-                queuePosition = value;
+            ValueListenableBuilder(
+              valueListenable: autoInserDateController,
+              builder: (context, date, child) {
+                return _QueuePositionPicker(
+                  controller: positionController,
+                  startDate: date,
+                );
               },
             ),
             const SizedBox(height: 8),
@@ -568,47 +584,77 @@ class _DateTimePickerState extends State<DateTimePicker> {
 
 class _QueuePositionPicker extends StatefulWidget {
   const _QueuePositionPicker({
-    this.initialValue,
-    required this.onChanged,
-    this.mustBeInQueue = false,
+    required this.controller,
+    required this.startDate,
   });
 
-  final QueueInsertionPosition? initialValue;
-  final ValueChanged<QueueInsertionPosition?> onChanged;
-  final bool mustBeInQueue;
+  final ValueNotifier<QueueInsertionPosition?> controller;
+  final DateTime? startDate;
   @override
   State<_QueuePositionPicker> createState() => __QueuePositionPickerState();
 }
 
 class __QueuePositionPickerState extends State<_QueuePositionPicker> {
-  QueueInsertionPosition? position;
+  Timer? _timer;
+  bool _mustBeInQueue = false;
 
   @override
   void initState() {
     super.initState();
-    position = widget.initialValue;
 
-    if (widget.mustBeInQueue && position == null) {
-      position = QueueInsertionPosition.preferred;
-      widget.onChanged(position);
+    _updateQueueLock();
+    _timer = Timer.periodic(
+      const Duration(seconds: 1),
+      (_) => _updateQueueLock(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant _QueuePositionPicker oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    _updateQueueLock();
+  }
+
+  void _updateQueueLock() {
+    final startDate = widget.startDate;
+
+    if (startDate?.isBefore(DateTime.now()) ?? false) {
+      if (_mustBeInQueue) return;
+      setState(() {
+        _mustBeInQueue = true;
+        widget.controller.value ??= QueueInsertionPosition.preferred;
+      });
+    } else {
+      if (!_mustBeInQueue) return;
+      setState(() {
+        _mustBeInQueue = false;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final position = widget.controller.value;
     return Wrap(
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         ChoiceChip(
           label: Text(context.tr("queued.none")),
           selected: position != null,
-          onSelected: widget.mustBeInQueue
+          onSelected: _mustBeInQueue
               ? null
               : (value) {
                   setState(() {
-                    position = value ? QueueInsertionPosition.preferred : null;
+                    widget.controller.value =
+                        value ? QueueInsertionPosition.preferred : null;
                   });
-                  widget.onChanged(position);
                 },
         ),
         const SizedBox(width: 8),
@@ -619,11 +665,10 @@ class __QueuePositionPickerState extends State<_QueuePositionPicker> {
               ? null
               : (value) {
                   setState(() {
-                    position = value
+                    widget.controller.value = value
                         ? QueueInsertionPosition.start
                         : QueueInsertionPosition.preferred;
                   });
-                  widget.onChanged(position);
                 },
         ),
         const SizedBox(width: 8),
@@ -634,11 +679,10 @@ class __QueuePositionPickerState extends State<_QueuePositionPicker> {
               ? null
               : (value) {
                   setState(() {
-                    position = value
+                    widget.controller.value = value
                         ? QueueInsertionPosition.end
                         : QueueInsertionPosition.preferred;
                   });
-                  widget.onChanged(position);
                 },
         ),
       ],

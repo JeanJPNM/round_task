@@ -19,6 +19,9 @@ class UserTask {
     this.progress,
   });
 
+  static DateTime? getAutoInsertDate(DateTime? startDate, DateTime? endDate) =>
+      startDate ?? endDate?.subtract(const Duration(days: 1));
+
   Id id;
   String title;
   String description;
@@ -33,8 +36,7 @@ class UserTask {
   DateTime? endDate;
 
   @Index()
-  DateTime? get autoInsertDate =>
-      startDate ?? endDate?.subtract(const Duration(days: 1));
+  DateTime? get autoInsertDate => getAutoInsertDate(startDate, endDate);
 
   @ignore
   RecurrenceRule? recurrence;

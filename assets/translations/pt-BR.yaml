@@ -7,8 +7,8 @@ pending:
   amount: Pendente ({})
 
 archived:
-  none: Completo
-  amount: Completo ({})
+  none: Arquivado
+  amount: Arquivado ({})
 
 search: Buscar
 general_error: Ocorreu um erro.

@@ -118,6 +118,10 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
     task.recurrence = recurrenceRule;
     task.lastTouched = DateTime.now();
 
+    if (task.archived && task.autoInsertDate != null) {
+      task.archived = false;
+    }
+
     for (final controller in _subTaskControllers) {
       controller.apply();
     }

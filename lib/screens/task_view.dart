@@ -216,8 +216,14 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
         break;
     }
 
-    for (final controller in _subTaskControllers) {
-      controller.subTask.done = false;
+    if (task.autoInsertDate == null) {
+      task.archived = true;
+    } else {
+      // only need to reset subtasks if the task
+      // is going to be repeated
+      for (final controller in _subTaskControllers) {
+        controller.subTask.done = false;
+      }
     }
   }
 

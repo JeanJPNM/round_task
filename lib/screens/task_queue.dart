@@ -23,21 +23,24 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
   final _searchFocusNode = FocusNode();
   final _searchController = SearchController();
 
-  bool _addToQueue = true;
+  TaskSearchType _searchType = TaskSearchType.queued;
 
   @override
   void initState() {
     super.initState();
 
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
 
     _tabController.animation!.addListener(() {
-      if (_tabController.indexIsChanging) {
-        _addToQueue = _tabController.index == 0;
-      } else {
-        final index = _tabController.animation!.value.round();
-        _addToQueue = index == 0;
-      }
+      final index = _tabController.indexIsChanging
+          ? _tabController.index
+          : _tabController.animation!.value.round();
+
+      _searchType = switch (index) {
+        1 => TaskSearchType.pending,
+        2 => TaskSearchType.archived,
+        _ => TaskSearchType.queued,
+      };
     });
   }
 
@@ -56,6 +59,12 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
       offset: _searchController.text.length,
     );
   }
+
+  Widget _buildTask(UserTask task) => SizedBox(
+        key: ValueKey(task.id),
+        width: double.infinity,
+        child: TaskCard(task: task),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -93,7 +102,7 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
                   },
                   suggestionsBuilder: (context, controller) async {
                     final tasks = await repository.searchTasks(
-                      _addToQueue,
+                      _searchType,
                       controller.text,
                     );
                     return tasks.map((task) => TaskCard(task: task));
@@ -140,15 +149,8 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
 
                             await repository.reorderTasks(tasks);
                           },
-                          itemBuilder: (context, index) {
-                            final task = tasks[index];
-
-                            return SizedBox(
-                              key: ValueKey(task.id),
-                              width: double.infinity,
-                              child: TaskCard(task: task),
-                            );
-                          },
+                          itemBuilder: (context, index) =>
+                              _buildTask(tasks[index]),
                         ),
                       );
                     }),
@@ -171,21 +173,39 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
                             isSameItem: (a, b) => a.id == b.id,
                             onReorder: (oldIndex, newIndex) {},
                             nonDraggableItems: tasks,
-                            itemBuilder: (context, index) {
-                              final task = tasks[index];
-                              return SizedBox(
-                                key: ValueKey(task.id),
-                                width: double.infinity,
-                                child: TaskCard(
-                                  key: ValueKey(task.id),
-                                  task: task,
-                                ),
-                              );
-                            },
+                            enableSwap: true,
+                            itemBuilder: (context, index) =>
+                                _buildTask(tasks[index]),
                           ),
                         );
                       },
                     ),
+                    Consumer(
+                      builder: (context, ref, child) {
+                        final archivedTasks = ref.watch(archivedTasksPod);
+
+                        return archivedTasks.when(
+                          loading: () => const Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                          error: (error, stackTrace) => Center(
+                            child: Text(context.tr("general_error")),
+                          ),
+                          data: (tasks) => AnimatedReorderableListView(
+                            key: const PageStorageKey("archivedTasks"),
+                            padding: _listPadding,
+                            shrinkWrap: true,
+                            items: tasks,
+                            isSameItem: (a, b) => a.id == b.id,
+                            onReorder: (oldIndex, newIndex) {},
+                            nonDraggableItems: tasks,
+                            enableSwap: true,
+                            itemBuilder: (context, index) =>
+                                _buildTask(tasks[index]),
+                          ),
+                        );
+                      },
+                    )
                   ],
                 ),
               ),
@@ -240,6 +260,23 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
                     );
                   },
                 ),
+                Consumer(builder: (context, ref, child) {
+                  final archivedTasks = ref.watch(archivedTasksPod);
+
+                  final label = switch (archivedTasks) {
+                    AsyncData(value: List(isNotEmpty: true, :final length)) =>
+                      context.tr(
+                        "archived.amount",
+                        args: [length.toString()],
+                      ),
+                    _ => context.tr("archived.none"),
+                  };
+
+                  return NavigationDestination(
+                    icon: const Icon(Icons.archive),
+                    label: label,
+                  );
+                }),
               ],
             );
           }),
@@ -254,7 +291,7 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
                 lastTouched: DateTime.now(),
                 creationDate: DateTime.now(),
               ),
-              _addToQueue,
+              _searchType == TaskSearchType.queued,
             ),
           );
         },

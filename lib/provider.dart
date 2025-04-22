@@ -31,6 +31,12 @@ final pendingTasksPod = StreamProvider((ref) {
   return repository.getPendingTasksStream();
 });
 
+final archivedTasksPod = StreamProvider((ref) {
+  final repository = ref.watch(repositoryPod);
+
+  return repository.getArchivedTasksStream();
+});
+
 class AutomaticTaskQueuer {
   AutomaticTaskQueuer(this.repository);
 
@@ -117,6 +123,12 @@ class RemoveSubTasks extends TaskEditAction {
   final List<SubTask> subTasks;
 }
 
+enum TaskSearchType {
+  queued,
+  pending,
+  archived,
+}
+
 class Repository {
   Repository(this.ref) {
     _queueInitFuture = taskQueuer.init();
@@ -172,9 +184,11 @@ class Repository {
 
     final reference = await isar.userTasks
         .where(sort: insertAtStart ? Sort.asc : Sort.desc)
-        .referenceIsNotNull()
+        .referenceIsNotNullAnyArchived()
         .referenceProperty()
         .findFirst();
+
+    task.archived = false;
 
     if (reference == null) {
       task.reference = 0;
@@ -191,7 +205,7 @@ class Repository {
 
     yield* isar.userTasks
         .where()
-        .referenceIsNotNull()
+        .referenceIsNotNullAnyArchived()
         .watch(fireImmediately: true);
   }
 
@@ -201,10 +215,19 @@ class Repository {
 
     final query = isar.userTasks
         .where()
-        .referenceIsNull()
-        .filter()
-        .archivedEqualTo(false)
+        .referenceArchivedEqualTo(null, false)
         .sortByCreationDate();
+    yield* query.watch(fireImmediately: true);
+  }
+
+  Stream<List<UserTask>> getArchivedTasksStream() async* {
+    final isar = await _isar;
+    await _queueInitFuture;
+
+    final query = isar.userTasks
+        .where()
+        .referenceArchivedEqualTo(null, true)
+        .sortByLastTouchedDesc();
     yield* query.watch(fireImmediately: true);
   }
 
@@ -222,7 +245,7 @@ class Repository {
 
       final firstReference = await isar.userTasks
           .where()
-          .referenceIsNotNull()
+          .referenceIsNotNullAnyArchived()
           .referenceProperty()
           .findFirst();
 
@@ -266,6 +289,7 @@ class Repository {
         .autoInsertDateIsNotNull()
         .filter()
         .referenceIsNull()
+        .archivedEqualTo(false)
         .autoInsertDateProperty()
         .findFirst();
   }
@@ -282,17 +306,23 @@ class Repository {
     });
   }
 
-  Future<List<UserTask>> searchTasks(bool queued, String searchText) async {
+  Future<List<UserTask>> searchTasks(
+    TaskSearchType type,
+    String searchText,
+  ) async {
     final isar = await _isar;
 
-    QueryBuilder<UserTask, UserTask, QFilterCondition> query;
-    if (queued) {
-      query = isar.userTasks.where().referenceIsNotNull().filter();
-    } else {
-      query = isar.userTasks.where().referenceIsNull().filter();
-    }
+    final query = switch (type) {
+      TaskSearchType.queued =>
+        isar.userTasks.where().referenceIsNotNullAnyArchived(),
+      TaskSearchType.pending =>
+        isar.userTasks.where().referenceArchivedEqualTo(null, false),
+      TaskSearchType.archived =>
+        isar.userTasks.where().referenceArchivedEqualTo(null, true),
+    };
 
     return await query
+        .filter()
         .group((q) => q
             .titleContains(searchText, caseSensitive: false)
             .or()

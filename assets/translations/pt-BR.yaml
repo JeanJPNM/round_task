@@ -6,6 +6,10 @@ pending:
   none: Pendente
   amount: Pendente ({})
 
+archived:
+  none: Completo
+  amount: Completo ({})
+
 search: Buscar
 general_error: Ocorreu um erro.
 save: Salvar

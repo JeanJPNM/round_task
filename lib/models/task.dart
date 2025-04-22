@@ -57,7 +57,7 @@ class UserTask {
   }
 
   /// Used to order the queue
-  @Index(unique: false)
+  @Index(unique: false, composite: [CompositeIndex("archived")])
   int? reference;
 
   final subTasks = IsarLinks<SubTask>();

@@ -416,10 +416,15 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
             ),
             TextButton(
               onPressed: () {
+                final controller = _SubTaskController(
+                  SubTask(name: "", done: false, reference: 0),
+                );
                 setState(() {
-                  _subTaskControllers.add(_SubTaskController(
-                    SubTask(name: "", done: false, reference: 0),
-                  ));
+                  _subTaskControllers.add(controller);
+                  controller.openView(
+                    context,
+                    onDelete: () => _removeSubTask(controller),
+                  );
                 });
               },
               child: Text(context.tr("add_subtask")),
@@ -720,6 +725,25 @@ class _SubTaskController {
     textController.dispose();
     doneController.dispose();
   }
+
+  Future<void> openView(
+    BuildContext context, {
+    required void Function() onDelete,
+  }) async {
+    final newText = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return _SubTaskDialog(
+          initialTitle: textController.value,
+          onDelete: onDelete,
+        );
+      },
+    );
+
+    if (newText != null) {
+      textController.value = newText;
+    }
+  }
 }
 
 class _SubTaskEditor extends StatefulWidget {
@@ -735,30 +759,16 @@ class _SubTaskEditor extends StatefulWidget {
 }
 
 class __SubTaskEditorState extends State<_SubTaskEditor> {
-  Future<void> _showEditDialog() async {
-    final newText = await showDialog<String>(
-      context: context,
-      builder: (context) {
-        return _SubTaskDialog(
-          initialTitle: widget.controller.textController.value,
-          onDelete: widget.onDelete,
-        );
-      },
-    );
-    if (newText != null) {
-      widget.controller.textController.value = newText;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final doneController = widget.controller.doneController;
     final titleController = widget.controller.textController;
 
     return ListTile(
-      onTap: () async {
-        await _showEditDialog();
-      },
+      onTap: () => widget.controller.openView(
+        context,
+        onDelete: widget.onDelete,
+      ),
       leading: ValueListenableBuilder(
         valueListenable: doneController,
         builder: (context, value, child) {

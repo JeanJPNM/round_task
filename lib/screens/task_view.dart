@@ -101,6 +101,8 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
     descriptionController.dispose();
     startDateController.dispose();
     endDateController.dispose();
+    autoInserDateController.dispose();
+    positionController.dispose();
 
     for (final controller in _subTaskControllers) {
       controller.dispose();

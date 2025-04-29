@@ -33,6 +33,8 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
   final scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
   final titleController = TextEditingController(),
       descriptionController = TextEditingController();
+  final titleFocusNode = FocusNode();
+  final descriptionFocusNode = FocusNode();
 
   final startDateController = DateTimeEditingController();
   final endDateController = DateTimeEditingController();
@@ -99,6 +101,8 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
   void dispose() {
     titleController.dispose();
     descriptionController.dispose();
+    titleFocusNode.dispose();
+    descriptionFocusNode.dispose();
     startDateController.dispose();
     endDateController.dispose();
     autoInserDateController.dispose();
@@ -301,6 +305,7 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
           padding: const EdgeInsets.all(8.0),
           children: [
             TextField(
+              focusNode: titleFocusNode,
               controller: titleController,
               decoration: InputDecoration(labelText: context.tr("title")),
               keyboardType: TextInputType.multiline,
@@ -311,6 +316,7 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
               ],
             ),
             TextField(
+              focusNode: descriptionFocusNode,
               controller: descriptionController,
               decoration: InputDecoration(labelText: context.tr("description")),
               maxLines: null,
@@ -422,6 +428,8 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
                   SubTask(name: "", done: false, reference: 0),
                 );
                 setState(() {
+                  titleFocusNode.unfocus();
+                  descriptionFocusNode.unfocus();
                   _subTaskControllers.add(controller);
                   controller.openView(
                     context,

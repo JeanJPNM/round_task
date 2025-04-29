@@ -105,7 +105,10 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
                       _searchType,
                       controller.text,
                     );
-                    return tasks.map((task) => TaskCard(task: task));
+                    return tasks.map((task) => TaskCard(
+                          key: ValueKey(task.id),
+                          task: task,
+                        ));
                   },
                   viewLeading: BackButton(
                     style: const ButtonStyle(

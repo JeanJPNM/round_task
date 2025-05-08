@@ -41,6 +41,7 @@ select_date: Selecionar data
 repeat_every: Repetir a cada
 repeat: Repetir
 repeat_menu:
+  hour: Hora
   day: Dia
   week: Semana
   month: Mês

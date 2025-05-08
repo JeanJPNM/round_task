@@ -150,6 +150,10 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
                 },
                 dropdownMenuEntries: [
                   DropdownMenuEntry(
+                    value: Frequency.hourly,
+                    label: context.tr("repeat_menu.hour"),
+                  ),
+                  DropdownMenuEntry(
                     value: Frequency.daily,
                     label: context.tr("repeat_menu.day"),
                   ),

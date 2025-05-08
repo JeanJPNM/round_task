@@ -41,10 +41,11 @@ select_date: Select date
 repeat_every: Repeat every
 repeat: Repeat
 repeat_menu:
-  day: Dia
-  week: Semana
-  month: Mês
-  year: Ano
+  hour: Hour
+  day: Day
+  week: Week
+  month: Month
+  year: Year
 
 weekday_letter:
   sunday: S

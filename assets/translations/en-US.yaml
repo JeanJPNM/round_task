@@ -15,8 +15,8 @@ general_error: An error occurred.
 save: Save
 done: Done
 
-task_card_start: 'Start: {}'
-task_card_end: 'End: {}'
+task_card_start: 'Start: {} ({})'
+task_card_end: 'End: {} ({})'
 
 create_task: Create task
 edit_task: Edit task

@@ -5,9 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:relative_time/relative_time.dart';
 import 'package:round_task/custom_colors.dart';
 import 'package:round_task/screens/task_queue.dart';
 import 'package:round_task/screens/task_view.dart';
+import 'package:round_task/widgets/second_tick_provider.dart';
 
 final _router = GoRouter(
   routes: [
@@ -48,7 +50,7 @@ Future<void> main() async {
       fallbackLocale: const Locale("en", "US"),
       path: "assets/translations",
       assetLoader: const YamlAssetLoader(),
-      child: const MyApp(),
+      child: const SecondTickProvider(child: MyApp()),
     ),
   ));
 }
@@ -90,7 +92,8 @@ class MyApp extends StatelessWidget {
             useMaterial3: true,
             extensions: [darkCustomColors],
           ),
-          localizationsDelegates: context.localizationDelegates,
+          localizationsDelegates: context.localizationDelegates
+              .followedBy([RelativeTimeLocalizations.delegate]),
           supportedLocales: context.supportedLocales,
           locale: context.locale,
         );

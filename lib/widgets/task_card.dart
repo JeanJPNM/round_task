@@ -1,9 +1,11 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:relative_time/relative_time.dart';
 import 'package:round_task/custom_colors.dart';
 import 'package:round_task/models/task.dart';
 import 'package:round_task/widgets/animated_progress_bar.dart';
+import 'package:round_task/widgets/second_tick_provider.dart';
 
 class TaskCard extends StatelessWidget {
   const TaskCard({
@@ -52,6 +54,24 @@ class TaskCard extends StatelessWidget {
       _ => Color.alphaBlend(tintColor.withAlpha(20), surfaceContainerLow),
     };
 
+    final timeMessage = switch (task) {
+      UserTask(reference: _?, :final endDate?) =>
+        context.tr("task_card_end", args: [
+          endDate.relativeTime(context),
+          _formatDate(locale, now, endDate),
+        ]),
+      UserTask(reference: null, :final autoInsertDate?) =>
+        context.tr("task_card_start", args: [
+          autoInsertDate.relativeTime(context),
+          _formatDate(locale, now, autoInsertDate),
+        ]),
+      _ => null,
+    };
+
+    if (timeMessage != null) {
+      SecondTickProvider.of(context);
+    }
+
     // TODO: add quick actions: start, send to end of queue, archive, delete
     return Card.outlined(
       clipBehavior: Clip.antiAlias,
@@ -83,19 +103,7 @@ class TaskCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.labelMedium,
                     ),
-                  if (task case UserTask(reference: _?, :final endDate?))
-                    Text(
-                      context.tr("task_card_end", args: [
-                        _formatDate(locale, now, endDate),
-                      ]),
-                    )
-                  else if (task
-                      case UserTask(reference: null, :final autoInsertDate?))
-                    Text(
-                      context.tr("task_card_start", args: [
-                        _formatDate(locale, now, autoInsertDate),
-                      ]),
-                    ),
+                  if (timeMessage != null) Text(timeMessage),
                 ],
               ),
             ),

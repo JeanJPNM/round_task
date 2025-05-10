@@ -888,7 +888,7 @@ DateTime? _nextDate(RecurrenceRule rule, DateTime date) {
       .getInstances(
         start: date.copyWith(isUtc: true),
         after: after.copyWith(isUtc: true),
-        includeAfter: true,
+        includeAfter: after == now,
       )
       .firstOrNull
       ?.copyWith(isUtc: false);

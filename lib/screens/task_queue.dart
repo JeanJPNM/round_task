@@ -20,6 +20,7 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
     with TickerProviderStateMixin {
   final _bucket = PageStorageBucket();
   late final TabController _tabController;
+  final _currentIndex = ValueNotifier(0);
   final _searchFocusNode = FocusNode();
   final _searchController = SearchController();
 
@@ -36,6 +37,7 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
           ? _tabController.index
           : _tabController.animation!.value.round();
 
+      _currentIndex.value = index;
       _searchType = switch (index) {
         1 => TaskSearchType.pending,
         2 => TaskSearchType.archived,
@@ -46,6 +48,7 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
 
   @override
   void dispose() {
+    _currentIndex.dispose();
     _tabController.dispose();
     _searchFocusNode.dispose();
     _searchController.dispose();
@@ -216,11 +219,11 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
           ],
         ),
       ),
-      bottomNavigationBar: ListenableBuilder(
-          listenable: _tabController,
-          builder: (context, child) {
+      bottomNavigationBar: ValueListenableBuilder(
+          valueListenable: _currentIndex,
+          builder: (context, selectedIndex, child) {
             return NavigationBar(
-              selectedIndex: _tabController.index,
+              selectedIndex: selectedIndex,
               onDestinationSelected: (value) {
                 _tabController.index = value;
               },

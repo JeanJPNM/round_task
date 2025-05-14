@@ -77,6 +77,16 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
         startDateController.value,
         endDateController.value,
       );
+
+      final value = startDateController.value;
+      final previous = startDateController.previous;
+      final endDate = endDateController.value;
+
+      if (value == null || previous == null || endDate == null) return;
+
+      final duration = endDate.difference(previous);
+
+      endDateController.value = value.add(duration);
     });
     endDateController.addListener(() {
       final value = endDateController.value;
@@ -321,15 +331,9 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
               decoration: InputDecoration(labelText: context.tr("description")),
               maxLines: null,
             ),
-            ValueListenableBuilder(
-              valueListenable: endDateController,
-              builder: (context, endDate, child) {
-                return DateTimePicker(
-                  label: Text(context.tr("start_date")),
-                  controller: startDateController,
-                  lastDate: endDate,
-                );
-              },
+            DateTimePicker(
+              label: Text(context.tr("start_date")),
+              controller: startDateController,
             ),
             ValueListenableBuilder(
               valueListenable: startDateController,
@@ -488,6 +492,14 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
 
 class DateTimeEditingController extends ValueNotifier<DateTime?> {
   DateTimeEditingController([super.value]);
+
+  DateTime? previous;
+
+  @override
+  set value(DateTime? newValue) {
+    previous = value;
+    super.value = newValue;
+  }
 }
 
 class DateTimePicker extends StatefulWidget {

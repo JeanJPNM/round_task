@@ -73,11 +73,14 @@ class TaskCard extends StatelessWidget {
     }
 
     // TODO: add quick actions: start, send to end of queue, archive, delete
+    const radius = Radius.circular(12.0);
+    const paddingValue = 15.0;
+    const borderWidth = 1.0;
     return Card.outlined(
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
-        borderRadius: const BorderRadius.all(Radius.circular(12.0)),
-        side: BorderSide(color: borderColor),
+        borderRadius: const BorderRadius.all(radius),
+        side: BorderSide(color: borderColor, width: borderWidth),
       ),
       color: backgroundColor,
       child: InkWell(
@@ -88,7 +91,7 @@ class TaskCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.all(15.0),
+              padding: const EdgeInsets.all(paddingValue),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -108,10 +111,21 @@ class TaskCard extends StatelessWidget {
               ),
             ),
             if (task.progress case final progress?)
-              AnimatedProgressBar(
-                value: progress,
-                duration: const Duration(milliseconds: 750),
-                curve: Curves.easeInOut,
+              Padding(
+                padding: const EdgeInsets.only(
+                  left: paddingValue,
+                  right: paddingValue,
+                  bottom: borderWidth,
+                ),
+                child: AnimatedProgressBar(
+                  value: progress,
+                  duration: const Duration(milliseconds: 750),
+                  curve: Curves.easeInOut,
+                  borderRadius: const BorderRadius.only(
+                    topRight: radius,
+                    topLeft: radius,
+                  ),
+                ),
               )
           ],
         ),

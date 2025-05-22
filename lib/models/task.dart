@@ -99,12 +99,3 @@ class TaskDir {
 
   final children = IsarLinks<TaskDir>();
 }
-
-@embedded
-class StoredRecurrence {
-  StoredRecurrence({
-    this.rule,
-  });
-  @ignore
-  RecurrenceRule? rule;
-}

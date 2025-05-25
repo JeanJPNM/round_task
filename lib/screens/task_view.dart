@@ -415,6 +415,8 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
                   )
                   .toList(),
               onReorder: (oldIndex, newIndex) {
+                oldIndex = _mapSubtaskIndex(oldIndex, _subTaskControllers);
+                newIndex = _mapSubtaskIndex(newIndex, _subTaskControllers);
                 if (oldIndex < newIndex) {
                   newIndex--;
                 }
@@ -903,4 +905,20 @@ DateTime? _nextDate(RecurrenceRule rule, DateTime date) {
       )
       .firstOrNull
       ?.copyWith(isUtc: false);
+}
+
+int _mapSubtaskIndex(
+    int relativeIndex, List<_SubTaskController> subTaskControllers) {
+  var lastValidIndex = 0;
+  var count = 0;
+
+  for (var (i, controller) in subTaskControllers.indexed) {
+    if (controller.removed) continue;
+
+    if (count == relativeIndex) return i;
+    lastValidIndex = i;
+    count++;
+  }
+
+  return lastValidIndex + 1;
 }

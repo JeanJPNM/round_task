@@ -32,9 +32,12 @@ class TaskCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     late final locale = Localizations.localeOf(context).toLanguageTag();
-    late final customColors = Theme.of(context).extension<CustomColors>()!;
-    final ColorScheme(:outlineVariant, :surfaceContainerLow) =
-        ColorScheme.of(context);
+    final theme = Theme.of(context);
+    final customColors = theme.extension<CustomColors>()!;
+    final ColorScheme(
+      :outlineVariant,
+      :surfaceContainerLow,
+    ) = theme.colorScheme;
     final now = DateTime.now();
 
     final tintColor = switch (task.endDate) {
@@ -97,14 +100,14 @@ class TaskCard extends StatelessWidget {
                 children: [
                   Text(
                     task.title,
-                    style: Theme.of(context).textTheme.labelLarge,
+                    style: theme.textTheme.labelLarge,
                   ),
                   if (task.description.isNotEmpty)
                     Text(
                       task.description,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelMedium,
+                      style: theme.textTheme.labelMedium,
                     ),
                   if (timeMessage != null) Text(timeMessage),
                 ],

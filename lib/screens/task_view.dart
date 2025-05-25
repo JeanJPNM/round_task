@@ -280,8 +280,7 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
   Widget build(BuildContext context) {
     final task = widget.task;
     final repository = ref.watch(repositoryPod);
-    final deleteSurface =
-        Theme.of(context).extension<CustomColors>()!.deleteSurface;
+    final CustomColors(:deleteSurface) = Theme.of(context).extension()!;
 
     return ScaffoldMessenger(
       key: scaffoldMessengerKey,

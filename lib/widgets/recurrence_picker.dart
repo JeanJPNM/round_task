@@ -112,6 +112,7 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
   @override
   Widget build(BuildContext context) {
     final locale = Localizations.localeOf(context).languageCode;
+    final theme = Theme.of(context);
     return IntrinsicWidth(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -120,7 +121,7 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
         children: [
           Text(
             context.tr("recurrence"),
-            style: Theme.of(context).textTheme.titleSmall,
+            style: theme.textTheme.titleSmall,
           ),
           Row(
             mainAxisSize: MainAxisSize.min,
@@ -209,7 +210,7 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
           },
           Text(
             context.tr("ends"),
-            style: Theme.of(context).textTheme.titleSmall,
+            style: theme.textTheme.titleSmall,
           ),
           Row(
             mainAxisSize: MainAxisSize.min,

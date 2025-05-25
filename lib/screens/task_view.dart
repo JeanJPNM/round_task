@@ -11,6 +11,7 @@ import 'package:round_task/custom_colors.dart';
 import 'package:round_task/models/task.dart';
 import 'package:round_task/provider.dart';
 import 'package:round_task/widgets/recurrence_picker.dart';
+import 'package:round_task/widgets/sliver_material_reorderable_list.dart';
 import 'package:rrule/rrule.dart';
 
 typedef TaskViewParams = (UserTask task, bool addToQueue);
@@ -310,144 +311,152 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
             ),
           ],
         ),
-        body: ListView(
+        body: Padding(
           padding: const EdgeInsets.all(8.0),
-          children: [
-            TextField(
-              focusNode: titleFocusNode,
-              controller: titleController,
-              decoration: InputDecoration(labelText: context.tr("title")),
-              keyboardType: TextInputType.multiline,
-              maxLines: null,
-              textInputAction: TextInputAction.done,
-              inputFormatters: [
-                FilteringTextInputFormatter.singleLineFormatter,
-              ],
-            ),
-            TextField(
-              focusNode: descriptionFocusNode,
-              controller: descriptionController,
-              decoration: InputDecoration(labelText: context.tr("description")),
-              maxLines: null,
-            ),
-            DateTimePicker(
-              label: Text(context.tr("start_date")),
-              controller: startDateController,
-            ),
-            ValueListenableBuilder(
-              valueListenable: startDateController,
-              builder: (context, startDate, child) {
-                return DateTimePicker(
-                  label: Text(context.tr("end_date")),
-                  controller: endDateController,
-                  firstDate: startDate,
-                  defaultHour: 23,
-                  defaultMinute: 59,
-                );
-              },
-            ),
-            ValueListenableBuilder(
-              valueListenable: startDateController,
-              builder: (context, startDate, child) {
-                if (startDate == null) return const SizedBox.shrink();
-
-                return Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(context.tr("recurrence")),
-                    TextButton(
-                      onPressed: () async {
-                        final rule = await showRecurrencePicker(
-                          context,
-                          initialRecurrenceRule: recurrenceRule,
-                          initialWeekDays: [startDate.weekday],
-                        );
-
-                        if (rule == null) return;
-                        setState(() {
-                          recurrenceRule = rule;
-                        });
-                      },
-                      child: Text(context.tr(recurrenceRule == null
-                          ? "add_recurrence"
-                          : "edit_recurrence")),
+          child: CustomScrollView(
+            slivers: [
+              SliverList.list(
+                children: [
+                  TextField(
+                    focusNode: titleFocusNode,
+                    controller: titleController,
+                    decoration: InputDecoration(labelText: context.tr("title")),
+                    keyboardType: TextInputType.multiline,
+                    maxLines: null,
+                    textInputAction: TextInputAction.done,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.singleLineFormatter,
+                    ],
+                  ),
+                  TextField(
+                    focusNode: descriptionFocusNode,
+                    controller: descriptionController,
+                    decoration: InputDecoration(
+                      labelText: context.tr("description"),
                     ),
-                    if (recurrenceRule != null)
-                      IconButton(
-                        onPressed: () {
-                          setState(() {
-                            recurrenceRule = null;
-                          });
-                        },
-                        icon: const Icon(Icons.delete),
+                    maxLines: null,
+                  ),
+                  DateTimePicker(
+                    label: Text(context.tr("start_date")),
+                    controller: startDateController,
+                  ),
+                  ValueListenableBuilder(
+                    valueListenable: startDateController,
+                    builder: (context, startDate, child) {
+                      return DateTimePicker(
+                        label: Text(context.tr("end_date")),
+                        controller: endDateController,
+                        firstDate: startDate,
+                        defaultHour: 23,
+                        defaultMinute: 59,
+                      );
+                    },
+                  ),
+                  ValueListenableBuilder(
+                    valueListenable: startDateController,
+                    builder: (context, startDate, child) {
+                      if (startDate == null) return const SizedBox.shrink();
+
+                      return Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Text(context.tr("recurrence")),
+                          TextButton(
+                            onPressed: () async {
+                              final rule = await showRecurrencePicker(
+                                context,
+                                initialRecurrenceRule: recurrenceRule,
+                                initialWeekDays: [startDate.weekday],
+                              );
+
+                              if (rule == null) return;
+                              setState(() {
+                                recurrenceRule = rule;
+                              });
+                            },
+                            child: Text(context.tr(recurrenceRule == null
+                                ? "add_recurrence"
+                                : "edit_recurrence")),
+                          ),
+                          if (recurrenceRule != null)
+                            IconButton(
+                              onPressed: () {
+                                setState(() {
+                                  recurrenceRule = null;
+                                });
+                              },
+                              icon: const Icon(Icons.delete),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  ValueListenableBuilder(
+                    valueListenable: autoInserDateController,
+                    builder: (context, date, child) {
+                      return _QueuePositionPicker(
+                        controller: positionController,
+                        startDate: date,
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  const Divider(),
+                ],
+              ),
+              SliverMaterialReorderableList(
+                children: _subTaskControllers
+                    .whereNot((controller) => controller.removed)
+                    .map(
+                      (controller) => Dismissible(
+                        key: ObjectKey(controller),
+                        onDismissed: (direction) => _removeSubTask(controller),
+                        background: Container(color: deleteSurface),
+                        child: _SubTaskEditor(
+                          controller: controller,
+                          onDelete: () => _removeSubTask(controller),
+                        ),
                       ),
-                  ],
-                );
-              },
-            ),
-            const SizedBox(height: 8),
-            ValueListenableBuilder(
-              valueListenable: autoInserDateController,
-              builder: (context, date, child) {
-                return _QueuePositionPicker(
-                  controller: positionController,
-                  startDate: date,
-                );
-              },
-            ),
-            const SizedBox(height: 8),
-            const Divider(),
-            ReorderableListView(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              children: _subTaskControllers
-                  .whereNot((controller) => controller.removed)
-                  .map(
-                    (controller) => Dismissible(
-                      key: ObjectKey(controller),
-                      onDismissed: (direction) => _removeSubTask(controller),
-                      background: Container(color: deleteSurface),
-                      child: _SubTaskEditor(
-                        controller: controller,
+                    )
+                    .toList(),
+                onReorder: (oldIndex, newIndex) {
+                  oldIndex = _mapSubtaskIndex(oldIndex, _subTaskControllers);
+                  newIndex = _mapSubtaskIndex(newIndex, _subTaskControllers);
+                  if (oldIndex < newIndex) {
+                    newIndex--;
+                  }
+
+                  setState(() {
+                    final controller = _subTaskControllers.removeAt(oldIndex);
+                    _subTaskControllers.insert(newIndex, controller);
+                  });
+                },
+              ),
+              SliverList.list(children: [
+                TextButton(
+                  onPressed: () {
+                    final controller = _SubTaskController(
+                      SubTask(name: "", done: false, reference: 0),
+                    );
+                    setState(() {
+                      titleFocusNode.unfocus();
+                      descriptionFocusNode.unfocus();
+                      _subTaskControllers.add(controller);
+                      controller.openView(
+                        context,
                         onDelete: () => _removeSubTask(controller),
-                      ),
-                    ),
-                  )
-                  .toList(),
-              onReorder: (oldIndex, newIndex) {
-                oldIndex = _mapSubtaskIndex(oldIndex, _subTaskControllers);
-                newIndex = _mapSubtaskIndex(newIndex, _subTaskControllers);
-                if (oldIndex < newIndex) {
-                  newIndex--;
-                }
-
-                setState(() {
-                  final controller = _subTaskControllers.removeAt(oldIndex);
-                  _subTaskControllers.insert(newIndex, controller);
-                });
-              },
-            ),
-            TextButton(
-              onPressed: () {
-                final controller = _SubTaskController(
-                  SubTask(name: "", done: false, reference: 0),
-                );
-                setState(() {
-                  titleFocusNode.unfocus();
-                  descriptionFocusNode.unfocus();
-                  _subTaskControllers.add(controller);
-                  controller.openView(
-                    context,
-                    onDelete: () => _removeSubTask(controller),
-                  );
-                });
-              },
-              child: Text(context.tr("add_subtask")),
-            ),
-            const SizedBox(height: 8),
-            const Divider(),
-            const SizedBox(height: 8),
-          ],
+                      );
+                    });
+                  },
+                  child: Text(context.tr("add_subtask")),
+                ),
+                const SizedBox(height: 8),
+                const Divider(),
+                const SizedBox(height: 8),
+              ])
+            ],
+          ),
         ),
         bottomNavigationBar: Padding(
           padding: const EdgeInsets.all(8),

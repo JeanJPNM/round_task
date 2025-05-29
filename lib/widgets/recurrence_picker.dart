@@ -141,8 +141,7 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
               ),
               const SizedBox(width: 10),
               DropdownMenu(
-                enableFilter: false,
-                enableSearch: false,
+                requestFocusOnTap: false,
                 initialSelection: frequency,
                 onSelected: (value) {
                   setState(() {

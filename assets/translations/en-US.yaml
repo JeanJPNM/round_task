@@ -18,6 +18,11 @@ done: Done
 task_card_start: 'Start: {} ({})'
 task_card_end: 'End: {} ({})'
 
+order:
+  default: Default
+  by_end_date: End date
+  by_start_date: Start date
+
 create_task: Create task
 edit_task: Edit task
 task_deleted: Task deleted

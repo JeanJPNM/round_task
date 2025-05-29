@@ -25,6 +25,8 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
   final _searchController = SearchController();
 
   TaskSearchType _searchType = TaskSearchType.queued;
+  TaskSorting? _queuedTasksSorting;
+  TaskSorting _pendingTasksSorting = TaskSorting.creationDate;
 
   @override
   void initState() {
@@ -132,37 +134,30 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
                   controller: _tabController,
                   children: [
                     Consumer(builder: (context, ref, child) {
-                      final queuedTasks = ref.watch(queuedTasksPod);
+                      final queuedTasks =
+                          ref.watch(queuedTasksPod(_queuedTasksSorting));
                       return queuedTasks.when(
                         loading: () =>
                             const Center(child: CircularProgressIndicator()),
                         error: (error, stackTrace) => Center(
                           child: Text(context.tr("general_error")),
                         ),
-                        data: (tasks) => AnimatedReorderableListView(
-                          key: const PageStorageKey("queuedTasks"),
-                          padding: _listPadding,
-                          shrinkWrap: true,
-                          items: tasks,
-                          isSameItem: (a, b) => a.id == b.id,
-                          onReorder: (oldIndex, newIndex) async {
-                            // modifying the list directly is a big no-no
-                            // but this is kind of fine because
-                            // a new list is produced a few milliseconds later
-                            // TODO: find a better way to do this
-                            final task = tasks.removeAt(oldIndex);
-                            tasks.insert(newIndex, task);
-
-                            await repository.reorderTasks(tasks);
+                        data: (tasks) => _QueuedTasksTab(
+                          sorting: _queuedTasksSorting,
+                          tasks: tasks,
+                          repository: repository,
+                          onSortingChanged: (sorting) {
+                            setState(() {
+                              _queuedTasksSorting = sorting;
+                            });
                           },
-                          itemBuilder: (context, index) =>
-                              _buildTask(tasks[index]),
                         ),
                       );
                     }),
                     Consumer(
                       builder: (context, ref, child) {
-                        final pendingTasks = ref.watch(pendingTasksPod);
+                        final pendingTasks =
+                            ref.watch(pendingTasksPod(_pendingTasksSorting));
 
                         return pendingTasks.when(
                           loading: () => const Center(
@@ -171,17 +166,14 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
                           error: (error, stackTrace) => Center(
                             child: Text(context.tr("general_error")),
                           ),
-                          data: (tasks) => AnimatedReorderableListView(
-                            key: const PageStorageKey("pendingTasks"),
-                            padding: _listPadding,
-                            shrinkWrap: true,
-                            items: tasks,
-                            isSameItem: (a, b) => a.id == b.id,
-                            onReorder: (oldIndex, newIndex) {},
-                            nonDraggableItems: tasks,
-                            enableSwap: true,
-                            itemBuilder: (context, index) =>
-                                _buildTask(tasks[index]),
+                          data: (tasks) => _PendingTasksTab(
+                            sorting: _pendingTasksSorting,
+                            tasks: tasks,
+                            onSortingChanged: (sorting) {
+                              setState(() {
+                                _pendingTasksSorting = sorting;
+                              });
+                            },
                           ),
                         );
                       },
@@ -230,7 +222,8 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
               destinations: [
                 Consumer(
                   builder: (context, ref, child) {
-                    final queuedTasks = ref.watch(queuedTasksPod);
+                    final queuedTasks =
+                        ref.watch(queuedTasksPod(_queuedTasksSorting));
 
                     final label = switch (queuedTasks) {
                       AsyncData(value: List(isNotEmpty: true, :final length)) =>
@@ -249,7 +242,8 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
                 ),
                 Consumer(
                   builder: (context, ref, child) {
-                    final pendingTasks = ref.watch(pendingTasksPod);
+                    final pendingTasks =
+                        ref.watch(pendingTasksPod(_pendingTasksSorting));
 
                     final label = switch (pendingTasks) {
                       AsyncData(value: List(isNotEmpty: true, :final length)) =>
@@ -306,3 +300,156 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
     );
   }
 }
+
+class _QueuedTasksTab extends StatefulWidget {
+  const _QueuedTasksTab({
+    required this.sorting,
+    required this.tasks,
+    required this.repository,
+    this.onSortingChanged,
+  });
+
+  final TaskSorting? sorting;
+  final Repository repository;
+  final List<UserTask> tasks;
+  final void Function(TaskSorting?)? onSortingChanged;
+
+  @override
+  State<_QueuedTasksTab> createState() => _QueuedTasksTabState();
+}
+
+class _QueuedTasksTabState extends State<_QueuedTasksTab>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    final sorting = widget.sorting;
+    final tasks = widget.tasks;
+    final repository = widget.repository;
+
+    return Column(
+      children: [
+        const SizedBox(height: 10),
+        SegmentedButton(
+          segments: [
+            ButtonSegment(
+              value: null,
+              label: Text(context.tr("order.default")),
+            ),
+            ButtonSegment(
+              value: TaskSorting.endDate,
+              label: Text(context.tr("order.by_end_date")),
+            ),
+            ButtonSegment(
+              value: TaskSorting.autoInsertDate,
+              label: Text(context.tr("order.by_start_date")),
+            ),
+          ],
+          selected: {sorting},
+          multiSelectionEnabled: false,
+          showSelectedIcon: false,
+          onSelectionChanged: (value) {
+            widget.onSortingChanged?.call(value.first);
+          },
+        ),
+        Expanded(
+          child: AnimatedReorderableListView<UserTask>(
+            enableSwap: true,
+            padding: _listPadding,
+            shrinkWrap: true,
+            items: tasks,
+            isSameItem: (a, b) => a.id == b.id,
+            nonDraggableItems: sorting == null ? const [] : tasks,
+            onReorder: (oldIndex, newIndex) async {
+              // modifying the list directly is a big no-no
+              // but this is kind of fine because
+              // a new list is produced a few milliseconds later
+              // TODO: find a better way to do this
+              final task = tasks.removeAt(oldIndex);
+              tasks.insert(newIndex, task);
+
+              await repository.reorderTasks(tasks);
+            },
+            itemBuilder: (context, index) => _buildTask(tasks[index]),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PendingTasksTab extends StatefulWidget {
+  const _PendingTasksTab({
+    required this.sorting,
+    required this.tasks,
+    this.onSortingChanged,
+  });
+
+  final TaskSorting sorting;
+  final List<UserTask> tasks;
+  final void Function(TaskSorting)? onSortingChanged;
+  @override
+  State<_PendingTasksTab> createState() => __PendingTasksTabState();
+}
+
+class __PendingTasksTabState extends State<_PendingTasksTab>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    final sorting = widget.sorting;
+    final tasks = widget.tasks;
+
+    return Column(
+      children: [
+        const SizedBox(height: 10),
+        SegmentedButton(
+          segments: [
+            ButtonSegment(
+              value: TaskSorting.creationDate,
+              label: Text(context.tr("order.default")),
+            ),
+            ButtonSegment(
+              value: TaskSorting.endDate,
+              label: Text(context.tr("order.by_end_date")),
+            ),
+            ButtonSegment(
+              value: TaskSorting.autoInsertDate,
+              label: Text(context.tr("order.by_start_date")),
+            ),
+          ],
+          selected: {sorting},
+          multiSelectionEnabled: false,
+          showSelectedIcon: false,
+          onSelectionChanged: (value) {
+            widget.onSortingChanged?.call(value.first);
+          },
+        ),
+        Expanded(
+          child: AnimatedReorderableListView(
+            padding: _listPadding,
+            shrinkWrap: true,
+            items: tasks,
+            isSameItem: (a, b) => a.id == b.id,
+            onReorder: (oldIndex, newIndex) {},
+            nonDraggableItems: tasks,
+            enableSwap: true,
+            itemBuilder: (context, index) => _buildTask(tasks[index]),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+Widget _buildTask(UserTask task) => SizedBox(
+      key: ValueKey(task.id),
+      width: double.infinity,
+      child: TaskCard(task: task),
+    );

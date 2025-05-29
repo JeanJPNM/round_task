@@ -18,6 +18,11 @@ done: Concluir
 task_card_start: 'Início: {} ({})'
 task_card_end: 'Término: {} ({})'
 
+order:
+  default: Padrão
+  by_end_date: Data de término
+  by_start_date: Data de início
+
 create_task: Criar tarefa
 edit_task: Editar tarefa
 task_deleted: Tarefa excluída

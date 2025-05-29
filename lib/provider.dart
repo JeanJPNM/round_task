@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
@@ -19,19 +20,48 @@ final isarPod = FutureProvider((ref) async {
 final repositoryPod = Provider(Repository.new);
 
 // no need to dispose, since they are used in the main screen of the app
-final queuedTasksPod = StreamProvider((ref) {
+final _innerQueuedTasksPod = StreamProvider((ref) {
   final repository = ref.watch(repositoryPod);
 
   return repository.getQueuedTasksStream();
 });
 
-final pendingTasksPod = StreamProvider((ref) {
+final queuedTasksPod = Provider.family.autoDispose((ref, TaskSorting? sorting) {
+  final tasks = ref.watch(_innerQueuedTasksPod);
+
+  // tasks already come sorted by reference
+  if (sorting == null) return tasks;
+
+  if (tasks case AsyncData()) {
+    return tasks.applySorting(sorting);
+  }
+
+  return tasks;
+});
+
+final _innerPendingTasksPod = StreamProvider((ref) {
   final repository = ref.watch(repositoryPod);
 
   return repository.getPendingTasksStream();
 });
 
-final archivedTasksPod = StreamProvider((ref) {
+final pendingTasksPod = Provider.family.autoDispose((
+  ref,
+  TaskSorting sorting,
+) {
+  final tasks = ref.watch(_innerPendingTasksPod);
+
+  // tasks already come sorted by creation date
+  if (sorting == TaskSorting.creationDate) return tasks;
+
+  if (tasks case AsyncData()) {
+    return tasks.applySorting(sorting);
+  }
+
+  return tasks;
+});
+
+final archivedTasksPod = StreamProvider.autoDispose((ref) {
   final repository = ref.watch(repositoryPod);
 
   return repository.getArchivedTasksStream();
@@ -127,6 +157,20 @@ enum TaskSearchType {
   queued,
   pending,
   archived,
+}
+
+enum TaskSorting {
+  creationDate,
+  autoInsertDate,
+  endDate;
+
+  DateTime? Function(UserTask task) get _keyOf {
+    return switch (this) {
+      TaskSorting.creationDate => (task) => task.creationDate,
+      TaskSorting.autoInsertDate => (task) => task.autoInsertDate,
+      TaskSorting.endDate => (task) => task.endDate,
+    };
+  }
 }
 
 class Repository {
@@ -328,5 +372,21 @@ class Repository {
             .or()
             .descriptionContains(searchText, caseSensitive: false))
         .findAll();
+  }
+}
+
+int _compareNullableDatetime(DateTime? a, DateTime? b) {
+  if (a == null && b == null) return 0;
+  if (a == null) return 1;
+  if (b == null) return -1;
+  return a.compareTo(b);
+}
+
+extension on AsyncData<List<UserTask>> {
+  AsyncData<List<UserTask>> applySorting(TaskSorting sorting) {
+    return AsyncData(value.sortedByCompare(
+      sorting._keyOf,
+      _compareNullableDatetime,
+    ));
   }
 }

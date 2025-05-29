@@ -327,6 +327,7 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
                     inputFormatters: [
                       FilteringTextInputFormatter.singleLineFormatter,
                     ],
+                    onTapOutside: (event) => titleFocusNode.unfocus(),
                   ),
                   TextField(
                     focusNode: descriptionFocusNode,
@@ -335,6 +336,7 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
                       labelText: context.tr("description"),
                     ),
                     maxLines: null,
+                    onTapOutside: (event) => descriptionFocusNode.unfocus(),
                   ),
                   DateTimePicker(
                     label: Text(context.tr("start_date")),
@@ -440,8 +442,6 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
                       SubTask(name: "", done: false, reference: 0),
                     );
                     setState(() {
-                      titleFocusNode.unfocus();
-                      descriptionFocusNode.unfocus();
                       _subTaskControllers.add(controller);
                       controller.openView(
                         context,

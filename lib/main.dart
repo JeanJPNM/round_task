@@ -23,13 +23,10 @@ final _router = GoRouter(
     GoRoute(
       path: "/task",
       pageBuilder: (context, state) {
-        final (task, addToQueue) = state.extra as TaskViewParams;
-
         return MaterialPage<void>(
           key: state.pageKey,
           child: TaskViewScreen(
-            task: task,
-            addToQueue: addToQueue,
+            params: state.extra as TaskViewParams,
           ),
         );
       },

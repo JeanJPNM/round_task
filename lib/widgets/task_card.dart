@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:relative_time/relative_time.dart';
 import 'package:round_task/custom_colors.dart';
 import 'package:round_task/models/task.dart';
+import 'package:round_task/screens/task_view.dart';
 import 'package:round_task/widgets/animated_progress_bar.dart';
 import 'package:round_task/widgets/second_tick_provider.dart';
 
@@ -88,7 +89,7 @@ class TaskCard extends StatelessWidget {
       color: backgroundColor,
       child: InkWell(
         onTap: () {
-          context.push("/task", extra: (task, false));
+          context.push("/task", extra: TaskViewParams(task));
         },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

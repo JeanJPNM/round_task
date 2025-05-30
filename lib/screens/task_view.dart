@@ -14,16 +14,26 @@ import 'package:round_task/widgets/recurrence_picker.dart';
 import 'package:round_task/widgets/sliver_material_reorderable_list.dart';
 import 'package:rrule/rrule.dart';
 
-typedef TaskViewParams = (UserTask task, bool addToQueue);
-
-class TaskViewScreen extends ConsumerStatefulWidget {
-  const TaskViewScreen({
-    super.key,
-    required this.task,
+class TaskViewParams {
+  TaskViewParams(
+    this.task, {
     this.addToQueue = false,
+    this.autofocusTitle = false,
   });
 
+  final UserTask task;
   final bool addToQueue;
+  final bool autofocusTitle;
+}
+
+class TaskViewScreen extends ConsumerStatefulWidget {
+  TaskViewScreen({super.key, required TaskViewParams params})
+      : task = params.task,
+        addToQueue = params.addToQueue,
+        focusTitle = params.autofocusTitle;
+
+  final bool addToQueue;
+  final bool focusTitle;
   final UserTask task;
 
   @override
@@ -318,6 +328,7 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
               SliverList.list(
                 children: [
                   TextField(
+                    autofocus: widget.focusTitle,
                     focusNode: titleFocusNode,
                     controller: titleController,
                     decoration: InputDecoration(labelText: context.tr("title")),

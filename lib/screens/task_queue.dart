@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:round_task/models/task.dart';
 import 'package:round_task/provider.dart';
+import 'package:round_task/screens/task_view.dart';
 import 'package:round_task/widgets/task_card.dart';
 
 const _listPadding = EdgeInsets.only(bottom: 100, top: 40);
@@ -284,14 +285,15 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
         onPressed: () {
           context.push(
             "/task",
-            extra: (
+            extra: TaskViewParams(
               UserTask(
                 title: '',
                 description: '',
                 lastTouched: DateTime.now(),
                 creationDate: DateTime.now(),
               ),
-              _searchType == TaskSearchType.queued,
+              addToQueue: _searchType == TaskSearchType.queued,
+              autofocusTitle: true,
             ),
           );
         },

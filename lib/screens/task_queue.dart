@@ -333,27 +333,22 @@ class _QueuedTasksTabState extends State<_QueuedTasksTab>
     return Column(
       children: [
         const SizedBox(height: 10),
-        SegmentedButton(
-          segments: [
-            ButtonSegment(
-              value: null,
-              label: Text(context.tr("order.default")),
+        Align(
+          alignment: Alignment.centerRight,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: _SortingPicker(
+              defaultSorting: null,
+              sorting: sorting,
+              entries: [
+                TaskSorting.endDate,
+                TaskSorting.autoInsertDate,
+              ],
+              onSortingChanged: (value) {
+                widget.onSortingChanged?.call(value);
+              },
             ),
-            ButtonSegment(
-              value: TaskSorting.endDate,
-              label: Text(context.tr("order.by_end_date")),
-            ),
-            ButtonSegment(
-              value: TaskSorting.autoInsertDate,
-              label: Text(context.tr("order.by_start_date")),
-            ),
-          ],
-          selected: {sorting},
-          multiSelectionEnabled: false,
-          showSelectedIcon: false,
-          onSelectionChanged: (value) {
-            widget.onSortingChanged?.call(value.first);
-          },
+          ),
         ),
         Expanded(
           child: AnimatedReorderableListView<UserTask>(
@@ -364,10 +359,6 @@ class _QueuedTasksTabState extends State<_QueuedTasksTab>
             isSameItem: (a, b) => a.id == b.id,
             nonDraggableItems: sorting == null ? const [] : tasks,
             onReorder: (oldIndex, newIndex) async {
-              // modifying the list directly is a big no-no
-              // but this is kind of fine because
-              // a new list is produced a few milliseconds later
-              // TODO: find a better way to do this
               final task = tasks.removeAt(oldIndex);
               tasks.insert(newIndex, task);
 
@@ -409,27 +400,24 @@ class __PendingTasksTabState extends State<_PendingTasksTab>
     return Column(
       children: [
         const SizedBox(height: 10),
-        SegmentedButton(
-          segments: [
-            ButtonSegment(
-              value: TaskSorting.creationDate,
-              label: Text(context.tr("order.default")),
+        Align(
+          alignment: Alignment.centerRight,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: _SortingPicker(
+              defaultSorting: TaskSorting.creationDate,
+              onSortingChanged: (TaskSorting? value) {
+                if (value != null) {
+                  widget.onSortingChanged?.call(value);
+                }
+              },
+              sorting: sorting,
+              entries: [
+                TaskSorting.endDate,
+                TaskSorting.autoInsertDate,
+              ],
             ),
-            ButtonSegment(
-              value: TaskSorting.endDate,
-              label: Text(context.tr("order.by_end_date")),
-            ),
-            ButtonSegment(
-              value: TaskSorting.autoInsertDate,
-              label: Text(context.tr("order.by_start_date")),
-            ),
-          ],
-          selected: {sorting},
-          multiSelectionEnabled: false,
-          showSelectedIcon: false,
-          onSelectionChanged: (value) {
-            widget.onSortingChanged?.call(value.first);
-          },
+          ),
         ),
         Expanded(
           child: AnimatedReorderableListView(
@@ -444,6 +432,49 @@ class __PendingTasksTabState extends State<_PendingTasksTab>
           ),
         ),
       ],
+    );
+  }
+}
+
+class _SortingPicker extends StatelessWidget {
+  const _SortingPicker({
+    required this.defaultSorting,
+    required this.entries,
+    required this.sorting,
+    this.onSortingChanged,
+  });
+
+  final TaskSorting? defaultSorting;
+  final List<TaskSorting> entries;
+  final TaskSorting? sorting;
+  final void Function(TaskSorting?)? onSortingChanged;
+
+  String _getSortingLabel(TaskSorting sorting) {
+    return switch (sorting) {
+      TaskSorting.endDate => "order.by_end_date",
+      TaskSorting.autoInsertDate => "order.by_start_date",
+      TaskSorting.creationDate => "order.by_creation_date",
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButton(
+      items: [
+        DropdownMenuItem(
+          value: defaultSorting,
+          child: Text(context.tr("order.default")),
+        ),
+        for (final entry in entries)
+          DropdownMenuItem(
+            value: entry,
+            child: Text(context.tr(_getSortingLabel(entry))),
+          ),
+      ],
+      onChanged: (value) => onSortingChanged?.call(value),
+      borderRadius: BorderRadius.circular(8.0),
+      value: sorting,
+      underline: const SizedBox.shrink(),
     );
   }
 }

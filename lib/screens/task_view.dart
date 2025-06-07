@@ -42,6 +42,7 @@ class TaskViewScreen extends ConsumerStatefulWidget {
 
 class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
   final scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+  final scrollController = ScrollController();
   final titleController = TextEditingController(),
       descriptionController = TextEditingController();
   final titleFocusNode = FocusNode();
@@ -120,6 +121,7 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
 
   @override
   void dispose() {
+    scrollController.dispose();
     titleController.dispose();
     descriptionController.dispose();
     titleFocusNode.dispose();
@@ -324,6 +326,7 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
         body: Padding(
           padding: const EdgeInsets.all(8.0),
           child: CustomScrollView(
+            controller: scrollController,
             slivers: [
               SliverList.list(
                 children: [
@@ -426,7 +429,7 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
                         key: ObjectKey(controller),
                         onDismissed: (direction) => _removeSubTask(controller),
                         background: Container(color: deleteSurface),
-                        child: _SubTaskEditor(
+                        child: _SubTaskCard(
                           controller: controller,
                           onDelete: () => _removeSubTask(controller),
                         ),
@@ -448,15 +451,24 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
               ),
               SliverList.list(children: [
                 TextButton(
-                  onPressed: () {
+                  onPressed: () async {
                     final controller = _SubTaskController(
                       SubTask(name: "", done: false, reference: 0),
                     );
+
+                    final added = await controller.openView(context);
+                    if (!added || !context.mounted) return;
+
                     setState(() {
                       _subTaskControllers.add(controller);
-                      controller.openView(
-                        context,
-                        onDelete: () => _removeSubTask(controller),
+                    });
+
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (!scrollController.hasClients) return;
+                      scrollController.animateTo(
+                        scrollController.offset + 60,
+                        duration: const Duration(milliseconds: 150),
+                        curve: Curves.bounceInOut,
                       );
                     });
                   },
@@ -769,28 +781,36 @@ class _SubTaskController {
     doneController.dispose();
   }
 
-  Future<void> openView(
+  Future<bool> openView(
     BuildContext context, {
-    required void Function() onDelete,
+    void Function()? onDelete,
   }) async {
-    final newText = await showDialog<String>(
-      context: context,
-      builder: (context) {
-        return _SubTaskDialog(
-          initialTitle: textController.value,
-          onDelete: onDelete,
-        );
-      },
-    );
+    final newText = await showModalBottomSheet<String>(
+        isScrollControlled: true,
+        context: context,
+        builder: (context) {
+          final viewInsets = EdgeInsets.only(
+            bottom: MediaQuery.viewInsetsOf(context).bottom,
+          );
+          return Padding(
+            padding: const EdgeInsets.all(15.0) + viewInsets,
+            child: _SubTaskEditor(
+              initialTitle: textController.value,
+              onDelete: onDelete,
+            ),
+          );
+        });
 
     if (newText != null) {
       textController.value = newText;
     }
+
+    return newText != null;
   }
 }
 
-class _SubTaskEditor extends StatefulWidget {
-  const _SubTaskEditor({
+class _SubTaskCard extends StatefulWidget {
+  const _SubTaskCard({
     required this.controller,
     required this.onDelete,
   });
@@ -798,10 +818,10 @@ class _SubTaskEditor extends StatefulWidget {
   final void Function() onDelete;
   final _SubTaskController controller;
   @override
-  State<_SubTaskEditor> createState() => __SubTaskEditorState();
+  State<_SubTaskCard> createState() => _SubTaskCardState();
 }
 
-class __SubTaskEditorState extends State<_SubTaskEditor> {
+class _SubTaskCardState extends State<_SubTaskCard> {
   @override
   Widget build(BuildContext context) {
     final doneController = widget.controller.doneController;
@@ -831,20 +851,20 @@ class __SubTaskEditorState extends State<_SubTaskEditor> {
   }
 }
 
-class _SubTaskDialog extends StatefulWidget {
-  const _SubTaskDialog({
+class _SubTaskEditor extends StatefulWidget {
+  const _SubTaskEditor({
     required this.initialTitle,
-    required this.onDelete,
+    this.onDelete,
   });
 
   final String initialTitle;
-  final void Function() onDelete;
+  final void Function()? onDelete;
 
   @override
-  State<_SubTaskDialog> createState() => __SubTaskDialogState();
+  State<_SubTaskEditor> createState() => _SubTaskEditorState();
 }
 
-class __SubTaskDialogState extends State<_SubTaskDialog> {
+class _SubTaskEditorState extends State<_SubTaskEditor> {
   late TextEditingController controller;
 
   @override
@@ -863,51 +883,52 @@ class __SubTaskDialogState extends State<_SubTaskDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      child: Padding(
-        padding: const EdgeInsets.all(15.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Align(
-              alignment: Alignment.centerRight,
-              child: IconButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  widget.onDelete();
-                },
-                icon: const Icon(Icons.delete),
-              ),
-            ),
-            TextField(
-              autofocus: true,
-              controller: controller,
-              onSubmitted: (value) {
-                Navigator.of(context).pop(value.trim());
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (widget.onDelete case final onDelete?)
+          Align(
+            alignment: Alignment.centerRight,
+            child: IconButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                onDelete();
               },
+              icon: const Icon(Icons.delete),
             ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: Text(context.tr("cancel")),
-                ),
-                const SizedBox(width: 8),
-                FilledButton(
-                  onPressed: () {
-                    Navigator.of(context).pop(controller.text.trim());
-                  },
-                  child: Text(context.tr("ok")),
-                ),
-              ],
-            )
+          ),
+        TextField(
+          autofocus: true,
+          controller: controller,
+          onSubmitted: (value) {
+            Navigator.of(context).pop(value.trim());
+          },
+          keyboardType: TextInputType.multiline,
+          maxLines: null,
+          textInputAction: TextInputAction.done,
+          inputFormatters: [
+            FilteringTextInputFormatter.singleLineFormatter,
           ],
         ),
-      ),
+        const SizedBox(height: 16),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text(context.tr("cancel")),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.of(context).pop(controller.text.trim());
+              },
+              child: Text(context.tr("ok")),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

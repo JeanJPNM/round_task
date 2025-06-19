@@ -321,11 +321,13 @@ Future<RecurrenceRule?> showRecurrencePicker(
       final viewInsets = EdgeInsets.only(
         bottom: MediaQuery.viewInsetsOf(context).bottom,
       );
-      return Padding(
-        padding: const EdgeInsets.all(15.0) + viewInsets,
-        child: RecurrencePicker(
-          initialRecurrenceRule: initialRecurrenceRule,
-          initialWeekDays: initialWeekDays,
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(15.0) + viewInsets,
+          child: RecurrencePicker(
+            initialRecurrenceRule: initialRecurrenceRule,
+            initialWeekDays: initialWeekDays,
+          ),
         ),
       );
     },

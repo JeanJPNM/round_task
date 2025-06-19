@@ -323,200 +323,206 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
             ),
           ],
         ),
-        body: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: CustomScrollView(
-            controller: scrollController,
-            slivers: [
-              SliverList.list(
-                children: [
-                  TextField(
-                    autofocus: widget.focusTitle,
-                    focusNode: titleFocusNode,
-                    controller: titleController,
-                    decoration: InputDecoration(labelText: context.tr("title")),
-                    keyboardType: TextInputType.multiline,
-                    maxLines: null,
-                    textInputAction: TextInputAction.done,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.singleLineFormatter,
-                    ],
-                    onTapOutside: (event) => titleFocusNode.unfocus(),
-                  ),
-                  TextField(
-                    focusNode: descriptionFocusNode,
-                    controller: descriptionController,
-                    decoration: InputDecoration(
-                      labelText: context.tr("description"),
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: CustomScrollView(
+              controller: scrollController,
+              slivers: [
+                SliverList.list(
+                  children: [
+                    TextField(
+                      autofocus: widget.focusTitle,
+                      focusNode: titleFocusNode,
+                      controller: titleController,
+                      decoration:
+                          InputDecoration(labelText: context.tr("title")),
+                      keyboardType: TextInputType.multiline,
+                      maxLines: null,
+                      textInputAction: TextInputAction.done,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.singleLineFormatter,
+                      ],
+                      onTapOutside: (event) => titleFocusNode.unfocus(),
                     ),
-                    maxLines: null,
-                    onTapOutside: (event) => descriptionFocusNode.unfocus(),
-                  ),
-                  DateTimePicker(
-                    label: Text(context.tr("start_date")),
-                    controller: startDateController,
-                  ),
-                  ValueListenableBuilder(
-                    valueListenable: startDateController,
-                    builder: (context, startDate, child) {
-                      return DateTimePicker(
-                        label: Text(context.tr("end_date")),
-                        controller: endDateController,
-                        firstDate: startDate,
-                        defaultHour: 23,
-                        defaultMinute: 59,
-                      );
-                    },
-                  ),
-                  ValueListenableBuilder(
-                    valueListenable: startDateController,
-                    builder: (context, startDate, child) {
-                      if (startDate == null) return const SizedBox.shrink();
+                    TextField(
+                      focusNode: descriptionFocusNode,
+                      controller: descriptionController,
+                      decoration: InputDecoration(
+                        labelText: context.tr("description"),
+                      ),
+                      maxLines: null,
+                      onTapOutside: (event) => descriptionFocusNode.unfocus(),
+                    ),
+                    DateTimePicker(
+                      label: Text(context.tr("start_date")),
+                      controller: startDateController,
+                    ),
+                    ValueListenableBuilder(
+                      valueListenable: startDateController,
+                      builder: (context, startDate, child) {
+                        return DateTimePicker(
+                          label: Text(context.tr("end_date")),
+                          controller: endDateController,
+                          firstDate: startDate,
+                          defaultHour: 23,
+                          defaultMinute: 59,
+                        );
+                      },
+                    ),
+                    ValueListenableBuilder(
+                      valueListenable: startDateController,
+                      builder: (context, startDate, child) {
+                        if (startDate == null) return const SizedBox.shrink();
 
-                      return Wrap(
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          Text(context.tr("recurrence")),
-                          TextButton(
-                            onPressed: () async {
-                              final rule = await showRecurrencePicker(
-                                context,
-                                initialRecurrenceRule: recurrenceRule,
-                                initialWeekDays: [startDate.weekday],
-                              );
+                        return Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text(context.tr("recurrence")),
+                            TextButton(
+                              onPressed: () async {
+                                final rule = await showRecurrencePicker(
+                                  context,
+                                  initialRecurrenceRule: recurrenceRule,
+                                  initialWeekDays: [startDate.weekday],
+                                );
 
-                              if (rule == null) return;
-                              setState(() {
-                                recurrenceRule = rule;
-                              });
-                            },
-                            child: Text(context.tr(recurrenceRule == null
-                                ? "add_recurrence"
-                                : "edit_recurrence")),
-                          ),
-                          if (recurrenceRule != null)
-                            IconButton(
-                              onPressed: () {
+                                if (rule == null) return;
                                 setState(() {
-                                  recurrenceRule = null;
+                                  recurrenceRule = rule;
                                 });
                               },
-                              icon: const Icon(Icons.delete),
+                              child: Text(context.tr(recurrenceRule == null
+                                  ? "add_recurrence"
+                                  : "edit_recurrence")),
                             ),
-                        ],
+                            if (recurrenceRule != null)
+                              IconButton(
+                                onPressed: () {
+                                  setState(() {
+                                    recurrenceRule = null;
+                                  });
+                                },
+                                icon: const Icon(Icons.delete),
+                              ),
+                          ],
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    ValueListenableBuilder(
+                      valueListenable: autoInserDateController,
+                      builder: (context, date, child) {
+                        return _QueuePositionPicker(
+                          controller: positionController,
+                          startDate: date,
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    const Divider(),
+                  ],
+                ),
+                SliverMaterialReorderableList(
+                  children: _subTaskControllers
+                      .whereNot((controller) => controller.removed)
+                      .map(
+                        (controller) => Dismissible(
+                          key: ObjectKey(controller),
+                          onDismissed: (direction) =>
+                              _removeSubTask(controller),
+                          background: Container(color: deleteSurface),
+                          child: _SubTaskCard(
+                            controller: controller,
+                            onDelete: () => _removeSubTask(controller),
+                          ),
+                        ),
+                      )
+                      .toList(),
+                  onReorder: (oldIndex, newIndex) {
+                    oldIndex = _mapSubtaskIndex(oldIndex, _subTaskControllers);
+                    newIndex = _mapSubtaskIndex(newIndex, _subTaskControllers);
+                    if (oldIndex < newIndex) {
+                      newIndex--;
+                    }
+
+                    setState(() {
+                      final controller = _subTaskControllers.removeAt(oldIndex);
+                      _subTaskControllers.insert(newIndex, controller);
+                    });
+                  },
+                ),
+                SliverList.list(children: [
+                  TextButton(
+                    onPressed: () async {
+                      final controller = _SubTaskController(
+                        SubTask(name: "", done: false, reference: 0),
                       );
+
+                      final added = await controller.openView(context);
+                      if (!added || !context.mounted) return;
+
+                      setState(() {
+                        _subTaskControllers.add(controller);
+                      });
+
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (!scrollController.hasClients) return;
+                        scrollController.animateTo(
+                          scrollController.offset + 60,
+                          duration: const Duration(milliseconds: 150),
+                          curve: Curves.bounceInOut,
+                        );
+                      });
                     },
-                  ),
-                  const SizedBox(height: 8),
-                  ValueListenableBuilder(
-                    valueListenable: autoInserDateController,
-                    builder: (context, date, child) {
-                      return _QueuePositionPicker(
-                        controller: positionController,
-                        startDate: date,
-                      );
-                    },
+                    child: Text(context.tr("add_subtask")),
                   ),
                   const SizedBox(height: 8),
                   const Divider(),
-                ],
-              ),
-              SliverMaterialReorderableList(
-                children: _subTaskControllers
-                    .whereNot((controller) => controller.removed)
-                    .map(
-                      (controller) => Dismissible(
-                        key: ObjectKey(controller),
-                        onDismissed: (direction) => _removeSubTask(controller),
-                        background: Container(color: deleteSurface),
-                        child: _SubTaskCard(
-                          controller: controller,
-                          onDelete: () => _removeSubTask(controller),
-                        ),
-                      ),
-                    )
-                    .toList(),
-                onReorder: (oldIndex, newIndex) {
-                  oldIndex = _mapSubtaskIndex(oldIndex, _subTaskControllers);
-                  newIndex = _mapSubtaskIndex(newIndex, _subTaskControllers);
-                  if (oldIndex < newIndex) {
-                    newIndex--;
-                  }
-
-                  setState(() {
-                    final controller = _subTaskControllers.removeAt(oldIndex);
-                    _subTaskControllers.insert(newIndex, controller);
-                  });
-                },
-              ),
-              SliverList.list(children: [
-                TextButton(
-                  onPressed: () async {
-                    final controller = _SubTaskController(
-                      SubTask(name: "", done: false, reference: 0),
-                    );
-
-                    final added = await controller.openView(context);
-                    if (!added || !context.mounted) return;
-
-                    setState(() {
-                      _subTaskControllers.add(controller);
-                    });
-
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (!scrollController.hasClients) return;
-                      scrollController.animateTo(
-                        scrollController.offset + 60,
-                        duration: const Duration(milliseconds: 150),
-                        curve: Curves.bounceInOut,
-                      );
-                    });
-                  },
-                  child: Text(context.tr("add_subtask")),
-                ),
-                const SizedBox(height: 8),
-                const Divider(),
-                const SizedBox(height: 8),
-              ])
-            ],
+                  const SizedBox(height: 8),
+                ])
+              ],
+            ),
           ),
         ),
-        bottomNavigationBar: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Row(children: [
-            Expanded(
-              child: ElevatedButton(
-                onPressed: () async {
-                  _applyChanges();
-                  await _save(repository, [
-                    if (_getTaskEditAction() case final action?) action,
-                  ]);
-                  if (!context.mounted) return;
-                  context.pop();
-                },
-                child: Text(context.tr("save")),
-              ),
-            ),
-            if (task.reference != null) ...[
-              const SizedBox(width: 8),
+        bottomNavigationBar: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Row(children: [
               Expanded(
-                child: FilledButton(
+                child: ElevatedButton(
                   onPressed: () async {
                     _applyChanges();
-                    _markAsDone(repository);
-
                     await _save(repository, [
-                      const RemoveTaskFromQueue(),
+                      if (_getTaskEditAction() case final action?) action,
                     ]);
-
                     if (!context.mounted) return;
                     context.pop();
                   },
-                  child: Text(context.tr("done")),
+                  child: Text(context.tr("save")),
                 ),
               ),
-            ],
-          ]),
+              if (task.reference != null) ...[
+                const SizedBox(width: 8),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: () async {
+                      _applyChanges();
+                      _markAsDone(repository);
+
+                      await _save(repository, [
+                        const RemoveTaskFromQueue(),
+                      ]);
+
+                      if (!context.mounted) return;
+                      context.pop();
+                    },
+                    child: Text(context.tr("done")),
+                  ),
+                ),
+              ],
+            ]),
+          ),
         ),
       ),
     );
@@ -792,11 +798,13 @@ class _SubTaskController {
           final viewInsets = EdgeInsets.only(
             bottom: MediaQuery.viewInsetsOf(context).bottom,
           );
-          return Padding(
-            padding: const EdgeInsets.all(15.0) + viewInsets,
-            child: _SubTaskEditor(
-              initialTitle: textController.value,
-              onDelete: onDelete,
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(15.0) + viewInsets,
+              child: _SubTaskEditor(
+                initialTitle: textController.value,
+                onDelete: onDelete,
+              ),
             ),
           );
         });

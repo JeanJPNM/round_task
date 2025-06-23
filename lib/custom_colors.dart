@@ -55,3 +55,12 @@ class CustomColors extends ThemeExtension<CustomColors> {
     );
   }
 }
+
+extension BrightnessExtension on Brightness {
+  Brightness get opposite {
+    return switch (this) {
+      Brightness.light => Brightness.dark,
+      Brightness.dark => Brightness.light,
+    };
+  }
+}

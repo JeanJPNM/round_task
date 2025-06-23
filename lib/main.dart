@@ -2,6 +2,7 @@ import 'package:dynamic_color/dynamic_color.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:easy_localization_loader/easy_localization_loader.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -15,19 +16,19 @@ final _router = GoRouter(
   routes: [
     GoRoute(
       path: "/",
-      pageBuilder: (context, state) => MaterialPage<void>(
-        key: state.pageKey,
+      pageBuilder: (context, state) => _buildPage(
+        context,
+        state,
         child: const TaskQueueScreen(),
       ),
     ),
     GoRoute(
       path: "/task",
       pageBuilder: (context, state) {
-        return MaterialPage<void>(
-          key: state.pageKey,
-          child: TaskViewScreen(
-            params: state.extra as TaskViewParams,
-          ),
+        return _buildPage(
+          context,
+          state,
+          child: TaskViewScreen(params: state.extra as TaskViewParams),
         );
       },
     ),
@@ -104,4 +105,36 @@ class MyApp extends StatelessWidget {
       },
     );
   }
+}
+
+class _OverlayAnnotations extends StatelessWidget {
+  const _OverlayAnnotations({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        systemNavigationBarColor: theme.colorScheme.surfaceContainer,
+        statusBarBrightness: theme.brightness.opposite,
+        statusBarIconBrightness: theme.brightness.opposite,
+        systemNavigationBarIconBrightness: theme.brightness.opposite,
+      ),
+      child: child,
+    );
+  }
+}
+
+Page<dynamic> _buildPage(
+  BuildContext context,
+  GoRouterState state, {
+  required Widget child,
+}) {
+  return MaterialPage<dynamic>(
+    key: state.pageKey,
+    child: _OverlayAnnotations(child: child),
+  );
 }

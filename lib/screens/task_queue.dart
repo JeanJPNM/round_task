@@ -87,6 +87,15 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
                 child: SearchAnchor(
                   searchController: _searchController,
                   isFullScreen: true,
+                  viewBuilder: (suggestions) {
+                    return SafeArea(
+                      top: false,
+                      bottom: false,
+                      child: ListView(
+                        children: suggestions.toList(),
+                      ),
+                    );
+                  },
                   builder: (context, controller) {
                     return SearchBar(
                       controller: controller,

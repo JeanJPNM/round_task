@@ -75,6 +75,11 @@ class MyApp extends StatelessWidget {
         final lightCustomColors = CustomColors.light.harmonized(lightScheme);
         final darkCustomColors = CustomColors.dark.harmonized(darkScheme);
 
+        final pageTransitionsTheme = PageTransitionsTheme(builders: {
+          for (final platform in TargetPlatform.values)
+            platform: const FadeForwardsPageTransitionsBuilder(),
+        });
+
         return MaterialApp.router(
           routerConfig: _router,
           title: 'Round Task',
@@ -82,11 +87,13 @@ class MyApp extends StatelessWidget {
           theme: ThemeData(
             colorScheme: lightScheme,
             useMaterial3: true,
+            pageTransitionsTheme: pageTransitionsTheme,
             extensions: [lightCustomColors],
           ),
           darkTheme: ThemeData(
             colorScheme: darkScheme,
             useMaterial3: true,
+            pageTransitionsTheme: pageTransitionsTheme,
             extensions: [darkCustomColors],
           ),
           localizationsDelegates: context.localizationDelegates

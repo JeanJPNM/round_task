@@ -1,6 +1,7 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:round_task/widgets/bottom_sheet_safe_area.dart';
 import 'package:rrule/rrule.dart';
 
 enum _EndOption {
@@ -318,16 +319,11 @@ Future<RecurrenceRule?> showRecurrencePicker(
     context: context,
     isScrollControlled: true,
     builder: (context) {
-      final viewInsets = EdgeInsets.only(
-        bottom: MediaQuery.viewInsetsOf(context).bottom,
-      );
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(15.0) + viewInsets,
-          child: RecurrencePicker(
-            initialRecurrenceRule: initialRecurrenceRule,
-            initialWeekDays: initialWeekDays,
-          ),
+      return BottomSheetSafeArea(
+        basePadding: const EdgeInsets.all(15.0),
+        child: RecurrencePicker(
+          initialRecurrenceRule: initialRecurrenceRule,
+          initialWeekDays: initialWeekDays,
         ),
       );
     },

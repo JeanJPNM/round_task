@@ -10,6 +10,7 @@ import 'package:isar/isar.dart';
 import 'package:round_task/custom_colors.dart';
 import 'package:round_task/models/task.dart';
 import 'package:round_task/provider.dart';
+import 'package:round_task/widgets/bottom_sheet_safe_area.dart';
 import 'package:round_task/widgets/recurrence_picker.dart';
 import 'package:round_task/widgets/sliver_material_reorderable_list.dart';
 import 'package:rrule/rrule.dart';
@@ -795,16 +796,11 @@ class _SubTaskController {
         isScrollControlled: true,
         context: context,
         builder: (context) {
-          final viewInsets = EdgeInsets.only(
-            bottom: MediaQuery.viewInsetsOf(context).bottom,
-          );
-          return SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(15.0) + viewInsets,
-              child: _SubTaskEditor(
-                initialTitle: textController.value,
-                onDelete: onDelete,
-              ),
+          return BottomSheetSafeArea(
+            basePadding: const EdgeInsets.all(15.0),
+            child: _SubTaskEditor(
+              initialTitle: textController.value,
+              onDelete: onDelete,
             ),
           );
         });

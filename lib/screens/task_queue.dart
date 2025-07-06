@@ -102,6 +102,15 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
                       focusNode: _searchFocusNode,
                       hintText: context.tr("search"),
                       leading: const Icon(Icons.search),
+                      trailing: [
+                        IconButton(
+                          onPressed: () {
+                            _unfocusSearchBar();
+                            context.push("/settings");
+                          },
+                          icon: const Icon(Icons.settings),
+                        )
+                      ],
                       onTapOutside: (event) {
                         _unfocusSearchBar();
                       },

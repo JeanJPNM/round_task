@@ -70,3 +70,16 @@ end_option:
 
 cancel: Cancel
 ok: Ok
+
+
+settings: Settings
+
+backup_and_restore: Backup and Restore
+
+export_database: Export data file
+export_success: Export completed successfully. Exported to {}
+export_failed: Export failed. Check the file at {}
+
+import_database: Import data file
+import_success: Import completed successfully. Imported from {}
+import_failed: Import failed. Check the file at {}

@@ -1,29 +1,26 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
+import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:round_task/models/database_metadata.dart';
 import 'package:round_task/models/task.dart';
 
 const _defaultSkipSize = 256;
 
-final isarPod = FutureProvider((ref) async {
-  final dir = await getApplicationDocumentsDirectory();
-  final isar = await Isar.open([UserTaskSchema, SubTaskSchema, TaskDirSchema],
-      directory: dir.path);
-
-  ref.onDispose(isar.close);
-  return isar;
-});
+final isarPod = AsyncNotifierProvider<IsarNotifier, Isar>(IsarNotifier.new);
 
 final repositoryPod = Provider(Repository.new);
 
 // no need to dispose, since they are used in the main screen of the app
-final _innerQueuedTasksPod = StreamProvider((ref) {
+final _innerQueuedTasksPod = StreamProvider((ref) async* {
+  await ref.watch(isarPod.future);
   final repository = ref.watch(repositoryPod);
 
-  return repository.getQueuedTasksStream();
+  yield* repository.getQueuedTasksStream();
 });
 
 final queuedTasksPod = Provider.family.autoDispose((ref, TaskSorting? sorting) {
@@ -39,10 +36,11 @@ final queuedTasksPod = Provider.family.autoDispose((ref, TaskSorting? sorting) {
   return tasks;
 });
 
-final _innerPendingTasksPod = StreamProvider((ref) {
+final _innerPendingTasksPod = StreamProvider((ref) async* {
+  await ref.watch(isarPod.future);
   final repository = ref.watch(repositoryPod);
 
-  return repository.getPendingTasksStream();
+  yield* repository.getPendingTasksStream();
 });
 
 final pendingTasksPod = Provider.family.autoDispose((
@@ -61,11 +59,100 @@ final pendingTasksPod = Provider.family.autoDispose((
   return tasks;
 });
 
-final archivedTasksPod = StreamProvider.autoDispose((ref) {
+final archivedTasksPod = StreamProvider.autoDispose((ref) async* {
+  await ref.watch(isarPod.future);
   final repository = ref.watch(repositoryPod);
 
-  return repository.getArchivedTasksStream();
+  yield* repository.getArchivedTasksStream();
 });
+
+class IsarNotifier extends AsyncNotifier<Isar> {
+  late final String _isarDir;
+  @override
+  Future<Isar> build() async {
+    final dir = Platform.isAndroid || Platform.isIOS
+        ? await getApplicationDocumentsDirectory()
+        : await getApplicationSupportDirectory();
+
+    _isarDir = dir.path;
+
+    final isar = await _openIsar(
+      directory: _isarDir,
+    );
+    await _migrateIfNeeded(isar);
+
+    ref.onDispose(dispose);
+
+    return isar;
+  }
+
+  Future<Isar> _openIsar({
+    required String directory,
+    String name = Isar.defaultName,
+  }) async {
+    return Isar.open(
+      [UserTaskSchema, SubTaskSchema, TaskDirSchema, DatabaseMetadataSchema],
+      directory: directory,
+      name: name,
+    );
+  }
+
+  Future<void> _migrateIfNeeded(Isar isar) async {
+    final metadata = await isar.databaseMetadatas.get(0);
+    if (metadata == null) {
+      // first time opening the database, create metadata
+      await isar.writeTxn(() async {
+        await isar.databaseMetadatas.put(const DatabaseMetadata(id: 0));
+      });
+    }
+
+    // add migration logic later
+  }
+
+  Future<void> exportDatabase(String path) async {
+    final isar = await future;
+    state = const AsyncValue.loading();
+
+    try {
+      final file = File(path);
+      if (await file.exists()) {
+        await file.delete();
+      }
+
+      await isar.copyToFile(path);
+    } finally {
+      state = AsyncValue.data(isar);
+    }
+  }
+
+  Future<void> importDatabase(String path) async {
+    var isar = await future;
+    state = const AsyncValue.loading();
+    await isar.close();
+
+    try {
+      final file = File(path);
+      // make sure the other isar file is valid
+      final importedIsar = await _openIsar(
+        directory: file.parent.path,
+        name: basenameWithoutExtension(file.path),
+      );
+      await importedIsar.close();
+
+      await file.copy(join(_isarDir, "${Isar.defaultName}.isar"));
+    } finally {
+      isar = await _openIsar(directory: _isarDir);
+      await _migrateIfNeeded(isar);
+      state = AsyncValue.data(isar);
+    }
+  }
+
+  void dispose() {
+    if (state case AsyncData<Isar> data) {
+      data.value.close();
+    }
+  }
+}
 
 class AutomaticTaskQueuer {
   AutomaticTaskQueuer(this.repository);

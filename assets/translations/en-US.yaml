@@ -39,6 +39,8 @@ edit_recurrence: Edit recurrence
 queue_position:
   start: At the start
   end: At the end
+start_time_measurement: Start time measurement
+stop_time_measurement: Stop time measurement
 add_subtask: Add subtask
 
 
@@ -70,6 +72,12 @@ end_option:
 
 cancel: Cancel
 ok: Ok
+
+
+task_time_measurements_title: Task time measurements
+measurement_start_time: Start
+measurement_end_time: End
+measurement_deleted: Time measurement for {} deleted
 
 
 settings: Settings

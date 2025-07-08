@@ -10,6 +10,7 @@ import 'package:relative_time/relative_time.dart';
 import 'package:round_task/custom_colors.dart';
 import 'package:round_task/screens/app_settings.dart';
 import 'package:round_task/screens/task_queue.dart';
+import 'package:round_task/screens/task_time_measurements.dart';
 import 'package:round_task/screens/task_view.dart';
 import 'package:round_task/widgets/second_tick_provider.dart';
 
@@ -24,15 +25,27 @@ final _router = GoRouter(
       ),
     ),
     GoRoute(
-      path: "/task",
-      pageBuilder: (context, state) {
-        return _buildPage(
-          context,
-          state,
-          child: TaskViewScreen(params: state.extra as TaskViewParams),
-        );
-      },
-    ),
+        path: "/task",
+        pageBuilder: (context, state) {
+          return _buildPage(
+            context,
+            state,
+            child: TaskViewScreen(params: state.extra as TaskViewParams),
+          );
+        },
+        routes: [
+          GoRoute(
+              path: "measurements",
+              pageBuilder: (context, state) {
+                return _buildPage(
+                  context,
+                  state,
+                  child: TaskTimeMeasurements(
+                    params: state.extra as TaskTimeMeasurementsParams,
+                  ),
+                );
+              }),
+        ]),
     GoRoute(
       path: "/settings",
       pageBuilder: (context, state) => _buildPage(

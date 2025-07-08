@@ -39,6 +39,8 @@ edit_recurrence: Editar recorrência
 queue_position:
   start: No início
   end: No fim
+start_time_measurement: Iniciar medição de tempo
+stop_time_measurement: Parar medição de tempo
 add_subtask: Adicionar subtarefa
 
 
@@ -70,6 +72,12 @@ end_option:
 
 cancel: Cancelar
 ok: Ok
+
+
+task_time_measurements_title: Medições de tempo
+measurement_start_time: Início
+measurement_end_time: Término
+measurement_deleted: Medição de tempo de {} excluída
 
 
 settings: Configurações

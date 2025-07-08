@@ -8,6 +8,7 @@ import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:round_task/models/database_metadata.dart';
 import 'package:round_task/models/task.dart';
+import 'package:round_task/models/time_measurement.dart';
 
 const _defaultSkipSize = 256;
 
@@ -66,6 +67,13 @@ final archivedTasksPod = StreamProvider.autoDispose((ref) async* {
   yield* repository.getArchivedTasksStream();
 });
 
+final currentlyTrackedTaskPod = StreamProvider.autoDispose((ref) async* {
+  await ref.watch(isarPod.future);
+  final repository = ref.watch(repositoryPod);
+
+  yield* repository.getCurrentlyTrackedTaskStream();
+});
+
 class IsarNotifier extends AsyncNotifier<Isar> {
   late final String _isarDir;
   @override
@@ -91,7 +99,13 @@ class IsarNotifier extends AsyncNotifier<Isar> {
     String name = Isar.defaultName,
   }) async {
     return Isar.open(
-      [UserTaskSchema, SubTaskSchema, TaskDirSchema, DatabaseMetadataSchema],
+      [
+        UserTaskSchema,
+        SubTaskSchema,
+        TaskDirSchema,
+        DatabaseMetadataSchema,
+        TimeMeasurementSchema
+      ],
       directory: directory,
       name: name,
     );
@@ -240,6 +254,28 @@ class RemoveSubTasks extends TaskEditAction {
   final List<SubTask> subTasks;
 }
 
+class StartTimeMeasurement extends TaskEditAction {
+  const StartTimeMeasurement(this.reference);
+  final DateTime reference;
+}
+
+class StopTimeMeasurement extends TaskEditAction {
+  const StopTimeMeasurement(this.reference);
+  final DateTime reference;
+}
+
+class PutTimeMeasurement extends TaskEditAction {
+  PutTimeMeasurement(this.measurement);
+
+  final TimeMeasurement measurement;
+}
+
+class RemoveTimeMeasurement extends TaskEditAction {
+  RemoveTimeMeasurement(this.measurement);
+
+  final TimeMeasurement measurement;
+}
+
 enum TaskSearchType {
   queued,
   pending,
@@ -291,11 +327,21 @@ class Repository {
             await isar.subTasks.deleteAll(
               subTasks.map((subTask) => subTask.id).toList(),
             );
+          case StartTimeMeasurement():
+            await _startTimeMeasurement(isar, task, action.reference);
+          case StopTimeMeasurement():
+            await _stopTimeMeasurement(isar, task, action.reference);
+          case PutTimeMeasurement(:final measurement):
+            await isar.timeMeasurements.put(measurement);
+            task.timeMeasurements.add(measurement);
+          case RemoveTimeMeasurement(:final measurement):
+            await isar.timeMeasurements.delete(measurement.id);
         }
       }
 
       await isar.userTasks.put(task);
       await task.subTasks.save();
+      await task.timeMeasurements.save();
     });
 
     taskQueuer.tryUpdate(task.autoInsertDate);
@@ -362,6 +408,18 @@ class Repository {
     yield* query.watch(fireImmediately: true);
   }
 
+  Stream<UserTask?> getCurrentlyTrackedTaskStream() async* {
+    final isar = await _isar;
+    await _queueInitFuture;
+
+    yield* isar.userTasks
+        .where()
+        .activeTimeMeasurementStartIsNotNull()
+        .limit(1)
+        .watch(fireImmediately: true)
+        .map((list) => list.firstOrNull);
+  }
+
   Future<void> addScheduledTasks() async {
     final isar = await _isar;
 
@@ -408,6 +466,9 @@ class Repository {
     await isar.writeTxn(() async {
       await isar.subTasks.deleteAll(
         task.subTasks.map((subTask) => subTask.id).toList(),
+      );
+      await isar.timeMeasurements.deleteAll(
+        task.timeMeasurements.map((measurement) => measurement.id).toList(),
       );
       await isar.userTasks.delete(task.id);
     });
@@ -459,6 +520,43 @@ class Repository {
             .or()
             .descriptionContains(searchText, caseSensitive: false))
         .findAll();
+  }
+
+  Future<void> _startTimeMeasurement(
+    Isar isar,
+    UserTask task,
+    DateTime now,
+  ) async {
+    task.activeTimeMeasurementStart = now;
+
+    final currentlyActive = await isar.userTasks
+        .where()
+        .activeTimeMeasurementStartIsNotNull()
+        .findFirst();
+
+    if (currentlyActive != null) {
+      await _stopTimeMeasurement(isar, currentlyActive, now);
+    }
+  }
+
+  /// Needs to be wrapped in a write transaction
+  Future<void> _stopTimeMeasurement(
+    Isar isar,
+    UserTask task,
+    DateTime now,
+  ) async {
+    if (task.activeTimeMeasurementStart == null) return;
+
+    final measurement = TimeMeasurement(
+      startTime: task.activeTimeMeasurementStart!,
+      endTime: now,
+    );
+
+    task.activeTimeMeasurementStart = null;
+    await isar.userTasks.put(task);
+    await isar.timeMeasurements.put(measurement);
+    task.timeMeasurements.add(measurement);
+    await task.timeMeasurements.save();
   }
 }
 

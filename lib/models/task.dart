@@ -1,4 +1,5 @@
 import 'package:isar/isar.dart';
+import 'package:round_task/models/time_measurement.dart';
 import 'package:rrule/rrule.dart';
 part 'task.g.dart';
 
@@ -17,6 +18,7 @@ class UserTask {
     this.recurrence,
     required this.creationDate,
     this.progress,
+    this.activeTimeMeasurementStart,
   });
 
   static DateTime? getAutoInsertDate(DateTime? startDate, DateTime? endDate) =>
@@ -37,6 +39,9 @@ class UserTask {
 
   @Index()
   DateTime? get autoInsertDate => getAutoInsertDate(startDate, endDate);
+
+  @Index()
+  DateTime? activeTimeMeasurementStart;
 
   @ignore
   RecurrenceRule? recurrence;
@@ -62,6 +67,7 @@ class UserTask {
 
   final subTasks = IsarLinks<SubTask>();
   final directory = IsarLink<TaskDir>();
+  final timeMeasurements = IsarLinks<TimeMeasurement>();
 }
 
 @collection

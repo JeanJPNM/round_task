@@ -8,11 +8,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:isar/isar.dart';
 import 'package:round_task/custom_colors.dart';
+import 'package:round_task/formatting.dart';
 import 'package:round_task/models/task.dart';
 import 'package:round_task/provider.dart';
+import 'package:round_task/screens/task_time_measurements.dart';
 import 'package:round_task/widgets/bottom_sheet_safe_area.dart';
+import 'package:round_task/widgets/date_time_input.dart';
 import 'package:round_task/widgets/recurrence_picker.dart';
+import 'package:round_task/widgets/second_tick_provider.dart';
 import 'package:round_task/widgets/sliver_material_reorderable_list.dart';
+import 'package:round_task/widgets/time_tracking_banner.dart';
 import 'package:rrule/rrule.dart';
 
 class TaskViewParams {
@@ -179,16 +184,16 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
     return (put: subTasks, remove: removedSubTasks);
   }
 
-  Future<void> _restoreTask(Repository repository) async {
-    final task = widget.task;
+  // Future<void> _restoreTask(Repository repository) async {
+  //   final task = widget.task;
 
-    task.subTasks.clear();
-    task.subTasks.addAll(_originalSubTasks);
+  //   task.subTasks.clear();
+  //   task.subTasks.addAll(_originalSubTasks);
 
-    await repository.writeTask(task, [
-      PutSubTasks(_originalSubTasks),
-    ]);
-  }
+  //   await repository.writeTask(task, [
+  //     PutSubTasks(_originalSubTasks),
+  //   ]);
+  // }
 
   Future<void> _save(
     Repository repository, [
@@ -292,369 +297,298 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
 
   @override
   Widget build(BuildContext context) {
+    const buttonRadius = Radius.circular(60);
     final task = widget.task;
     final repository = ref.watch(repositoryPod);
+    final currentlyTrackedTask = ref.watch(currentlyTrackedTaskPod).valueOrNull;
     final CustomColors(:deleteSurface) = Theme.of(context).extension()!;
+    final isCreatingTask = task.id == Isar.autoIncrement;
 
-    return ScaffoldMessenger(
-      key: scaffoldMessengerKey,
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(context.tr(
-            task.id == Isar.autoIncrement ? "create_task" : "edit_task",
-          )),
-          actions: [
-            IconButton(
-              onPressed: () async {
-                await repository.deleteTask(task);
+    return TimeTrackingScreenWrapper(
+      disabled: currentlyTrackedTask?.id == task.id,
+      child: ScaffoldMessenger(
+        key: scaffoldMessengerKey,
+        child: Scaffold(
+          appBar: AppBar(
+            title: Text(context.tr(
+              isCreatingTask ? "create_task" : "edit_task",
+            )),
+            actions: [
+              IconButton(
+                onPressed: () async {
+                  await repository.deleteTask(task);
 
-                if (!context.mounted) return;
-                parentScaffoldMessenger.showSnackBar(
-                  SnackBar(
-                    content: Text(context.tr("task_deleted")),
-                    action: SnackBarAction(
-                      label: context.tr("undo"),
-                      onPressed: () => _restoreTask(repository),
+                  if (!context.mounted) return;
+                  parentScaffoldMessenger.showSnackBar(
+                    SnackBar(
+                      content: Text(context.tr("task_deleted")),
+                      // TODO: restore after migrating to drift
+                      // action: SnackBarAction(
+                      //   label: context.tr("undo"),
+                      //   onPressed: () => _restoreTask(repository),
+                      // ),
                     ),
-                  ),
-                );
-                context.pop();
-              },
-              icon: const Icon(Icons.delete),
-            ),
-          ],
-        ),
-        body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: CustomScrollView(
-              controller: scrollController,
-              slivers: [
-                SliverList.list(
-                  children: [
-                    TextField(
-                      autofocus: widget.focusTitle,
-                      focusNode: titleFocusNode,
-                      controller: titleController,
-                      decoration:
-                          InputDecoration(labelText: context.tr("title")),
-                      keyboardType: TextInputType.multiline,
-                      maxLines: null,
-                      textInputAction: TextInputAction.done,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.singleLineFormatter,
-                      ],
-                      onTapOutside: (event) => titleFocusNode.unfocus(),
-                    ),
-                    TextField(
-                      focusNode: descriptionFocusNode,
-                      controller: descriptionController,
-                      decoration: InputDecoration(
-                        labelText: context.tr("description"),
+                  );
+                  context.pop();
+                },
+                icon: const Icon(Icons.delete),
+              ),
+            ],
+          ),
+          body: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: CustomScrollView(
+                controller: scrollController,
+                slivers: [
+                  SliverList.list(
+                    children: [
+                      TextField(
+                        autofocus: widget.focusTitle,
+                        focusNode: titleFocusNode,
+                        controller: titleController,
+                        decoration:
+                            InputDecoration(labelText: context.tr("title")),
+                        keyboardType: TextInputType.multiline,
+                        maxLines: null,
+                        textInputAction: TextInputAction.done,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.singleLineFormatter,
+                        ],
+                        onTapOutside: (event) => titleFocusNode.unfocus(),
                       ),
-                      maxLines: null,
-                      onTapOutside: (event) => descriptionFocusNode.unfocus(),
-                    ),
-                    DateTimePicker(
-                      label: Text(context.tr("start_date")),
-                      controller: startDateController,
-                    ),
-                    ValueListenableBuilder(
-                      valueListenable: startDateController,
-                      builder: (context, startDate, child) {
-                        return DateTimePicker(
-                          label: Text(context.tr("end_date")),
-                          controller: endDateController,
-                          firstDate: startDate,
-                          defaultHour: 23,
-                          defaultMinute: 59,
-                        );
-                      },
-                    ),
-                    ValueListenableBuilder(
-                      valueListenable: startDateController,
-                      builder: (context, startDate, child) {
-                        if (startDate == null) return const SizedBox.shrink();
+                      TextField(
+                        focusNode: descriptionFocusNode,
+                        controller: descriptionController,
+                        decoration: InputDecoration(
+                          labelText: context.tr("description"),
+                        ),
+                        maxLines: null,
+                        onTapOutside: (event) => descriptionFocusNode.unfocus(),
+                      ),
+                      DateTimeInput(
+                        label: Text(context.tr("start_date")),
+                        controller: startDateController,
+                      ),
+                      ValueListenableBuilder(
+                        valueListenable: startDateController,
+                        builder: (context, startDate, child) {
+                          return DateTimeInput(
+                            label: Text(context.tr("end_date")),
+                            controller: endDateController,
+                            firstDate: startDate,
+                            defaultHour: 23,
+                            defaultMinute: 59,
+                          );
+                        },
+                      ),
+                      ValueListenableBuilder(
+                        valueListenable: startDateController,
+                        builder: (context, startDate, child) {
+                          if (startDate == null) return const SizedBox.shrink();
 
-                        return Wrap(
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            Text(context.tr("recurrence")),
-                            TextButton(
-                              onPressed: () async {
-                                final rule = await showRecurrencePicker(
-                                  context,
-                                  initialRecurrenceRule: recurrenceRule,
-                                  initialWeekDays: [startDate.weekday],
-                                );
+                          return Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              Text(context.tr("recurrence")),
+                              TextButton(
+                                onPressed: () async {
+                                  final rule = await showRecurrencePicker(
+                                    context,
+                                    initialRecurrenceRule: recurrenceRule,
+                                    initialWeekDays: [startDate.weekday],
+                                  );
 
-                                if (rule == null) return;
-                                setState(() {
-                                  recurrenceRule = rule;
-                                });
-                              },
-                              child: Text(context.tr(recurrenceRule == null
-                                  ? "add_recurrence"
-                                  : "edit_recurrence")),
-                            ),
-                            if (recurrenceRule != null)
-                              IconButton(
-                                onPressed: () {
+                                  if (rule == null) return;
                                   setState(() {
-                                    recurrenceRule = null;
+                                    recurrenceRule = rule;
                                   });
                                 },
-                                icon: const Icon(Icons.delete),
+                                child: Text(context.tr(recurrenceRule == null
+                                    ? "add_recurrence"
+                                    : "edit_recurrence")),
                               ),
-                          ],
+                              if (recurrenceRule != null)
+                                IconButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      recurrenceRule = null;
+                                    });
+                                  },
+                                  icon: const Icon(Icons.delete),
+                                ),
+                            ],
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      ValueListenableBuilder(
+                        valueListenable: autoInserDateController,
+                        builder: (context, date, child) {
+                          return _QueuePositionPicker(
+                            controller: positionController,
+                            startDate: date,
+                          );
+                        },
+                      ),
+                      if (!isCreatingTask) ...[
+                        const SizedBox(height: 16),
+                        IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(
+                                flex: 4,
+                                child: _TimeMeasurementButton(
+                                    task: task,
+                                    repository: repository,
+                                    style: const ButtonStyle(
+                                      shape: WidgetStatePropertyAll(
+                                        RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.horizontal(
+                                            left: buttonRadius,
+                                          ),
+                                        ),
+                                      ),
+                                    )),
+                              ),
+                              const SizedBox(width: 2),
+                              Expanded(
+                                child: IconButton.filledTonal(
+                                  onPressed: () {
+                                    context.push(
+                                      "/task/measurements",
+                                      extra: TaskTimeMeasurementsParams(
+                                        task: task,
+                                      ),
+                                    );
+                                  },
+                                  style: const ButtonStyle(
+                                    shape: WidgetStatePropertyAll(
+                                      RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.horizontal(
+                                          right: buttonRadius,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  icon: const Icon(Icons.history),
+                                ),
+                              )
+                            ],
+                          ),
+                        ),
+                      ],
+                      const Divider(),
+                    ],
+                  ),
+                  SliverMaterialReorderableList(
+                    children: _subTaskControllers
+                        .whereNot((controller) => controller.removed)
+                        .map(
+                          (controller) => Dismissible(
+                            key: ObjectKey(controller),
+                            onDismissed: (direction) =>
+                                _removeSubTask(controller),
+                            background: Container(color: deleteSurface),
+                            child: _SubTaskCard(
+                              controller: controller,
+                              onDelete: () => _removeSubTask(controller),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                    onReorder: (oldIndex, newIndex) {
+                      oldIndex =
+                          _mapSubtaskIndex(oldIndex, _subTaskControllers);
+                      newIndex =
+                          _mapSubtaskIndex(newIndex, _subTaskControllers);
+                      if (oldIndex < newIndex) {
+                        newIndex--;
+                      }
+
+                      setState(() {
+                        final controller =
+                            _subTaskControllers.removeAt(oldIndex);
+                        _subTaskControllers.insert(newIndex, controller);
+                      });
+                    },
+                  ),
+                  SliverList.list(children: [
+                    TextButton(
+                      onPressed: () async {
+                        final controller = _SubTaskController(
+                          SubTask(name: "", done: false, reference: 0),
                         );
+
+                        final added = await controller.openView(context);
+                        if (!added || !context.mounted) return;
+
+                        setState(() {
+                          _subTaskControllers.add(controller);
+                        });
+
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (!scrollController.hasClients) return;
+                          scrollController.animateTo(
+                            scrollController.offset + 60,
+                            duration: const Duration(milliseconds: 150),
+                            curve: Curves.bounceInOut,
+                          );
+                        });
                       },
-                    ),
-                    const SizedBox(height: 8),
-                    ValueListenableBuilder(
-                      valueListenable: autoInserDateController,
-                      builder: (context, date, child) {
-                        return _QueuePositionPicker(
-                          controller: positionController,
-                          startDate: date,
-                        );
-                      },
+                      child: Text(context.tr("add_subtask")),
                     ),
                     const SizedBox(height: 8),
                     const Divider(),
-                  ],
-                ),
-                SliverMaterialReorderableList(
-                  children: _subTaskControllers
-                      .whereNot((controller) => controller.removed)
-                      .map(
-                        (controller) => Dismissible(
-                          key: ObjectKey(controller),
-                          onDismissed: (direction) =>
-                              _removeSubTask(controller),
-                          background: Container(color: deleteSurface),
-                          child: _SubTaskCard(
-                            controller: controller,
-                            onDelete: () => _removeSubTask(controller),
-                          ),
-                        ),
-                      )
-                      .toList(),
-                  onReorder: (oldIndex, newIndex) {
-                    oldIndex = _mapSubtaskIndex(oldIndex, _subTaskControllers);
-                    newIndex = _mapSubtaskIndex(newIndex, _subTaskControllers);
-                    if (oldIndex < newIndex) {
-                      newIndex--;
-                    }
-
-                    setState(() {
-                      final controller = _subTaskControllers.removeAt(oldIndex);
-                      _subTaskControllers.insert(newIndex, controller);
-                    });
-                  },
-                ),
-                SliverList.list(children: [
-                  TextButton(
-                    onPressed: () async {
-                      final controller = _SubTaskController(
-                        SubTask(name: "", done: false, reference: 0),
-                      );
-
-                      final added = await controller.openView(context);
-                      if (!added || !context.mounted) return;
-
-                      setState(() {
-                        _subTaskControllers.add(controller);
-                      });
-
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (!scrollController.hasClients) return;
-                        scrollController.animateTo(
-                          scrollController.offset + 60,
-                          duration: const Duration(milliseconds: 150),
-                          curve: Curves.bounceInOut,
-                        );
-                      });
-                    },
-                    child: Text(context.tr("add_subtask")),
-                  ),
-                  const SizedBox(height: 8),
-                  const Divider(),
-                  const SizedBox(height: 8),
-                ])
-              ],
+                    const SizedBox(height: 8),
+                  ])
+                ],
+              ),
             ),
           ),
-        ),
-        bottomNavigationBar: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Row(children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () async {
-                    _applyChanges();
-                    await _save(repository, [
-                      if (_getTaskEditAction() case final action?) action,
-                    ]);
-                    if (!context.mounted) return;
-                    context.pop();
-                  },
-                  child: Text(context.tr("save")),
-                ),
-              ),
-              if (task.reference != null) ...[
-                const SizedBox(width: 8),
+          bottomNavigationBar: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: Row(children: [
                 Expanded(
-                  child: FilledButton(
+                  child: ElevatedButton(
                     onPressed: () async {
                       _applyChanges();
-                      _markAsDone(repository);
-
                       await _save(repository, [
-                        const RemoveTaskFromQueue(),
+                        if (_getTaskEditAction() case final action?) action,
                       ]);
-
                       if (!context.mounted) return;
                       context.pop();
                     },
-                    child: Text(context.tr("done")),
+                    child: Text(context.tr("save")),
                   ),
                 ),
-              ],
-            ]),
+                if (task.reference != null) ...[
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () async {
+                        _applyChanges();
+                        _markAsDone(repository);
+
+                        await _save(repository, [
+                          const RemoveTaskFromQueue(),
+                          StopTimeMeasurement(DateTime.now()),
+                        ]);
+
+                        if (!context.mounted) return;
+                        context.pop();
+                      },
+                      child: Text(context.tr("done")),
+                    ),
+                  ),
+                ],
+              ]),
+            ),
           ),
         ),
       ),
-    );
-  }
-}
-
-class DateTimeEditingController extends ValueNotifier<DateTime?> {
-  DateTimeEditingController([super.value]);
-
-  DateTime? previous;
-
-  @override
-  set value(DateTime? newValue) {
-    previous = value;
-    super.value = newValue;
-  }
-}
-
-class DateTimePicker extends StatefulWidget {
-  DateTimePicker({
-    super.key,
-    required this.label,
-    required this.controller,
-    this.defaultHour = 0,
-    this.defaultMinute = 0,
-    DateTime? firstDate,
-    DateTime? lastDate,
-  })  : firstDate = firstDate ?? DateTime(2000),
-        lastDate = lastDate ?? DateTime(2100);
-  final DateTimeEditingController? controller;
-  final Widget label;
-  final DateTime firstDate;
-  final DateTime lastDate;
-  final int defaultHour;
-  final int defaultMinute;
-  @override
-  State<DateTimePicker> createState() => _DateTimePickerState();
-}
-
-class _DateTimePickerState extends State<DateTimePicker> {
-  bool _disposeController = false;
-  late final DateTimeEditingController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-
-    if (widget.controller == null) {
-      _controller = DateTimeEditingController();
-      _disposeController = true;
-    } else {
-      _controller = widget.controller!;
-    }
-  }
-
-  @override
-  void dispose() {
-    if (_disposeController) {
-      _controller.dispose();
-    }
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final locale = Localizations.localeOf(context).toLanguageTag();
-    return ValueListenableBuilder(
-      valueListenable: _controller,
-      builder: (context, value, child) {
-        return Wrap(
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            widget.label,
-            Wrap(
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                TextButton(
-                  onPressed: () async {
-                    final date = await showDatePicker(
-                      context: context,
-                      initialDate: value,
-                      firstDate: widget.firstDate,
-                      lastDate: widget.lastDate,
-                    );
-
-                    if (date != null) {
-                      _controller.value = DateTime(
-                        date.year,
-                        date.month,
-                        date.day,
-                        value?.hour ?? widget.defaultHour,
-                        value?.minute ?? widget.defaultMinute,
-                      );
-                    }
-                  },
-                  child: Text(switch (value) {
-                    null => context.tr("select_date"),
-                    _ => DateFormat.yMMMEd(locale).format(value),
-                  }),
-                ),
-                if (value != null) ...[
-                  TextButton(
-                    onPressed: () async {
-                      final time = await showTimePicker(
-                        context: context,
-                        initialTime: TimeOfDay.fromDateTime(value),
-                      );
-                      if (time != null) {
-                        _controller.value = DateTime(
-                          value.year,
-                          value.month,
-                          value.day,
-                          time.hour,
-                          time.minute,
-                        );
-                      }
-                    },
-                    child: Text(DateFormat.jm(locale).format(value)),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.delete),
-                    onPressed: () {
-                      _controller.value = null;
-                    },
-                  ),
-                ],
-              ],
-            ),
-          ],
-        );
-      },
     );
   }
 }
@@ -933,6 +867,101 @@ class _SubTaskEditorState extends State<_SubTaskEditor> {
           ],
         ),
       ],
+    );
+  }
+}
+
+class _TimeMeasurementButton extends StatefulWidget {
+  const _TimeMeasurementButton({
+    required this.task,
+    required this.repository,
+    this.style,
+  });
+
+  final Repository repository;
+  final UserTask task;
+  final ButtonStyle? style;
+
+  @override
+  State<_TimeMeasurementButton> createState() => _TimeMeasurementButtonState();
+}
+
+class _TimeMeasurementButtonState extends State<_TimeMeasurementButton> {
+  static const _startKey = ValueKey("start");
+  static const _stopKey = ValueKey("stop");
+  static const _duration = Duration(milliseconds: 500);
+  static const _curve = Curves.easeOut;
+
+  Future<void> _start() async {
+    await widget.repository.writeTask(widget.task, [
+      StartTimeMeasurement(DateTime.now()),
+    ]);
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  Future<void> _stop() async {
+    await widget.repository.writeTask(widget.task, [
+      StopTimeMeasurement(DateTime.now()),
+    ]);
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  Widget _buildTransition(Widget child, Animation<double> animation) {
+    const offset = Offset(2, 0);
+    final tween = Tween<Offset>(
+      begin: child.key == _startKey ? -offset : offset,
+      end: Offset.zero,
+    );
+    final offsetAnimation = animation.drive(tween);
+    return FadeTransition(
+      opacity: animation,
+      child: SlideTransition(
+        position: offsetAnimation,
+        child: child,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final start = widget.task.activeTimeMeasurementStart;
+    final onPressed = start == null ? _start : _stop;
+    if (start != null) SecondTickProvider.of(context);
+
+    return FilledButton(
+      onPressed: onPressed,
+      style: widget.style,
+      child: AnimatedSwitcher(
+        switchInCurve: _curve,
+        switchOutCurve: _curve,
+        transitionBuilder: _buildTransition,
+        duration: _duration,
+        child: switch (start) {
+          null => Text(
+              key: _startKey,
+              context.tr("start_time_measurement"),
+            ),
+          _ => IntrinsicHeight(
+              key: _stopKey,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(formatDuration(now.difference(start))),
+                  const VerticalDivider(),
+                  Flexible(child: Text(context.tr("stop_time_measurement")))
+                ],
+              ),
+            ),
+        },
+      ),
     );
   }
 }

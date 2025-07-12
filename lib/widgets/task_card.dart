@@ -62,6 +62,11 @@ class TaskCard extends ConsumerWidget {
     final now = DateTime.now();
 
     if (currentlyTrackedTask?.id == task.id) {
+      final buttonStyle = const FilledButton(
+        child: null,
+        onPressed: null,
+      ).defaultStyleOf(context);
+
       return Card.filled(
         clipBehavior: Clip.antiAlias,
         color: primary,
@@ -73,6 +78,7 @@ class TaskCard extends ConsumerWidget {
           _TaskCardContent(
             task: task,
             now: now,
+            overlayColor: buttonStyle.overlayColor,
           ),
         ),
       );
@@ -117,12 +123,14 @@ class _TaskCardContent extends StatelessWidget {
   const _TaskCardContent({
     required this.task,
     required this.now,
+    this.overlayColor,
     this.borderWidth = 0,
   });
 
   final DateTime now;
   final UserTask task;
   final double borderWidth;
+  final WidgetStateProperty<Color?>? overlayColor;
 
   @override
   Widget build(BuildContext context) {
@@ -148,6 +156,7 @@ class _TaskCardContent extends StatelessWidget {
     }
 
     return InkWell(
+      overlayColor: overlayColor,
       onTap: () {
         context.push("/task", extra: TaskViewParams(task));
       },

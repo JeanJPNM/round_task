@@ -62,6 +62,7 @@ dependencies:
   drift: ^2.26.1
   drift_flutter: ^0.2.4
   sqlite3: ^2.7.6
+  downloadsfolder: ^1.2.0
 
 dev_dependencies:
   flutter_test:

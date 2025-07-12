@@ -90,4 +90,4 @@ export_failed: Export failed. Check the file at {}
 
 import_database: Import data file
 import_success: Import completed successfully. Imported from {}
-import_failed: Import failed. Check the file at {}
+import_failed: Import failed. Make sure the file {} is a valid Round Task backup file.

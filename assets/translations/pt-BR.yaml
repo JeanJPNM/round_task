@@ -90,4 +90,4 @@ export_failed: Falha ao exportar para o arquivo em {}
 
 import_database: Importar arquivo de dados
 import_success: Importação concluída com sucesso. Importou de {}
-import_failed: Falha na importação. Verifique o arquivo em {}
+import_failed: Falha na importação. Verifique se o arquivo {} é um arquivo de backup válido do Round Task.

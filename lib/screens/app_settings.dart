@@ -1,9 +1,8 @@
+import 'package:downloadsfolder/downloadsfolder.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path/path.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:round_task/provider.dart';
 
 class AppSettings extends ConsumerStatefulWidget {
@@ -15,8 +14,7 @@ class AppSettings extends ConsumerStatefulWidget {
 
 class _AppSettingsState extends ConsumerState<AppSettings> {
   Future<String> _getBackupDirectoryPath() async {
-    final dir = await getDownloadsDirectory() ??
-        await getApplicationDocumentsDirectory();
+    final dir = await getDownloadDirectory();
 
     return dir.path;
   }
@@ -40,7 +38,9 @@ class _AppSettingsState extends ConsumerState<AppSettings> {
     BuildContext context,
   ) async {
     final dir = await _getBackupDirectoryPath();
-    final path = join(dir, 'round_task_backup.sqlite');
+    final now = DateTime.now();
+    final suffix = DateFormat('yyyy-MM-dd-HH-mm-ss').format(now);
+    final path = join(dir, 'round-task-$suffix.sqlite');
     final success = await _tryAction(() async {
       await dbNotifier.exportData(path);
     });
@@ -69,10 +69,10 @@ class _AppSettingsState extends ConsumerState<AppSettings> {
 
     if (result == null) return;
 
-    final path = result.files.single.path!;
+    final file = result.files.single;
     final success = await _tryAction(() async {
       // Attempt to import the database
-      return await dbNotifier.importData(path);
+      return await dbNotifier.importData(file.path!);
     });
 
     if (!context.mounted) return;
@@ -82,7 +82,7 @@ class _AppSettingsState extends ConsumerState<AppSettings> {
         content: Text(
           context.tr(
             success ? "import_success" : "import_failed",
-            args: [path],
+            args: [file.name],
           ),
         ),
       ),

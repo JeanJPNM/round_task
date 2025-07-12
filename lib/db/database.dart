@@ -283,7 +283,12 @@ class AppDatabase extends _$AppDatabase {
     final DateTime? autoInsertDate = await transaction(() async {
       var task = await into(userTasks).insertReturning(
         taskInsertable,
-        mode: InsertMode.insertOrReplace,
+        onConflict: DoUpdate(
+          (_) => switch (taskInsertable) {
+            UserTask task => task.toCompanion(false),
+            _ => taskInsertable,
+          },
+        ),
       );
 
       for (final action in actions) {
@@ -306,10 +311,7 @@ class AppDatabase extends _$AppDatabase {
         }
       }
 
-      await into(userTasks).insert(
-        task,
-        mode: InsertMode.insertOrReplace,
-      );
+      await update(userTasks).replace(task);
 
       await batch((batch) {
         for (final action in actions) {
@@ -326,7 +328,7 @@ class AppDatabase extends _$AppDatabase {
               batch.insert(
                 timeMeasurements,
                 measurement,
-                mode: InsertMode.insertOrReplace,
+                onConflict: DoUpdate((_) => measurement),
               );
             case RemoveTimeMeasurement(:final measurement):
               batch.deleteWhere(
@@ -350,17 +352,17 @@ class AppDatabase extends _$AppDatabase {
   Future<void> softDeleteTask(UserTask task) async {
     final now = DateTime.now();
 
-    await (update(userTasks)..where((t) => t.id.equals(task.id)))
+    await (update(userTasks)..whereSamePrimaryKey(task))
         .write(UserTasksCompanion(deletedAt: Value(now)));
   }
 
   Future<void> undoSoftDeleteTask(UserTask task) async {
-    await (update(userTasks)..where((t) => t.id.equals(task.id)))
+    await (update(userTasks)..whereSamePrimaryKey(task))
         .write(const UserTasksCompanion(deletedAt: Value(null)));
   }
 
   Future<void> deleteTask(UserTask task) async {
-    await (delete(userTasks)..where((t) => t.id.equals(task.id))).go();
+    await (delete(userTasks)..whereSamePrimaryKey(task)).go();
   }
 
   Future<DateTime?> getNextPendingTaskDate() async {
@@ -368,6 +370,7 @@ class AppDatabase extends _$AppDatabase {
       ..addColumns([userTasks.autoInsertDate])
       ..where(userTasks.status.equalsValue(TaskStatus.pending) &
           userTasks.autoInsertDate.isNotNull())
+      ..limit(1)
       ..orderBy([OrderingTerm.asc(userTasks.autoInsertDate)]);
 
     return await query
@@ -421,7 +424,6 @@ class AppDatabase extends _$AppDatabase {
           batch.update(
             userTasks,
             UserTasksCompanion(
-              id: Value(task.id),
               status: const Value(TaskStatus.active),
               reference: Value(current),
             ),
@@ -530,10 +532,7 @@ class AppDatabase extends _$AppDatabase {
     for (final active in currentlyActive) {
       // stop all other time measurements
       final modifiedActive = await _stopTimeMeasurement(active, now);
-      await into(userTasks).insert(
-        modifiedActive,
-        mode: InsertMode.insertOrReplace,
-      );
+      await update(userTasks).replace(modifiedActive);
     }
 
     return task.copyWith(

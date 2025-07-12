@@ -34,8 +34,9 @@ class TimeTrackingBanner extends StatelessWidget {
       ),
       child: SafeArea(
         bottom: false,
+        minimum: const EdgeInsets.symmetric(horizontal: 6.0),
         child: Padding(
-          padding: const EdgeInsets.all(6.0),
+          padding: const EdgeInsets.symmetric(vertical: 6.0),
           child: IntrinsicHeight(
             child: Row(
               key: ValueKey(task.id),

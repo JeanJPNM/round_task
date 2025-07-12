@@ -186,12 +186,12 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
   }) {
     final task = widget.task;
     final now = DateTime.now();
-    final autoInsertDate = autoInsertDateOf(startDate, endDate);
+    final hasAutoInsertDate = (startDate, endDate) != (null, null);
 
-    final status = switch ((task?.status, done, autoInsertDate == null)) {
-      (_, true, true) => TaskStatus.archived,
-      (_, true, false) => TaskStatus.pending,
-      (TaskStatus.archived, false, false) => TaskStatus.pending,
+    final status = switch ((task?.status, done, hasAutoInsertDate)) {
+      (_, true, false) => TaskStatus.archived,
+      (_, true, true) => TaskStatus.pending,
+      (TaskStatus.archived, false, true) => TaskStatus.pending,
       (final status, false, _) => status ?? TaskStatus.pending,
     };
 
@@ -217,13 +217,6 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
     bool markAsDone = false,
     List<TaskEditAction> extra = const [],
   }) async {
-    final put = _subTasksController.toCompanions(resetDone: markAsDone);
-    final remove = _subTasksController.removedSubTaskIds();
-
-    final progress = put.isEmpty
-        ? null
-        : put.where((subTask) => subTask.done.value).length / put.length;
-
     final (:startDate, :endDate, :recurrence) = switch (markAsDone) {
       true => _getNextOccurrence(),
       false => (
@@ -232,6 +225,16 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
           recurrence: recurrenceRule,
         ),
     };
+    final hasAutoInsertDate = (startDate, endDate) != (null, null);
+
+    final put = _subTasksController.toCompanions(
+      resetDone: markAsDone && hasAutoInsertDate,
+    );
+    final remove = _subTasksController.removedSubTaskIds();
+
+    final progress = put.isEmpty
+        ? null
+        : put.where((subTask) => subTask.done.value).length / put.length;
 
     final taskCompanion = _getTaskCompanion(
       done: markAsDone,

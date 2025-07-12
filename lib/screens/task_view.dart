@@ -6,10 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:isar/isar.dart';
 import 'package:round_task/custom_colors.dart';
+import 'package:round_task/db/db.dart';
 import 'package:round_task/formatting.dart';
-import 'package:round_task/models/task.dart';
 import 'package:round_task/provider.dart';
 import 'package:round_task/screens/task_time_measurements.dart';
 import 'package:round_task/widgets/bottom_sheet_safe_area.dart';
@@ -27,26 +26,56 @@ class TaskViewParams {
     this.autofocusTitle = false,
   });
 
-  final UserTask task;
+  final UserTask? task;
   final bool addToQueue;
   final bool autofocusTitle;
 }
 
-class TaskViewScreen extends ConsumerStatefulWidget {
-  TaskViewScreen({super.key, required TaskViewParams params})
-      : task = params.task,
-        addToQueue = params.addToQueue,
-        focusTitle = params.autofocusTitle;
+class TaskViewScreen extends ConsumerWidget {
+  const TaskViewScreen({super.key, required this.params});
+
+  final TaskViewParams params;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final (task, subTasks) = switch (params.task) {
+      final task? => (
+          ref.watch(taskByIdPod(task.id)).valueOrNull ?? task,
+          ref.watch(taskSubTasksPod(task.id)),
+        ),
+      _ => (null, const AsyncData(<SubTask>[])),
+    };
+
+    return _TaskEditor(
+      task: task,
+      originalTask: params.task,
+      addToQueue: params.addToQueue,
+      focusTitle: params.autofocusTitle,
+      subTasksValue: subTasks,
+    );
+  }
+}
+
+class _TaskEditor extends ConsumerStatefulWidget {
+  const _TaskEditor({
+    required this.task,
+    required this.originalTask,
+    required this.addToQueue,
+    required this.focusTitle,
+    required this.subTasksValue,
+  });
 
   final bool addToQueue;
   final bool focusTitle;
-  final UserTask task;
+  final UserTask? task;
+  final UserTask? originalTask;
+  final AsyncValue<List<SubTask>> subTasksValue;
 
   @override
-  ConsumerState<TaskViewScreen> createState() => _TaskViewScreenState();
+  ConsumerState<_TaskEditor> createState() => _TaskEditorState();
 }
 
-class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
+class _TaskEditorState extends ConsumerState<_TaskEditor> {
   final scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
   final scrollController = ScrollController();
   final titleController = TextEditingController(),
@@ -61,11 +90,10 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
   final positionController = ValueNotifier<QueueInsertionPosition?>(null);
   bool lockTaskInQueue = false;
 
-  late final List<SubTask> _originalSubTasks;
   late ScaffoldMessengerState parentScaffoldMessenger;
   ScaffoldMessengerState get childScaffoldMessenger =>
       scaffoldMessengerKey.currentState!;
-  List<_SubTaskController> _subTaskControllers = const [];
+  final _subTasksController = _SubTasksController([]);
 
   RecurrenceRule? recurrenceRule;
   @override
@@ -73,29 +101,31 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
     super.initState();
 
     final task = widget.task;
-    _originalSubTasks = task.subTasks.sortedBy<num>((a) => a.reference);
+    if (task != null) {
+      titleController.text = task.title;
+      descriptionController.text = task.description;
+      startDateController.value = task.startDate;
+      endDateController.value = task.endDate;
+      autoInserDateController.value = task.autoInsertDate;
+      recurrenceRule = task.recurrence;
+    }
 
-    titleController.text = task.title;
-    descriptionController.text = task.description;
-    startDateController.value = task.startDate;
-    endDateController.value = task.endDate;
-    autoInserDateController.value = task.autoInsertDate;
-    recurrenceRule = task.recurrence;
-    positionController.value = task.reference != null || widget.addToQueue
-        ? QueueInsertionPosition.preferred
-        : null;
-    lockTaskInQueue = task.autoInsertDate?.isBefore(DateTime.now()) ?? false;
+    _subTasksController.setSubTasks(
+      widget.subTasksValue.valueOrNull ?? [],
+    );
+    positionController.value =
+        task?.status == TaskStatus.active || widget.addToQueue
+            ? QueueInsertionPosition.preferred
+            : null;
+    lockTaskInQueue = task?.autoInsertDate?.isBefore(DateTime.now()) ?? false;
 
-    _subTaskControllers = _originalSubTasks
-        .map((subTask) => _SubTaskController(subTask))
-        .toList();
-
-    startDateController.addListener(() {
-      autoInserDateController.value = UserTask.getAutoInsertDate(
+    Listenable.merge([startDateController, endDateController]).addListener(() {
+      autoInserDateController.value = autoInsertDateOf(
         startDateController.value,
         endDateController.value,
       );
-
+    });
+    startDateController.addListener(() {
       final value = startDateController.value;
       final previous = startDateController.previous;
       final endDate = endDateController.value;
@@ -108,15 +138,21 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
     });
     endDateController.addListener(() {
       final value = endDateController.value;
-      autoInserDateController.value = UserTask.getAutoInsertDate(
-        startDateController.value,
-        value,
-      );
-      if (value == null) return;
-      if (startDateController.value != null) return;
+      if (value == null || startDateController.value != null) return;
 
       startDateController.value = DateTime(value.year, value.month, value.day);
     });
+  }
+
+  @override
+  void didUpdateWidget(covariant _TaskEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.subTasksValue != widget.subTasksValue) {
+      widget.subTasksValue.whenData((subTasks) {
+        _subTasksController.setSubTasks(subTasks);
+      });
+    }
   }
 
   @override
@@ -136,176 +172,163 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
     endDateController.dispose();
     autoInserDateController.dispose();
     positionController.dispose();
-
-    for (final controller in _subTaskControllers) {
-      controller.dispose();
-    }
+    _subTasksController.dispose();
 
     super.dispose();
   }
 
-  void _applyChanges() {
+  UserTasksCompanion _getTaskCompanion({
+    bool done = false,
+    double? progress,
+    DateTime? startDate,
+    DateTime? endDate,
+    RecurrenceRule? recurrence,
+  }) {
     final task = widget.task;
-    task.title = titleController.text.trim();
-    task.description = descriptionController.text.trim();
-    task.startDate = startDateController.value;
-    task.endDate = endDateController.value;
-    task.recurrence = recurrenceRule;
-    task.lastTouched = DateTime.now();
+    final now = DateTime.now();
+    final autoInsertDate = autoInsertDateOf(startDate, endDate);
 
-    if (task.archived && task.autoInsertDate != null) {
-      task.archived = false;
-    }
+    final status = switch ((task?.status, done, autoInsertDate == null)) {
+      (_, true, true) => TaskStatus.archived,
+      (_, true, false) => TaskStatus.pending,
+      (TaskStatus.archived, false, false) => TaskStatus.pending,
+      (final status, false, _) => status ?? TaskStatus.pending,
+    };
 
-    for (final controller in _subTaskControllers) {
-      controller.apply();
-    }
+    return UserTasksCompanion.insert(
+      id: Value.absentIfNull(task?.id),
+      title: titleController.text.trim(),
+      description: descriptionController.text.trim(),
+      activeTimeMeasurementStart: Value(task?.activeTimeMeasurementStart),
+      startDate: Value(startDate),
+      endDate: Value(endDate),
+      recurrence: Value(recurrence),
+      status: status,
+      progress: Value(progress),
+      createdAt: task?.createdAt ?? now,
+      updatedByUserAt: now,
+      reference: Value.absentIfNull(task?.reference),
+      deletedAt: Value.absentIfNull(task?.deletedAt),
+    );
   }
-
-  ({List<SubTask> put, List<SubTask> remove}) _updateSubTasks() {
-    final task = widget.task;
-    final removedSubTasks = _subTaskControllers
-        .where((controller) => controller.removed)
-        .map((controller) => controller.subTask)
-        .where((subTask) => subTask.id != Isar.autoIncrement)
-        .toList();
-
-    final subTasks = _subTaskControllers
-        .whereNot((controller) => controller.removed)
-        .map((controller) => controller.subTask)
-        .toList();
-
-    for (final (i, subTask) in subTasks.indexed) {
-      subTask.reference = i;
-    }
-
-    task.subTasks.removeAll(removedSubTasks);
-    task.subTasks.addAll(subTasks);
-    return (put: subTasks, remove: removedSubTasks);
-  }
-
-  // Future<void> _restoreTask(Repository repository) async {
-  //   final task = widget.task;
-
-  //   task.subTasks.clear();
-  //   task.subTasks.addAll(_originalSubTasks);
-
-  //   await repository.writeTask(task, [
-  //     PutSubTasks(_originalSubTasks),
-  //   ]);
-  // }
 
   Future<void> _save(
-    Repository repository, [
+    AppDatabase db, {
+    bool markAsDone = false,
     List<TaskEditAction> extra = const [],
-  ]) async {
-    final task = widget.task;
-    final (:put, :remove) = _updateSubTasks();
+  }) async {
+    final put = _subTasksController.toCompanions(resetDone: markAsDone);
+    final remove = _subTasksController.removedSubTaskIds();
 
-    task.progress = put.isEmpty
+    final progress = put.isEmpty
         ? null
-        : put.where((subTask) => subTask.done).length / put.length;
+        : put.where((subTask) => subTask.done.value).length / put.length;
 
-    await repository.writeTask(task, [
+    final (:startDate, :endDate, :recurrence) = switch (markAsDone) {
+      true => _getNextOccurrence(),
+      false => (
+          startDate: startDateController.value,
+          endDate: endDateController.value,
+          recurrence: recurrenceRule,
+        ),
+    };
+
+    final taskCompanion = _getTaskCompanion(
+      done: markAsDone,
+      progress: progress,
+      startDate: startDate,
+      endDate: endDate,
+      recurrence: recurrence,
+    );
+
+    await db.writeTask(taskCompanion, [
       PutSubTasks(put),
       RemoveSubTasks(remove),
       ...extra,
     ]);
   }
 
-  void _markAsDone(Repository repository) {
-    final task = widget.task;
+  ({
+    DateTime? startDate,
+    DateTime? endDate,
+    RecurrenceRule? recurrence,
+  }) _getNextOccurrence() {
+    final startDate = startDateController.value;
+    final endDate = endDateController.value;
+    final recurrence = recurrenceRule;
 
-    switch (task) {
-      case UserTask(
-          :final startDate?,
-          :final endDate,
-          :final recurrence?,
-        ):
+    switch ((startDate, endDate, recurrence)) {
+      case (final startDate?, final endDate, final recurrence?):
         final newStart = _nextDate(recurrence, startDate);
-        task.startDate = newStart;
-        task.endDate = switch ((newStart, endDate)) {
+
+        final newEnd = switch ((newStart, endDate)) {
           (final newStart?, final endDate?) =>
             newStart.add(endDate.difference(startDate)),
           _ => null,
         };
 
-        if (recurrence.count case final count?) {
-          task.recurrence =
-              count > 1 ? recurrence.copyWith(count: count - 1) : null;
-        }
-        break;
-      case UserTask(
-          :final endDate?,
-          :final recurrence?,
-        ):
+        final newRecurrence = switch (recurrence.count) {
+          null => recurrence,
+          final count when count > 1 => recurrence.copyWith(count: count - 1),
+          _ => null,
+        };
+
+        return (
+          startDate: newStart,
+          endDate: newEnd,
+          recurrence: newRecurrence
+        );
+      case (null, final endDate?, final recurrence?):
         final newEnd = _nextDate(recurrence, endDate);
 
-        task.endDate = newEnd;
+        final newRecurrence = switch (recurrence.count) {
+          null => recurrence,
+          final count when count > 1 => recurrence.copyWith(count: count - 1),
+          _ => null,
+        };
 
-        if (recurrence.count case final count?) {
-          task.recurrence =
-              count > 1 ? recurrence.copyWith(count: count - 1) : null;
-        }
-        break;
+        return (startDate: null, endDate: newEnd, recurrence: newRecurrence);
       default:
-        task.recurrence = null;
-        task.startDate = null;
-        task.endDate = null;
-        break;
-    }
-
-    if (task.autoInsertDate == null) {
-      task.archived = true;
-    } else {
-      // only need to reset subtasks if the task
-      // is going to be repeated
-      for (final controller in _subTaskControllers) {
-        controller.subTask.done = false;
-      }
+        return (startDate: null, endDate: null, recurrence: recurrence);
     }
   }
 
-  void _removeSubTask(_SubTaskController controller) {
-    setState(() {
-      controller.removed = true;
-    });
-
+  void _onRemoveSubTask(_SubTaskController controller) {
     childScaffoldMessenger.showSnackBar(SnackBar(
       content: Text(context.tr('subtask_deleted')),
       action: SnackBarAction(
         label: context.tr('undo'),
         onPressed: () {
-          setState(() {
-            controller.removed = false;
-          });
+          _subTasksController.markAsActive(controller);
         },
       ),
     ));
   }
 
   TaskEditAction? _getTaskEditAction() {
-    return switch ((positionController.value, widget.task.reference)) {
+    return switch ((positionController.value, widget.task?.status)) {
+      (null, TaskStatus.active) => const RemoveTaskFromQueue(),
       // remove from queue + already not in queue
-      (null, null) => null,
+      (null, _) => null,
       // put somewhere in queue + already in queue
-      (QueueInsertionPosition.preferred, _?) => null,
+      (QueueInsertionPosition.preferred, TaskStatus.active) => null,
       (final position?, _) => PutTaskInQueue(position),
-      (null, _?) => const RemoveTaskFromQueue(),
     };
   }
 
   @override
   Widget build(BuildContext context) {
     const buttonRadius = Radius.circular(60);
+    final originalTask = widget.originalTask;
     final task = widget.task;
-    final repository = ref.watch(repositoryPod);
+    final database = ref.watch(databasePod);
     final currentlyTrackedTask = ref.watch(currentlyTrackedTaskPod).valueOrNull;
-    final CustomColors(:deleteSurface) = Theme.of(context).extension()!;
-    final isCreatingTask = task.id == Isar.autoIncrement;
+    final isCreatingTask = originalTask == null;
+    final isCurrentlyTracking =
+        task != null && currentlyTrackedTask?.id == task.id;
 
     return TimeTrackingScreenWrapper(
-      disabled: currentlyTrackedTask?.id == task.id,
+      disabled: isCurrentlyTracking,
       child: ScaffoldMessenger(
         key: scaffoldMessengerKey,
         child: Scaffold(
@@ -314,25 +337,26 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
               isCreatingTask ? "create_task" : "edit_task",
             )),
             actions: [
-              IconButton(
-                onPressed: () async {
-                  await repository.deleteTask(task);
+              if (originalTask != null)
+                IconButton(
+                  onPressed: () async {
+                    await database.softDeleteTask(originalTask);
 
-                  if (!context.mounted) return;
-                  parentScaffoldMessenger.showSnackBar(
-                    SnackBar(
-                      content: Text(context.tr("task_deleted")),
-                      // TODO: restore after migrating to drift
-                      // action: SnackBarAction(
-                      //   label: context.tr("undo"),
-                      //   onPressed: () => _restoreTask(repository),
-                      // ),
-                    ),
-                  );
-                  context.pop();
-                },
-                icon: const Icon(Icons.delete),
-              ),
+                    if (!context.mounted) return;
+                    parentScaffoldMessenger.showSnackBar(
+                      SnackBar(
+                        content: Text(context.tr("task_deleted")),
+                        action: SnackBarAction(
+                          label: context.tr("undo"),
+                          onPressed: () =>
+                              database.undoSoftDeleteTask(originalTask),
+                        ),
+                      ),
+                    );
+                    context.pop();
+                  },
+                  icon: const Icon(Icons.delete),
+                ),
             ],
           ),
           body: SafeArea(
@@ -431,7 +455,7 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
                           );
                         },
                       ),
-                      if (!isCreatingTask) ...[
+                      if (!isCreatingTask && task != null) ...[
                         const SizedBox(height: 16),
                         IntrinsicHeight(
                           child: Row(
@@ -441,7 +465,7 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
                                 flex: 4,
                                 child: _TimeMeasurementButton(
                                     task: task,
-                                    repository: repository,
+                                    database: database,
                                     style: const ButtonStyle(
                                       shape: WidgetStatePropertyAll(
                                         RoundedRectangleBorder(
@@ -482,67 +506,26 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
                       const Divider(),
                     ],
                   ),
-                  SliverMaterialReorderableList(
-                    children: _subTaskControllers
-                        .whereNot((controller) => controller.removed)
-                        .map(
-                          (controller) => Dismissible(
-                            key: ObjectKey(controller),
-                            onDismissed: (direction) =>
-                                _removeSubTask(controller),
-                            background: Container(color: deleteSurface),
-                            child: _SubTaskCard(
-                              controller: controller,
-                              onDelete: () => _removeSubTask(controller),
-                            ),
-                          ),
-                        )
-                        .toList(),
-                    onReorder: (oldIndex, newIndex) {
-                      oldIndex =
-                          _mapSubtaskIndex(oldIndex, _subTaskControllers);
-                      newIndex =
-                          _mapSubtaskIndex(newIndex, _subTaskControllers);
-                      if (oldIndex < newIndex) {
-                        newIndex--;
-                      }
-
-                      setState(() {
-                        final controller =
-                            _subTaskControllers.removeAt(oldIndex);
-                        _subTaskControllers.insert(newIndex, controller);
-                      });
-                    },
-                  ),
-                  SliverList.list(children: [
-                    TextButton(
-                      onPressed: () async {
-                        final controller = _SubTaskController(
-                          SubTask(name: "", done: false, reference: 0),
-                        );
-
-                        final added = await controller.openView(context);
-                        if (!added || !context.mounted) return;
-
-                        setState(() {
-                          _subTaskControllers.add(controller);
-                        });
-
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          if (!scrollController.hasClients) return;
-                          scrollController.animateTo(
-                            scrollController.offset + 60,
-                            duration: const Duration(milliseconds: 150),
-                            curve: Curves.bounceInOut,
-                          );
-                        });
-                      },
-                      child: Text(context.tr("add_subtask")),
+                  widget.subTasksValue.when(
+                    error: (error, stackTrace) => SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Text(context.tr("error_loading_subtasks")),
+                      ),
                     ),
-                    const SizedBox(height: 8),
-                    const Divider(),
-                    const SizedBox(height: 8),
-                  ])
+                    loading: () => const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.all(16),
+                        child: LinearProgressIndicator(),
+                      ),
+                    ),
+                    data: (subTasks) => _SubTasksSliver(
+                      onRemoveSubTask: _onRemoveSubTask,
+                      subTasks: subTasks,
+                      subTasksController: _subTasksController,
+                      scrollController: scrollController,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -554,8 +537,7 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () async {
-                      _applyChanges();
-                      await _save(repository, [
+                      await _save(database, extra: [
                         if (_getTaskEditAction() case final action?) action,
                       ]);
                       if (!context.mounted) return;
@@ -564,16 +546,12 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
                     child: Text(context.tr("save")),
                   ),
                 ),
-                if (task.reference != null) ...[
+                if (originalTask?.status == TaskStatus.active) ...[
                   const SizedBox(width: 8),
                   Expanded(
                     child: FilledButton(
                       onPressed: () async {
-                        _applyChanges();
-                        _markAsDone(repository);
-
-                        await _save(repository, [
-                          const RemoveTaskFromQueue(),
+                        await _save(database, markAsDone: true, extra: [
                           StopTimeMeasurement(DateTime.now()),
                         ]);
 
@@ -589,6 +567,95 @@ class _TaskViewScreenState extends ConsumerState<TaskViewScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _SubTasksSliver extends StatefulWidget {
+  const _SubTasksSliver({
+    required this.subTasks,
+    required this.subTasksController,
+    required this.scrollController,
+    required this.onRemoveSubTask,
+  });
+
+  final ScrollController scrollController;
+  final List<SubTask> subTasks;
+  final _SubTasksController subTasksController;
+  final void Function(_SubTaskController) onRemoveSubTask;
+  @override
+  State<_SubTasksSliver> createState() => _SubTasksSliverState();
+}
+
+class _SubTasksSliverState extends State<_SubTasksSliver> {
+  void _removeSubTask(_SubTaskController controller) {
+    widget.subTasksController.markAsRemoved(controller);
+    widget.onRemoveSubTask(controller);
+  }
+
+  void _addSubTask() async {
+    final controller = _SubTaskController(title: "", done: false);
+
+    final added = await controller.openView(context);
+    if (!added) {
+      controller.dispose();
+      return;
+    }
+    widget.subTasksController.add(controller);
+
+    if (!context.mounted) return;
+
+    final scrollController = widget.scrollController;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!scrollController.hasClients) return;
+      scrollController.animateTo(
+        scrollController.offset + 60,
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.bounceInOut,
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final CustomColors(:deleteSurface) = Theme.of(context).extension()!;
+    final subTasksController = widget.subTasksController;
+
+    return SliverMainAxisGroup(
+      slivers: [
+        ListenableBuilder(
+          listenable: subTasksController,
+          builder: (context, child) {
+            final controllers = subTasksController.activeControllers;
+
+            return SliverMaterialReorderableList(
+              onReorder: subTasksController.reorderActiveController,
+              children: [
+                for (final controller in controllers)
+                  Dismissible(
+                    key: ObjectKey(controller),
+                    onDismissed: (direction) => _removeSubTask(controller),
+                    background: Container(color: deleteSurface),
+                    child: _SubTaskCard(
+                      controller: controller,
+                      onDelete: () => _removeSubTask(controller),
+                    ),
+                  )
+              ],
+            );
+          },
+        ),
+        SliverList.list(children: [
+          TextButton(
+            onPressed: _addSubTask,
+            child: Text(context.tr("add_subtask")),
+          ),
+          const SizedBox(height: 8),
+          const Divider(),
+          const SizedBox(height: 8),
+        ])
+      ],
     );
   }
 }
@@ -701,20 +768,104 @@ class __QueuePositionPickerState extends State<_QueuePositionPicker> {
   }
 }
 
+class _SubTasksController extends ChangeNotifier {
+  _SubTasksController(this.controllers);
+
+  final List<_SubTaskController> controllers;
+
+  Iterable<_SubTaskController> get activeControllers =>
+      controllers.whereNot((c) => c.removed);
+
+  List<int> removedSubTaskIds() => controllers
+      .where((c) => c.removed)
+      .map((c) => c.id)
+      .whereType<int>()
+      .toList();
+
+  List<SubTasksCompanion> toCompanions({bool resetDone = false}) =>
+      activeControllers
+          .mapIndexed((index, controller) =>
+              controller.toCompanion(index, resetDone: resetDone))
+          .toList();
+
+  void setSubTasks(List<SubTask> subTasks) {
+    clear();
+    for (final subTask in subTasks) {
+      final controller = _SubTaskController(
+        id: subTask.id,
+        title: subTask.title,
+        done: subTask.done,
+      );
+      controllers.add(controller);
+    }
+
+    notifyListeners();
+  }
+
+  void add(_SubTaskController controller) {
+    controllers.add(controller);
+    notifyListeners();
+  }
+
+  void markAsRemoved(_SubTaskController controller) {
+    controller.removed = true;
+    notifyListeners();
+  }
+
+  void markAsActive(_SubTaskController controller) {
+    controller.removed = false;
+    notifyListeners();
+  }
+
+  void clear() {
+    for (final controller in controllers) {
+      controller.dispose();
+    }
+    controllers.clear();
+    notifyListeners();
+  }
+
+  void reorderActiveController(int oldIndex, int newIndex) {
+    oldIndex = _mapSubtaskIndex(oldIndex, controllers);
+    newIndex = _mapSubtaskIndex(newIndex, controllers);
+    if (oldIndex < newIndex) {
+      newIndex--;
+    }
+    final oldController = controllers.removeAt(oldIndex);
+    controllers.insert(newIndex, oldController);
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    clear();
+    super.dispose();
+  }
+}
+
 class _SubTaskController {
-  _SubTaskController(this.subTask) {
-    textController.value = subTask.name;
-    doneController.value = subTask.done;
+  _SubTaskController({
+    this.id,
+    required String title,
+    required bool done,
+  }) {
+    textController.value = title;
+    doneController.value = done;
   }
 
   bool removed = false;
-  final SubTask subTask;
+  final int? id;
   final textController = ValueNotifier("");
   final doneController = ValueNotifier(false);
 
-  void apply() {
-    subTask.name = textController.value;
-    subTask.done = doneController.value;
+  SubTasksCompanion toCompanion(int reference, {bool resetDone = false}) {
+    return SubTasksCompanion(
+      id: Value.absentIfNull(id),
+      taskId: const Value.absent(),
+      title: Value(textController.value),
+      done: Value(!resetDone && doneController.value),
+      reference: Value(reference),
+    );
   }
 
   void dispose() {
@@ -874,11 +1025,11 @@ class _SubTaskEditorState extends State<_SubTaskEditor> {
 class _TimeMeasurementButton extends StatefulWidget {
   const _TimeMeasurementButton({
     required this.task,
-    required this.repository,
+    required this.database,
     this.style,
   });
 
-  final Repository repository;
+  final AppDatabase database;
   final UserTask task;
   final ButtonStyle? style;
 
@@ -893,24 +1044,17 @@ class _TimeMeasurementButtonState extends State<_TimeMeasurementButton> {
   static const _curve = Curves.easeOut;
 
   Future<void> _start() async {
-    await widget.repository.writeTask(widget.task, [
+    await widget.database.writeTask(widget.task, [
       StartTimeMeasurement(DateTime.now()),
     ]);
     if (!mounted) return;
-    setState(() {});
   }
 
   Future<void> _stop() async {
-    await widget.repository.writeTask(widget.task, [
+    await widget.database.writeTask(widget.task, [
       StopTimeMeasurement(DateTime.now()),
     ]);
     if (!mounted) return;
-    setState(() {});
-  }
-
-  @override
-  void initState() {
-    super.initState();
   }
 
   Widget _buildTransition(Widget child, Animation<double> animation) {

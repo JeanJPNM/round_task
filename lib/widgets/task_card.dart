@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:relative_time/relative_time.dart';
 import 'package:round_task/custom_colors.dart';
+import 'package:round_task/db/database.dart';
 import 'package:round_task/formatting.dart';
-import 'package:round_task/models/task.dart';
 import 'package:round_task/provider.dart';
 import 'package:round_task/screens/task_view.dart';
 import 'package:round_task/widgets/animated_progress_bar.dart';
@@ -130,12 +130,12 @@ class _TaskCardContent extends StatelessWidget {
     final languageTag = Localizations.localeOf(context).toLanguageTag();
 
     final timeMessage = switch (task) {
-      UserTask(reference: _?, :final endDate?) =>
+      UserTask(status: TaskStatus.active, :final endDate?) =>
         context.tr("task_card_end", args: [
           endDate.relativeTime(context),
           formatDate(languageTag, now, endDate),
         ]),
-      UserTask(reference: null, :final autoInsertDate?) =>
+      UserTask(status: TaskStatus.pending, :final autoInsertDate?) =>
         context.tr("task_card_start", args: [
           autoInsertDate.relativeTime(context),
           formatDate(languageTag, now, autoInsertDate),

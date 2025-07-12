@@ -36,13 +36,13 @@ class _AppSettingsState extends ConsumerState<AppSettings> {
   }
 
   Future<void> _exportData(
-    IsarNotifier isarNotifier,
+    DatabaseNotifier dbNotifier,
     BuildContext context,
   ) async {
     final dir = await _getBackupDirectoryPath();
-    final path = join(dir, 'round_task_backup.isar');
+    final path = join(dir, 'round_task_backup.sqlite');
     final success = await _tryAction(() async {
-      await isarNotifier.exportDatabase(path);
+      await dbNotifier.exportData(path);
     });
 
     if (!context.mounted) return;
@@ -59,12 +59,11 @@ class _AppSettingsState extends ConsumerState<AppSettings> {
   }
 
   Future<void> _importData(
-    IsarNotifier isarNotifier,
+    DatabaseNotifier dbNotifier,
     BuildContext context,
   ) async {
     final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['isar'],
+      type: FileType.any,
       allowMultiple: false,
     );
 
@@ -73,7 +72,7 @@ class _AppSettingsState extends ConsumerState<AppSettings> {
     final path = result.files.single.path!;
     final success = await _tryAction(() async {
       // Attempt to import the database
-      return await isarNotifier.importDatabase(path);
+      return await dbNotifier.importData(path);
     });
 
     if (!context.mounted) return;
@@ -92,7 +91,7 @@ class _AppSettingsState extends ConsumerState<AppSettings> {
 
   @override
   Widget build(BuildContext context) {
-    final isarNotifier = ref.watch(isarPod.notifier);
+    final dbNotifier = ref.watch(databasePod.notifier);
 
     return Scaffold(
       appBar: AppBar(
@@ -102,12 +101,12 @@ class _AppSettingsState extends ConsumerState<AppSettings> {
         children: [
           _SectionHeader(title: Text(context.tr("backup_and_restore"))),
           ListTile(
-            onTap: () => _exportData(isarNotifier, context),
+            onTap: () => _exportData(dbNotifier, context),
             leading: const Icon(Icons.upload),
             title: Text(context.tr("export_database")),
           ),
           ListTile(
-            onTap: () => _importData(isarNotifier, context),
+            onTap: () => _importData(dbNotifier, context),
             leading: const Icon(Icons.download),
             title: Text(context.tr("import_database")),
           ),

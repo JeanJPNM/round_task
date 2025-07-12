@@ -3,7 +3,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:round_task/models/task.dart';
+import 'package:round_task/db/db.dart';
 import 'package:round_task/provider.dart';
 import 'package:round_task/screens/task_view.dart';
 import 'package:round_task/widgets/task_card.dart';
@@ -26,7 +26,7 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
   final _searchFocusNode = FocusNode();
   final _searchController = SearchController();
 
-  TaskSearchType _searchType = TaskSearchType.queued;
+  TaskStatus _searchStatus = TaskStatus.active;
   TaskSorting? _queuedTasksSorting;
   TaskSorting _pendingTasksSorting = TaskSorting.creationDate;
 
@@ -42,10 +42,10 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
           : _tabController.animation!.value.round();
 
       _currentIndex.value = index;
-      _searchType = switch (index) {
-        1 => TaskSearchType.pending,
-        2 => TaskSearchType.archived,
-        _ => TaskSearchType.queued,
+      _searchStatus = switch (index) {
+        1 => TaskStatus.pending,
+        2 => TaskStatus.archived,
+        _ => TaskStatus.active,
       };
     });
   }
@@ -75,7 +75,7 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
 
   @override
   Widget build(BuildContext context) {
-    final repository = ref.watch(repositoryPod);
+    final database = ref.watch(databasePod);
 
     return TimeTrackingScreenWrapper(
       child: Scaffold(
@@ -127,8 +127,8 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
                       );
                     },
                     suggestionsBuilder: (context, controller) async {
-                      final tasks = await repository.searchTasks(
-                        _searchType,
+                      final tasks = await database.searchTasks(
+                        _searchStatus,
                         controller.text,
                       );
                       return tasks.map((task) => TaskCard(
@@ -166,7 +166,7 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
                           data: (tasks) => _QueuedTasksTab(
                             sorting: _queuedTasksSorting,
                             tasks: tasks,
-                            repository: repository,
+                            database: database,
                             onSortingChanged: (sorting) {
                               setState(() {
                                 _queuedTasksSorting = sorting;
@@ -310,13 +310,8 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
             context.push(
               "/task",
               extra: TaskViewParams(
-                UserTask(
-                  title: '',
-                  description: '',
-                  lastTouched: DateTime.now(),
-                  creationDate: DateTime.now(),
-                ),
-                addToQueue: _searchType == TaskSearchType.queued,
+                null,
+                addToQueue: _searchStatus == TaskStatus.active,
                 autofocusTitle: true,
               ),
             );
@@ -332,12 +327,12 @@ class _QueuedTasksTab extends StatefulWidget {
   const _QueuedTasksTab({
     required this.sorting,
     required this.tasks,
-    required this.repository,
+    required this.database,
     this.onSortingChanged,
   });
 
   final TaskSorting? sorting;
-  final Repository repository;
+  final AppDatabase database;
   final List<UserTask> tasks;
   final void Function(TaskSorting?)? onSortingChanged;
 
@@ -355,7 +350,7 @@ class _QueuedTasksTabState extends State<_QueuedTasksTab>
     super.build(context);
     final sorting = widget.sorting;
     final tasks = widget.tasks;
-    final repository = widget.repository;
+    final database = widget.database;
 
     return Column(
       children: [
@@ -389,7 +384,7 @@ class _QueuedTasksTabState extends State<_QueuedTasksTab>
               final task = tasks.removeAt(oldIndex);
               tasks.insert(newIndex, task);
 
-              await repository.reorderTasks(tasks);
+              await database.reorderTasks(tasks);
             },
             itemBuilder: (context, index) => _buildTask(tasks[index]),
           ),

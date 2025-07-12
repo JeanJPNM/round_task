@@ -1,26 +1,15 @@
-import 'package:collection/collection.dart';
 import 'package:duration/duration.dart';
 import 'package:duration/locale.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:round_task/db/db.dart';
 import 'package:round_task/formatting.dart';
-import 'package:round_task/models/task.dart';
-import 'package:round_task/models/time_measurement.dart';
 import 'package:round_task/provider.dart';
 import 'package:round_task/widgets/bottom_sheet_safe_area.dart';
 import 'package:round_task/widgets/date_time_input.dart';
 import 'package:round_task/widgets/second_tick_provider.dart';
 import 'package:round_task/widgets/time_tracking_banner.dart';
-
-final _measurementsProvider =
-    FutureProvider.autoDispose.family<List<TimeMeasurement>, UserTask>(
-  (ref, task) async {
-    await task.timeMeasurements.load();
-    return task.timeMeasurements
-        .sorted((a, b) => -a.startTime.compareTo(b.startTime));
-  },
-);
 
 final class TaskTimeMeasurementsParams {
   const TaskTimeMeasurementsParams({required this.task});
@@ -43,30 +32,25 @@ class TaskTimeMeasurements extends ConsumerStatefulWidget {
 
 class _TaskTimeMeasurementsState extends ConsumerState<TaskTimeMeasurements> {
   Future<void> _putMeasurement(
-    Repository repository,
-    TimeMeasurement measurement,
+    AppDatabase database,
+    Insertable<TimeMeasurement> measurement,
   ) async {
-    await repository.writeTask(
+    await database.writeTask(
       widget.task,
       [PutTimeMeasurement(measurement)],
     );
-    if (!mounted) return;
-
-    ref.invalidate(_measurementsProvider(widget.task));
   }
 
   Future<void> _removeMeasurement(
-    Repository repository,
+    AppDatabase database,
     TimeMeasurement measurement,
   ) async {
-    await repository.writeTask(
+    await database.writeTask(
       widget.task,
       [RemoveTimeMeasurement(measurement)],
     );
 
     if (!mounted) return;
-
-    ref.invalidate(_measurementsProvider(widget.task));
 
     final languageTag = Localizations.localeOf(context).toLanguageTag();
     final now = DateTime.now();
@@ -74,12 +58,12 @@ class _TaskTimeMeasurementsState extends ConsumerState<TaskTimeMeasurements> {
       SnackBar(
         content: Text(
           context.tr("measurement_deleted", args: [
-            formatDate(languageTag, now, measurement.startTime),
+            formatDate(languageTag, now, measurement.start),
           ]),
         ),
         action: SnackBarAction(
           label: context.tr("undo"),
-          onPressed: () => _putMeasurement(repository, measurement),
+          onPressed: () => _putMeasurement(database, measurement),
         ),
       ),
     );
@@ -88,8 +72,8 @@ class _TaskTimeMeasurementsState extends ConsumerState<TaskTimeMeasurements> {
   @override
   Widget build(BuildContext context) {
     final task = widget.task;
-    final measurements = ref.watch(_measurementsProvider(task));
-    final repository = ref.watch(repositoryPod);
+    final measurements = ref.watch(taskTimeMeasurementsPod(task.id));
+    final database = ref.watch(databasePod);
     final currentlyTrackedTask = ref.watch(currentlyTrackedTaskPod).valueOrNull;
 
     return TimeTrackingScreenWrapper(
@@ -123,23 +107,21 @@ class _TaskTimeMeasurementsState extends ConsumerState<TaskTimeMeasurements> {
 
                 final measurement = measurements[index];
                 return _TimeMeasurementItem(
-                  start: measurement.startTime,
-                  end: measurement.endTime,
+                  start: measurement.start,
+                  end: measurement.end,
                   onChange: (result) async {
                     switch (result) {
                       case _MeasurementDeleted():
-                        await _removeMeasurement(repository, measurement);
+                        await _removeMeasurement(database, measurement);
                         return;
                       case _MeasurementEdited(
                           start: final start,
                           end: final end,
                         ):
-                        final updatedMeasurement = TimeMeasurement(
-                          id: measurement.id,
-                          startTime: start,
-                          endTime: end,
+                        await _putMeasurement(
+                          database,
+                          measurement.copyWith(start: start, end: end),
                         );
-                        await _putMeasurement(repository, updatedMeasurement);
                     }
                   },
                 );
@@ -152,21 +134,18 @@ class _TaskTimeMeasurementsState extends ConsumerState<TaskTimeMeasurements> {
             final now = DateTime.now();
             final result = await _showTimeMeasurementEditor(
               context,
-              startTime: now,
-              endTime: now,
+              start: now,
+              end: now,
               allowDelete: false,
             );
 
-            if (result
-                case _MeasurementEdited(
-                  start: final start,
-                  end: final end,
-                )) {
+            if (result case _MeasurementEdited(:final start, :final end)) {
               await _putMeasurement(
-                repository,
-                TimeMeasurement(
-                  startTime: start,
-                  endTime: end,
+                database,
+                TimeMeasurementsCompanion.insert(
+                  taskId: task.id,
+                  start: start,
+                  end: end,
                 ),
               );
             }
@@ -191,7 +170,7 @@ class _TimeMeasurementItem extends StatelessWidget {
 
   Future<void> _handleTap(BuildContext context) async {
     final result = await _showTimeMeasurementEditor(context,
-        startTime: start, endTime: end!, allowDelete: true);
+        start: start, end: end!, allowDelete: true);
     if (result == null) return;
     onChange?.call(result);
   }
@@ -238,8 +217,8 @@ class _MeasurementDeleted extends _EditorResult {
 
 Future<_EditorResult?> _showTimeMeasurementEditor(
   BuildContext context, {
-  required DateTime startTime,
-  required DateTime endTime,
+  required DateTime start,
+  required DateTime end,
   bool allowDelete = false,
 }) async {
   return await showModalBottomSheet<_EditorResult>(
@@ -248,8 +227,8 @@ Future<_EditorResult?> _showTimeMeasurementEditor(
     builder: (context) => BottomSheetSafeArea(
       basePadding: const EdgeInsets.all(16),
       child: _TimeMeasurementEditor(
-        startTime: startTime,
-        endTime: endTime,
+        start: start,
+        end: end,
         allowDelete: allowDelete,
       ),
     ),
@@ -258,13 +237,13 @@ Future<_EditorResult?> _showTimeMeasurementEditor(
 
 class _TimeMeasurementEditor extends StatefulWidget {
   const _TimeMeasurementEditor({
-    required this.startTime,
-    required this.endTime,
+    required this.start,
+    required this.end,
     this.allowDelete = true,
   });
 
-  final DateTime startTime;
-  final DateTime endTime;
+  final DateTime start;
+  final DateTime end;
   final bool allowDelete;
   @override
   State<_TimeMeasurementEditor> createState() => __TimeMeasurementEditorState();
@@ -282,8 +261,8 @@ class __TimeMeasurementEditorState extends State<_TimeMeasurementEditor> {
     startController.addListener(_runValidation);
     endController.addListener(_runValidation);
 
-    startController.value = widget.startTime;
-    endController.value = widget.endTime;
+    startController.value = widget.start;
+    endController.value = widget.end;
   }
 
   void _runValidation() {

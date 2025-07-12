@@ -2,26 +2,26 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:collection/collection.dart';
+import 'package:drift/drift.dart';
+import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:round_task/models/database_metadata.dart';
+import 'package:round_task/db/db.dart' as db;
 import 'package:round_task/models/task.dart';
 import 'package:round_task/models/time_measurement.dart';
+import 'package:sqlite3/sqlite3.dart';
 
-const _defaultSkipSize = 256;
-
-final isarPod = AsyncNotifierProvider<IsarNotifier, Isar>(IsarNotifier.new);
-
-final repositoryPod = Provider(Repository.new);
+final databasePod = NotifierProvider<DatabaseNotifier, db.AppDatabase>(
+  DatabaseNotifier.new,
+);
 
 // no need to dispose, since they are used in the main screen of the app
 final _innerQueuedTasksPod = StreamProvider((ref) async* {
-  await ref.watch(isarPod.future);
-  final repository = ref.watch(repositoryPod);
+  final database = ref.watch(databasePod);
 
-  yield* repository.getQueuedTasksStream();
+  yield* database.getQueuedTasksStream();
 });
 
 final queuedTasksPod = Provider.family.autoDispose((ref, TaskSorting? sorting) {
@@ -38,10 +38,9 @@ final queuedTasksPod = Provider.family.autoDispose((ref, TaskSorting? sorting) {
 });
 
 final _innerPendingTasksPod = StreamProvider((ref) async* {
-  await ref.watch(isarPod.future);
-  final repository = ref.watch(repositoryPod);
+  final database = ref.watch(databasePod);
 
-  yield* repository.getPendingTasksStream();
+  yield* database.getPendingTasksStream();
 });
 
 final pendingTasksPod = Provider.family.autoDispose((
@@ -61,502 +60,47 @@ final pendingTasksPod = Provider.family.autoDispose((
 });
 
 final archivedTasksPod = StreamProvider.autoDispose((ref) async* {
-  await ref.watch(isarPod.future);
-  final repository = ref.watch(repositoryPod);
+  final database = ref.watch(databasePod);
 
-  yield* repository.getArchivedTasksStream();
+  yield* database.getArchivedTasksStream();
 });
 
 final currentlyTrackedTaskPod = StreamProvider.autoDispose((ref) async* {
-  await ref.watch(isarPod.future);
-  final repository = ref.watch(repositoryPod);
+  final database = ref.watch(databasePod);
 
-  yield* repository.getCurrentlyTrackedTaskStream();
+  yield* database.getCurrentlyTrackedTaskStream();
 });
 
-class IsarNotifier extends AsyncNotifier<Isar> {
-  late final String _isarDir;
-  @override
-  Future<Isar> build() async {
-    final dir = Platform.isAndroid || Platform.isIOS
-        ? await getApplicationDocumentsDirectory()
-        : await getApplicationSupportDirectory();
+final taskByIdPod =
+    StreamProvider.autoDispose.family<db.UserTask?, int>((ref, taskId) {
+  final db = ref.watch(databasePod);
+  return db.getTaskByIdStream(taskId);
+});
 
-    _isarDir = dir.path;
+final taskSubTasksPod =
+    StreamProvider.autoDispose.family<List<db.SubTask>, int>((ref, taskId) {
+  final database = ref.watch(databasePod);
+  return database.getSubTasksStream(taskId);
+});
 
-    final isar = await _openIsar(
-      directory: _isarDir,
-    );
-    await _migrateIfNeeded(isar);
+final taskTimeMeasurementsPod = StreamProvider.autoDispose
+    .family<List<db.TimeMeasurement>, int>((ref, taskId) {
+  final database = ref.watch(databasePod);
 
-    ref.onDispose(dispose);
-
-    return isar;
-  }
-
-  Future<Isar> _openIsar({
-    required String directory,
-    String name = Isar.defaultName,
-  }) async {
-    return Isar.open(
-      [
-        UserTaskSchema,
-        SubTaskSchema,
-        TaskDirSchema,
-        DatabaseMetadataSchema,
-        TimeMeasurementSchema
-      ],
-      directory: directory,
-      name: name,
-    );
-  }
-
-  Future<void> _migrateIfNeeded(Isar isar) async {
-    final metadata = await isar.databaseMetadatas.get(0);
-    if (metadata == null) {
-      // first time opening the database, create metadata
-      await isar.writeTxn(() async {
-        await isar.databaseMetadatas.put(const DatabaseMetadata(id: 0));
-      });
-    }
-
-    // add migration logic later
-  }
-
-  Future<void> exportDatabase(String path) async {
-    final isar = await future;
-    state = const AsyncValue.loading();
-
-    try {
-      final file = File(path);
-      if (await file.exists()) {
-        await file.delete();
-      }
-
-      await isar.copyToFile(path);
-    } finally {
-      state = AsyncValue.data(isar);
-    }
-  }
-
-  Future<void> importDatabase(String path) async {
-    var isar = await future;
-    state = const AsyncValue.loading();
-    await isar.close();
-
-    try {
-      final file = File(path);
-      // make sure the other isar file is valid
-      final importedIsar = await _openIsar(
-        directory: file.parent.path,
-        name: basenameWithoutExtension(file.path),
-      );
-      await importedIsar.close();
-
-      await file.copy(join(_isarDir, "${Isar.defaultName}.isar"));
-    } finally {
-      isar = await _openIsar(directory: _isarDir);
-      await _migrateIfNeeded(isar);
-      state = AsyncValue.data(isar);
-    }
-  }
-
-  void dispose() {
-    if (state case AsyncData<Isar> data) {
-      data.value.close();
-    }
-  }
-}
-
-class AutomaticTaskQueuer {
-  AutomaticTaskQueuer(this.repository);
-
-  final Repository repository;
-
-  DateTime? _value;
-  Timer? _timer;
-
-  Future<void> init() async {
-    await _runUpdate(force: true);
-  }
-
-  void tryUpdate(DateTime? date) {
-    if (date == null) return;
-
-    if (value == null || date.isBefore(value!)) {
-      value = date;
-    }
-  }
-
-  DateTime? get value => _value;
-  set value(DateTime? date) {
-    _value = date;
-
-    if (date?.isBefore(DateTime.now()) ?? false) {
-      _runUpdate();
-    }
-  }
-
-  // we check for pending tasks every 5 seconds
-  // because a fixed timer to the next task
-  // can be delayed if the app is put in the background
-  // and reopened later
-  Future<void> _runUpdate({bool force = false}) async {
-    _timer?.cancel();
-    const duration = Duration(seconds: 5);
-
-    final now = DateTime.now();
-
-    if (value?.isBefore(now) ?? force) {
-      await repository.addScheduledTasks();
-      final date = await repository.getNextPendingTaskDate();
-      _timer = Timer(duration, _runUpdate);
-      value = date;
-    } else {
-      _timer = Timer(duration, _runUpdate);
-    }
-  }
-
-  void dispose() {
-    _timer?.cancel();
-  }
-}
-
-enum QueueInsertionPosition {
-  start,
-  end,
-  preferred,
-}
-
-sealed class TaskEditAction {
-  const TaskEditAction();
-}
-
-class PutTaskInQueue extends TaskEditAction {
-  PutTaskInQueue(this.position);
-
-  final QueueInsertionPosition position;
-}
-
-class RemoveTaskFromQueue extends TaskEditAction {
-  const RemoveTaskFromQueue();
-}
-
-class PutSubTasks extends TaskEditAction {
-  PutSubTasks(this.subTasks);
-
-  final List<SubTask> subTasks;
-}
-
-class RemoveSubTasks extends TaskEditAction {
-  RemoveSubTasks(this.subTasks);
-
-  final List<SubTask> subTasks;
-}
-
-class StartTimeMeasurement extends TaskEditAction {
-  const StartTimeMeasurement(this.reference);
-  final DateTime reference;
-}
-
-class StopTimeMeasurement extends TaskEditAction {
-  const StopTimeMeasurement(this.reference);
-  final DateTime reference;
-}
-
-class PutTimeMeasurement extends TaskEditAction {
-  PutTimeMeasurement(this.measurement);
-
-  final TimeMeasurement measurement;
-}
-
-class RemoveTimeMeasurement extends TaskEditAction {
-  RemoveTimeMeasurement(this.measurement);
-
-  final TimeMeasurement measurement;
-}
-
-enum TaskSearchType {
-  queued,
-  pending,
-  archived,
-}
+  return database.getTimeMeasurementsStream(taskId);
+});
 
 enum TaskSorting {
   creationDate,
   autoInsertDate,
   endDate;
 
-  DateTime? Function(UserTask task) get _keyOf {
+  DateTime? Function(db.UserTask task) get _keyOf {
     return switch (this) {
-      TaskSorting.creationDate => (task) => task.creationDate,
+      TaskSorting.creationDate => (task) => task.createdAt,
       TaskSorting.autoInsertDate => (task) => task.autoInsertDate,
       TaskSorting.endDate => (task) => task.endDate,
     };
-  }
-}
-
-class Repository {
-  Repository(this.ref) {
-    _queueInitFuture = taskQueuer.init();
-    ref.onDispose(taskQueuer.dispose);
-  }
-
-  late final Future<void> _queueInitFuture;
-  late final AutomaticTaskQueuer taskQueuer = AutomaticTaskQueuer(this);
-  final Ref ref;
-
-  Future<Isar> get _isar => ref.read(isarPod.future);
-
-  Future<void> writeTask(
-    UserTask task, [
-    List<TaskEditAction> actions = const [],
-  ]) async {
-    final isar = await _isar;
-
-    await isar.writeTxn(() async {
-      for (final action in actions) {
-        switch (action) {
-          case PutTaskInQueue(:final position):
-            await _putTaskInQueue(isar, task, position);
-          case RemoveTaskFromQueue():
-            task.reference = null;
-          case PutSubTasks(:final subTasks):
-            await isar.subTasks.putAll(subTasks);
-          case RemoveSubTasks(:final subTasks):
-            await isar.subTasks.deleteAll(
-              subTasks.map((subTask) => subTask.id).toList(),
-            );
-          case StartTimeMeasurement():
-            await _startTimeMeasurement(isar, task, action.reference);
-          case StopTimeMeasurement():
-            await _stopTimeMeasurement(isar, task, action.reference);
-          case PutTimeMeasurement(:final measurement):
-            await isar.timeMeasurements.put(measurement);
-            task.timeMeasurements.add(measurement);
-          case RemoveTimeMeasurement(:final measurement):
-            await isar.timeMeasurements.delete(measurement.id);
-        }
-      }
-
-      await isar.userTasks.put(task);
-      await task.subTasks.save();
-      await task.timeMeasurements.save();
-    });
-
-    taskQueuer.tryUpdate(task.autoInsertDate);
-  }
-
-  Future<void> _putTaskInQueue(
-    Isar isar,
-    UserTask task,
-    QueueInsertionPosition position,
-  ) async {
-    final insertAtStart = switch (position) {
-      QueueInsertionPosition.start => true,
-      QueueInsertionPosition.end => false,
-      QueueInsertionPosition.preferred =>
-        task.autoInsertDate?.isBefore(DateTime.now()) ?? false,
-    };
-
-    final reference = await isar.userTasks
-        .where(sort: insertAtStart ? Sort.asc : Sort.desc)
-        .referenceIsNotNullAnyArchived()
-        .referenceProperty()
-        .findFirst();
-
-    task.archived = false;
-
-    if (reference == null) {
-      task.reference = 0;
-    } else if (insertAtStart) {
-      task.reference = reference - _defaultSkipSize;
-    } else {
-      task.reference = reference + _defaultSkipSize;
-    }
-  }
-
-  Stream<List<UserTask>> getQueuedTasksStream() async* {
-    final isar = await _isar;
-    await _queueInitFuture;
-
-    yield* isar.userTasks
-        .where()
-        .referenceIsNotNullAnyArchived()
-        .watch(fireImmediately: true);
-  }
-
-  Stream<List<UserTask>> getPendingTasksStream() async* {
-    final isar = await _isar;
-    await _queueInitFuture;
-
-    final query = isar.userTasks
-        .where()
-        .referenceArchivedEqualTo(null, false)
-        .sortByCreationDate();
-    yield* query.watch(fireImmediately: true);
-  }
-
-  Stream<List<UserTask>> getArchivedTasksStream() async* {
-    final isar = await _isar;
-    await _queueInitFuture;
-
-    final query = isar.userTasks
-        .where()
-        .referenceArchivedEqualTo(null, true)
-        .sortByLastTouchedDesc();
-    yield* query.watch(fireImmediately: true);
-  }
-
-  Stream<UserTask?> getCurrentlyTrackedTaskStream() async* {
-    final isar = await _isar;
-    await _queueInitFuture;
-
-    yield* isar.userTasks
-        .where()
-        .activeTimeMeasurementStartIsNotNull()
-        .limit(1)
-        .watch(fireImmediately: true)
-        .map((list) => list.firstOrNull);
-  }
-
-  Future<void> addScheduledTasks() async {
-    final isar = await _isar;
-
-    await isar.writeTxn(() async {
-      final now = DateTime.now();
-      final tasks = await isar.userTasks
-          .where(sort: Sort.desc)
-          .autoInsertDateBetween(null, now, includeLower: false)
-          .filter()
-          .referenceIsNull()
-          .findAll();
-
-      final firstReference = await isar.userTasks
-          .where()
-          .referenceIsNotNullAnyArchived()
-          .referenceProperty()
-          .findFirst();
-
-      var current = 0;
-      var increment = _defaultSkipSize;
-      Iterable<UserTask> taskIterable = tasks;
-
-      if (firstReference != null) {
-        increment = -increment;
-        current = firstReference + increment;
-
-        // in this mode, the tasks are added to the beginning of the queue
-        // so we need to reverse the iteration order
-        taskIterable = tasks.reversed;
-      }
-
-      for (final task in taskIterable) {
-        task.reference = current;
-        current += increment;
-      }
-
-      await isar.userTasks.putAll(tasks);
-    });
-  }
-
-  Future<void> deleteTask(UserTask task) async {
-    final isar = await _isar;
-
-    await isar.writeTxn(() async {
-      await isar.subTasks.deleteAll(
-        task.subTasks.map((subTask) => subTask.id).toList(),
-      );
-      await isar.timeMeasurements.deleteAll(
-        task.timeMeasurements.map((measurement) => measurement.id).toList(),
-      );
-      await isar.userTasks.delete(task.id);
-    });
-  }
-
-  Future<DateTime?> getNextPendingTaskDate() async {
-    final isar = await _isar;
-    return await isar.userTasks
-        .where()
-        .autoInsertDateIsNotNull()
-        .filter()
-        .referenceIsNull()
-        .archivedEqualTo(false)
-        .autoInsertDateProperty()
-        .findFirst();
-  }
-
-  //  TODO: use the reference to only update one task
-  Future<void> reorderTasks(List<UserTask> tasks) async {
-    final isar = await _isar;
-    await isar.writeTxn(() async {
-      for (var i = 0; i < tasks.length; i++) {
-        tasks[i].reference = i * _defaultSkipSize;
-      }
-
-      await isar.userTasks.putAll(tasks);
-    });
-  }
-
-  Future<List<UserTask>> searchTasks(
-    TaskSearchType type,
-    String searchText,
-  ) async {
-    final isar = await _isar;
-
-    final query = switch (type) {
-      TaskSearchType.queued =>
-        isar.userTasks.where().referenceIsNotNullAnyArchived(),
-      TaskSearchType.pending =>
-        isar.userTasks.where().referenceArchivedEqualTo(null, false),
-      TaskSearchType.archived =>
-        isar.userTasks.where().referenceArchivedEqualTo(null, true),
-    };
-
-    return await query
-        .filter()
-        .group((q) => q
-            .titleContains(searchText, caseSensitive: false)
-            .or()
-            .descriptionContains(searchText, caseSensitive: false))
-        .findAll();
-  }
-
-  Future<void> _startTimeMeasurement(
-    Isar isar,
-    UserTask task,
-    DateTime now,
-  ) async {
-    task.activeTimeMeasurementStart = now;
-
-    final currentlyActive = await isar.userTasks
-        .where()
-        .activeTimeMeasurementStartIsNotNull()
-        .findFirst();
-
-    if (currentlyActive != null) {
-      await _stopTimeMeasurement(isar, currentlyActive, now);
-    }
-  }
-
-  /// Needs to be wrapped in a write transaction
-  Future<void> _stopTimeMeasurement(
-    Isar isar,
-    UserTask task,
-    DateTime now,
-  ) async {
-    if (task.activeTimeMeasurementStart == null) return;
-
-    final measurement = TimeMeasurement(
-      startTime: task.activeTimeMeasurementStart!,
-      endTime: now,
-    );
-
-    task.activeTimeMeasurementStart = null;
-    await isar.userTasks.put(task);
-    await isar.timeMeasurements.put(measurement);
-    task.timeMeasurements.add(measurement);
-    await task.timeMeasurements.save();
   }
 }
 
@@ -567,11 +111,174 @@ int _compareNullableDatetime(DateTime? a, DateTime? b) {
   return a.compareTo(b);
 }
 
-extension on AsyncData<List<UserTask>> {
-  AsyncData<List<UserTask>> applySorting(TaskSorting sorting) {
+extension on AsyncData<List<db.UserTask>> {
+  AsyncData<List<db.UserTask>> applySorting(TaskSorting sorting) {
     return AsyncData(value.sortedByCompare(
       sorting._keyOf,
       _compareNullableDatetime,
     ));
   }
+}
+
+typedef _IsarMigrationData = ({
+  List<db.UserTasksCompanion> tasks,
+  List<db.SubTasksCompanion> subTasks,
+  List<db.TimeMeasurementsCompanion> timeMeasurements,
+});
+
+class DatabaseNotifier extends Notifier<db.AppDatabase> {
+  late final String databasePath;
+
+  @override
+  db.AppDatabase build() {
+    final completer = Completer<_IsarMigrationData?>();
+    final executor = LazyDatabase(() async {
+      final dir = Platform.isAndroid || Platform.isIOS
+          ? await getApplicationDocumentsDirectory()
+          : await getApplicationSupportDirectory();
+
+      databasePath = join(dir.path, "round_task.sqlite");
+      final file = File(databasePath);
+      final isarFile = File(join(dir.path, '${Isar.defaultName}.isar'));
+
+      if (await isarFile.exists()) {
+        final isar = await Isar.open(
+          [UserTaskSchema, SubTaskSchema, TaskDirSchema, TimeMeasurementSchema],
+          directory: dir.path,
+        );
+        final companions = await _getIsarCompanions(isar);
+        completer.complete(companions);
+        await isar.close(deleteFromDisk: true);
+        final lockFile = File(join(dir.path, '${Isar.defaultName}.isar-lck'));
+
+        if (await lockFile.exists()) {
+          await lockFile.delete();
+        }
+      } else {
+        completer.complete(null);
+      }
+
+      return NativeDatabase.createInBackground(file);
+    });
+
+    final database = db.AppDatabase(executor);
+    ref.onDispose(() => state.close());
+
+    database.init(runIsarMigration: (database) async {
+      final data = await completer.future;
+      if (data == null) return;
+
+      await _runIsarMigration(database, data);
+    });
+
+    return database;
+  }
+
+  Future<void> exportData(String path) async {
+    final file = File(path);
+    await file.parent.create(recursive: true);
+    if (await file.exists()) {
+      await file.delete();
+    }
+
+    await state.customStatement("VACUUM INTO ?", [path]);
+  }
+
+  Future<void> importData(String path) async {
+    await state.close();
+
+    try {
+      final importedDb = sqlite3.open(path);
+      final tempDir = await getTemporaryDirectory();
+      final tempDbPath = join(tempDir.path, "temp_round_task.sqlite");
+      final tempDbFile = File(tempDbPath);
+
+      if (await tempDbFile.exists()) {
+        await tempDbFile.delete();
+      }
+
+      try {
+        importedDb.execute("VACUUM INTO ?", [tempDbPath]);
+      } finally {
+        importedDb.dispose();
+      }
+
+      await tempDbFile.copy(databasePath);
+      await tempDbFile.delete();
+    } finally {
+      state = db.AppDatabase(
+        NativeDatabase.createInBackground(File(databasePath)),
+      );
+      await state.init();
+    }
+  }
+}
+
+Future<_IsarMigrationData> _getIsarCompanions(Isar isar) async {
+  final tasks = await isar.userTasks.where().anyId().findAll();
+
+  final taskCompanions = <db.UserTasksCompanion>[];
+  final subTaskCompanions = <db.SubTasksCompanion>[];
+  final timeMeasurementCompanions = <db.TimeMeasurementsCompanion>[];
+  for (final (index, task) in tasks.indexed) {
+    final taskId = index + 1;
+    final taskCompanion = db.UserTasksCompanion.insert(
+      id: Value(taskId),
+      title: task.title,
+      description: task.description,
+      reference: Value(task.reference),
+      activeTimeMeasurementStart: Value(task.activeTimeMeasurementStart),
+      startDate: Value(task.startDate),
+      endDate: Value(task.endDate),
+      progress: Value(task.progress),
+      recurrence: Value(task.recurrence),
+      status: switch (task) {
+        UserTask(reference: _?) => db.TaskStatus.active,
+        UserTask(archived: true) => db.TaskStatus.archived,
+        _ => db.TaskStatus.pending,
+      },
+      createdAt: task.creationDate,
+      updatedByUserAt: task.lastTouched,
+    );
+
+    await task.subTasks.load();
+    await task.timeMeasurements.load();
+
+    taskCompanions.add(taskCompanion);
+    subTaskCompanions.addAll(task.subTasks.map((subTask) {
+      return db.SubTasksCompanion.insert(
+        taskId: taskId,
+        title: subTask.name,
+        done: subTask.done,
+        reference: subTask.reference,
+      );
+    }));
+    timeMeasurementCompanions
+        .addAll(task.timeMeasurements.map((timeMeasurement) {
+      return db.TimeMeasurementsCompanion.insert(
+        taskId: taskId,
+        start: timeMeasurement.startTime,
+        end: timeMeasurement.endTime,
+      );
+    }));
+  }
+
+  return (
+    tasks: taskCompanions,
+    subTasks: subTaskCompanions,
+    timeMeasurements: timeMeasurementCompanions,
+  );
+}
+
+Future<void> _runIsarMigration(
+  db.AppDatabase database,
+  _IsarMigrationData data,
+) async {
+  final (:tasks, :subTasks, :timeMeasurements) = data;
+
+  await database.batch((batch) {
+    batch.insertAll(database.userTasks, tasks);
+    batch.insertAll(database.subTasks, subTasks);
+    batch.insertAll(database.timeMeasurements, timeMeasurements);
+  });
 }

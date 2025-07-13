@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:round_task/db/db.dart';
 import 'package:round_task/provider.dart';
 import 'package:round_task/screens/task_view.dart';
+import 'package:round_task/widgets/select_dropdown.dart';
 import 'package:round_task/widgets/task_card.dart';
 import 'package:round_task/widgets/time_tracking_banner.dart';
 
@@ -481,7 +482,7 @@ class _SortingPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DropdownButton(
+    return SelectDropdown(
       items: [
         DropdownMenuItem(
           value: defaultSorting,
@@ -494,9 +495,7 @@ class _SortingPicker extends StatelessWidget {
           ),
       ],
       onChanged: (value) => onSortingChanged?.call(value),
-      borderRadius: BorderRadius.circular(8.0),
       value: sorting,
-      underline: const SizedBox.shrink(),
     );
   }
 }

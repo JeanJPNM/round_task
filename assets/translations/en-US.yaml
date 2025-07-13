@@ -82,6 +82,20 @@ measurement_deleted: Time measurement for {} deleted
 
 settings: Settings
 
+error_loading_settings: Error loading settings
+
+appearance: Appearance
+accent_color: Accent color
+use_system_accent_color: Use system accent color
+theme_mode:
+  name: Theme mode
+  system: System
+  light: Light
+  dark: Dark
+color_picker:
+  primary: Primary
+  wheel: Custom
+
 backup_and_restore: Backup and Restore
 
 export_database: Export data file

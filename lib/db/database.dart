@@ -1,17 +1,24 @@
 import 'dart:async';
 
 import 'package:drift/drift.dart';
+import 'package:flutter/material.dart' show Color;
+import 'package:round_task/db/database.steps.dart';
 import 'package:rrule/rrule.dart';
 
 part 'database.g.dart';
 
 const _defaultSkipSize = 256;
 
-enum TaskStatus {
+mixin DatabaseEnum on Enum {
+  int get dbCode;
+}
+
+enum TaskStatus with DatabaseEnum {
   active(0),
   pending(1),
   archived(2);
 
+  @override
   final int dbCode;
 
   const TaskStatus(this.dbCode);
@@ -26,18 +33,26 @@ enum TaskStatus {
   }
 }
 
-class TaskStatusConverter extends TypeConverter<TaskStatus, int> {
-  const TaskStatusConverter();
+class CodeEnumConverter<T extends DatabaseEnum> extends TypeConverter<T, int> {
+  const CodeEnumConverter(this.fromDb);
+
+  final T Function(int) fromDb;
 
   @override
-  TaskStatus fromSql(int fromDb) {
-    return TaskStatus.fromDbCode(fromDb);
-  }
+  T fromSql(int code) => fromDb(code);
 
   @override
-  int toSql(TaskStatus value) {
-    return value.dbCode;
-  }
+  int toSql(T value) => value.dbCode;
+}
+
+class ColorConverter extends TypeConverter<Color, int> {
+  const ColorConverter();
+
+  @override
+  Color fromSql(int value) => Color(value);
+
+  @override
+  int toSql(Color color) => color.toARGB32();
 }
 
 class RecurrenceRuleConverter extends TypeConverter<RecurrenceRule?, String?> {
@@ -87,7 +102,8 @@ class UserTasks extends Table {
   late final id = integer().autoIncrement()();
   late final title = text()();
   late final description = text()();
-  late final status = integer().map(const TaskStatusConverter())();
+  late final status =
+      integer().map(const CodeEnumConverter(TaskStatus.fromDbCode))();
   late final reference = integer().nullable()();
   late final progress = real().nullable()();
   late final createdAt = integer().map(const DateTimeConverter())();
@@ -124,6 +140,8 @@ class SubTasks extends Table {
 }
 
 @TableIndex(name: "idx_time_measurements_task_id", columns: {#taskId})
+@TableIndex(name: "idx_time_measurements_start", columns: {#start})
+@TableIndex(name: "idx_time_measurements_end", columns: {#end})
 class TimeMeasurements extends Table {
   late final id = integer().autoIncrement()();
   late final taskId = integer().references(
@@ -133,6 +151,34 @@ class TimeMeasurements extends Table {
   )();
   late final start = integer().map(const DateTimeConverter())();
   late final end = integer().map(const DateTimeConverter())();
+}
+
+enum AppBrightness with DatabaseEnum {
+  system(0),
+  light(1),
+  dark(2);
+
+  const AppBrightness(this.dbCode);
+
+  @override
+  final int dbCode;
+
+  factory AppBrightness.fromDbCode(int code) {
+    return values.firstWhere(
+      (e) => e.dbCode == code,
+      orElse: () => AppBrightness.system,
+    );
+  }
+}
+
+@DataClassName("AppSettings")
+class AppSettingsTable extends Table {
+  late final id = integer().autoIncrement()();
+
+  late final brightness =
+      integer().map(const CodeEnumConverter(AppBrightness.fromDbCode))();
+
+  late final seedColor = integer().map(const ColorConverter()).nullable()();
 }
 
 enum QueueInsertionPosition {
@@ -189,7 +235,12 @@ class RemoveTimeMeasurement extends TaskEditAction {
   final TimeMeasurement measurement;
 }
 
-@DriftDatabase(tables: [UserTasks, SubTasks, TimeMeasurements])
+@DriftDatabase(tables: [
+  UserTasks,
+  SubTasks,
+  TimeMeasurements,
+  AppSettingsTable,
+])
 class AppDatabase extends _$AppDatabase {
   // After generating code, this class needs to define a `schemaVersion` getter
   // and a constructor telling drift where the database should be stored.
@@ -198,8 +249,14 @@ class AppDatabase extends _$AppDatabase {
 
   late final AutomaticTaskQueuer _queuer = AutomaticTaskQueuer(this);
 
+  static const _defaultSettings = AppSettings(
+    id: 0,
+    brightness: AppBrightness.system,
+    seedColor: null,
+  );
+
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration {
@@ -207,6 +264,11 @@ class AppDatabase extends _$AppDatabase {
       beforeOpen: (details) async {
         await customStatement('PRAGMA foreign_keys = ON');
       },
+      onUpgrade: stepByStep(from1To2: (m, schema) async {
+        await m.createIndex(schema.idxTimeMeasurementsStart);
+        await m.createIndex(schema.idxTimeMeasurementsEnd);
+        await m.createTable(schema.appSettingsTable);
+      }),
     );
   }
 
@@ -274,6 +336,26 @@ class AppDatabase extends _$AppDatabase {
           ..where((t) => t.taskId.equals(taskId))
           ..orderBy([(t) => OrderingTerm.desc(t.start)]))
         .watch();
+  }
+
+  Stream<AppSettings> getAppSettingsStream() {
+    return (select(appSettingsTable)..limit(1))
+        .watchSingleOrNull()
+        .map((settings) => settings ?? _defaultSettings);
+  }
+
+  Future<void> saveAppSettings(AppSettingsTableCompanion settings) async {
+    final existing =
+        await (select(appSettingsTable)..limit(1)).getSingleOrNull();
+
+    if (existing == null) {
+      await into(appSettingsTable).insert(
+        _defaultSettings.copyWithCompanion(settings),
+      );
+    } else {
+      await (update(appSettingsTable)..whereSamePrimaryKey(existing))
+          .write(settings);
+    }
   }
 
   Future<void> writeTask(

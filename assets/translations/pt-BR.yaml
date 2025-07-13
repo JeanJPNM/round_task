@@ -82,6 +82,20 @@ measurement_deleted: Medição de tempo de {} excluída
 
 settings: Configurações
 
+error_loading_settings: Erro ao carregar configurações
+
+appearance: Aparência
+accent_color: Cor de destaque
+use_system_accent_color: Usar cor de destaque do sistema
+theme_mode:
+  name: Modo de tema
+  system: Sistema
+  light: Claro
+  dark: Escuro
+color_picker:
+  primary: Primária
+  wheel: Personalizada
+
 backup_and_restore: Backup e Restauração
 
 export_database: Exportar arquivo de dados

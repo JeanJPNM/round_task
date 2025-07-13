@@ -63,6 +63,8 @@ dependencies:
   drift_flutter: ^0.2.4
   sqlite3: ^2.7.6
   downloadsfolder: ^1.2.0
+  dropdown_button2: ^2.3.9
+  flex_color_picker: ^3.7.1
 
 dev_dependencies:
   flutter_test:

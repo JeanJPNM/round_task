@@ -18,10 +18,10 @@ final databasePod = NotifierProvider<DatabaseNotifier, db.AppDatabase>(
 );
 
 // no need to dispose, since they are used in the main screen of the app
-final _innerQueuedTasksPod = StreamProvider((ref) async* {
+final _innerQueuedTasksPod = StreamProvider((ref) {
   final database = ref.watch(databasePod);
 
-  yield* database.getQueuedTasksStream();
+  return database.getQueuedTasksStream();
 });
 
 final queuedTasksPod = Provider.family.autoDispose((ref, TaskSorting? sorting) {
@@ -37,10 +37,10 @@ final queuedTasksPod = Provider.family.autoDispose((ref, TaskSorting? sorting) {
   return tasks;
 });
 
-final _innerPendingTasksPod = StreamProvider((ref) async* {
+final _innerPendingTasksPod = StreamProvider((ref) {
   final database = ref.watch(databasePod);
 
-  yield* database.getPendingTasksStream();
+  return database.getPendingTasksStream();
 });
 
 final pendingTasksPod = Provider.family.autoDispose((
@@ -59,16 +59,16 @@ final pendingTasksPod = Provider.family.autoDispose((
   return tasks;
 });
 
-final archivedTasksPod = StreamProvider.autoDispose((ref) async* {
+final archivedTasksPod = StreamProvider.autoDispose((ref) {
   final database = ref.watch(databasePod);
 
-  yield* database.getArchivedTasksStream();
+  return database.getArchivedTasksStream();
 });
 
-final currentlyTrackedTaskPod = StreamProvider.autoDispose((ref) async* {
+final currentlyTrackedTaskPod = StreamProvider.autoDispose((ref) {
   final database = ref.watch(databasePod);
 
-  yield* database.getCurrentlyTrackedTaskStream();
+  return database.getCurrentlyTrackedTaskStream();
 });
 
 final taskByIdPod =
@@ -88,6 +88,12 @@ final taskTimeMeasurementsPod = StreamProvider.autoDispose
   final database = ref.watch(databasePod);
 
   return database.getTimeMeasurementsStream(taskId);
+});
+
+final appSettingsPod = StreamProvider.autoDispose((ref) {
+  final database = ref.watch(databasePod);
+
+  return database.getAppSettingsStream();
 });
 
 enum TaskSorting {

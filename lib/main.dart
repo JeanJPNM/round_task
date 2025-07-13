@@ -8,6 +8,8 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:relative_time/relative_time.dart';
 import 'package:round_task/custom_colors.dart';
+import 'package:round_task/db/database.dart';
+import 'package:round_task/provider.dart';
 import 'package:round_task/screens/app_settings.dart';
 import 'package:round_task/screens/task_queue.dart';
 import 'package:round_task/screens/task_time_measurements.dart';
@@ -51,7 +53,7 @@ final _router = GoRouter(
       pageBuilder: (context, state) => _buildPage(
         context,
         state,
-        child: const AppSettings(),
+        child: const SettingsScreen(),
       ),
     ),
   ],
@@ -75,16 +77,26 @@ Future<void> main() async {
   ));
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   // This widget is the root of your application.
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final seedColor = ref.watch(
+        appSettingsPod.select((settings) => settings.valueOrNull?.seedColor));
+    final appBrightness = ref.watch(
+        appSettingsPod.select((settings) => settings.valueOrNull?.brightness));
     return DynamicColorBuilder(
       builder: (lightDynamic, darkDynamic) {
         final ColorScheme lightScheme, darkScheme;
-        if (lightDynamic != null && darkDynamic != null) {
+        if (seedColor != null) {
+          lightScheme = ColorScheme.fromSeed(seedColor: seedColor);
+          darkScheme = ColorScheme.fromSeed(
+            seedColor: seedColor,
+            brightness: Brightness.dark,
+          );
+        } else if (lightDynamic != null && darkDynamic != null) {
           lightScheme = lightDynamic.harmonized();
           darkScheme = darkDynamic.harmonized();
         } else {
@@ -106,7 +118,11 @@ class MyApp extends StatelessWidget {
         return MaterialApp.router(
           routerConfig: _router,
           title: 'Round Task',
-          themeMode: ThemeMode.system,
+          themeMode: switch (appBrightness) {
+            AppBrightness.light => ThemeMode.light,
+            AppBrightness.dark => ThemeMode.dark,
+            _ => ThemeMode.system,
+          },
           theme: ThemeData(
             colorScheme: lightScheme,
             useMaterial3: true,

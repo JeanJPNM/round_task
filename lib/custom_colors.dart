@@ -48,10 +48,11 @@ class CustomColors extends ThemeExtension<CustomColors> {
   }
 
   CustomColors harmonized(ColorScheme colorScheme) {
+    final inverse = colorScheme.inversePrimary;
     return copyWith(
       deleteSurface: deleteSurface.harmonizeWith(colorScheme.primary),
-      untilTodayColor: untilTodayColor.harmonizeWith(colorScheme.primary),
-      overdueColor: overdueColor.harmonizeWith(colorScheme.primary),
+      untilTodayColor: untilTodayColor.harmonizeWith(inverse),
+      overdueColor: overdueColor.harmonizeWith(inverse),
     );
   }
 }

@@ -78,6 +78,7 @@ task_time_measurements_title: Task time measurements
 measurement_start_time: Start
 measurement_end_time: End
 measurement_deleted: Time measurement for {} deleted
+task_time_measurements_total: 'Total: {}'
 
 
 settings: Settings

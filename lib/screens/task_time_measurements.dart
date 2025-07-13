@@ -73,6 +73,16 @@ class _TaskTimeMeasurementsState extends ConsumerState<TaskTimeMeasurements> {
   Widget build(BuildContext context) {
     final task = widget.task;
     final measurements = ref.watch(taskTimeMeasurementsPod(task.id));
+    final measurementSum = ref.watch(
+      taskTimeMeasurementsPod(task.id).select(
+        (measurements) => measurements.whenData(
+          (data) => data.fold(
+            Duration.zero,
+            (total, measurement) => total + measurement.duration,
+          ),
+        ),
+      ),
+    );
     final database = ref.watch(databasePod);
     final currentlyTrackedTask = ref.watch(currentlyTrackedTaskPod).valueOrNull;
 
@@ -81,6 +91,8 @@ class _TaskTimeMeasurementsState extends ConsumerState<TaskTimeMeasurements> {
       child: Scaffold(
         appBar: AppBar(
           title: Text(context.tr("task_time_measurements_title")),
+          bottom:
+              _TotalDurationBanner(task: task, measurementSum: measurementSum),
         ),
         body: measurements.when(
           loading: () => const Center(
@@ -157,6 +169,56 @@ class _TaskTimeMeasurementsState extends ConsumerState<TaskTimeMeasurements> {
   }
 }
 
+class _TotalDurationBanner extends StatelessWidget
+    implements PreferredSizeWidget {
+  const _TotalDurationBanner({
+    required this.task,
+    required this.measurementSum,
+  });
+
+  final UserTask task;
+  final AsyncValue<Duration> measurementSum;
+
+  @override
+  Size get preferredSize => const Size.fromHeight(30);
+
+  @override
+  Widget build(BuildContext context) {
+    final sum = measurementSum.valueOrNull;
+    if (sum == null) return const SizedBox.shrink();
+
+    final Duration total;
+    if (task.activeTimeMeasurementStart case final start?) {
+      total = sum + DateTime.now().difference(start);
+      SecondTickProvider.of(context);
+    } else {
+      total = sum;
+    }
+
+    if (total == Duration.zero) return const SizedBox.shrink();
+
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 8.0, left: 16.0, right: 16.0),
+        child: Text(
+          context.tr("task_time_measurements_total", args: [
+            total.pretty(
+              locale: DurationLocale.fromLanguageCode(
+                    Localizations.localeOf(context).languageCode,
+                  ) ??
+                  const EnglishDurationLocale(),
+              tersity: DurationTersity.second,
+              upperTersity: DurationTersity.hour,
+              maxUnits: 2,
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
 class _TimeMeasurementItem extends StatelessWidget {
   const _TimeMeasurementItem({
     required this.start,
@@ -194,6 +256,7 @@ class _TimeMeasurementItem extends StatelessWidget {
               locale: DurationLocale.fromLanguageCode(locale.languageCode) ??
                   const EnglishDurationLocale(),
               tersity: DurationTersity.second,
+              upperTersity: DurationTersity.hour,
             ),
       ),
     );

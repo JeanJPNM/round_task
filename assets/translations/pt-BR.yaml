@@ -78,6 +78,7 @@ task_time_measurements_title: Medições de tempo
 measurement_start_time: Início
 measurement_end_time: Término
 measurement_deleted: Medição de tempo de {} excluída
+task_time_measurements_total: 'Total: {}'
 
 
 settings: Configurações

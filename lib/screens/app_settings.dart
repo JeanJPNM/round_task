@@ -243,7 +243,7 @@ class _ColorPickerBottomSheetState extends State<_ColorPickerBottomSheet> {
       mainAxisSize: MainAxisSize.min,
       children: [
         SwitchListTile(
-          title: Text(context.tr("use_system_color")),
+          title: Text(context.tr("use_system_accent_color")),
           value: useSystemColor,
           onChanged: (value) {
             setState(() {

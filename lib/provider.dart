@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:collection/collection.dart';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
 import 'package:path/path.dart';
@@ -71,6 +72,15 @@ final currentlyTrackedTaskPod = StreamProvider.autoDispose((ref) {
   return database.getCurrentlyTrackedTaskStream();
 });
 
+final filteredTasksPod = StreamProvider.family.autoDispose((
+  ref,
+  TaskFilter filter,
+) {
+  final database = ref.watch(databasePod);
+
+  return database.searchTasks(filter.status, filter.searchQuery).watch();
+});
+
 final taskByIdPod =
     StreamProvider.autoDispose.family<db.UserTask?, int>((ref, taskId) {
   final db = ref.watch(databasePod);
@@ -95,6 +105,29 @@ final appSettingsPod = StreamProvider.autoDispose((ref) {
 
   return database.getAppSettingsStream();
 });
+
+@immutable
+class TaskFilter {
+  const TaskFilter({
+    required this.status,
+    required this.searchQuery,
+  });
+
+  final db.TaskStatus status;
+  final String searchQuery;
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is TaskFilter &&
+        other.status == status &&
+        other.searchQuery == searchQuery;
+  }
+
+  @override
+  int get hashCode => Object.hash(status, searchQuery);
+}
 
 enum TaskSorting {
   creationDate,

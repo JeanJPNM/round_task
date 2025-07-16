@@ -546,10 +546,10 @@ class AppDatabase extends _$AppDatabase {
   }
 
   // TODO: just filter it on the dart side
-  Future<List<UserTask>> searchTasks(
+  MultiSelectable<UserTask> searchTasks(
     TaskStatus status,
     String searchText,
-  ) async {
+  ) {
     final pattern = '%$searchText%';
     final query = _selectTasks()
       ..where((t) => t.status.equalsValue(status))
@@ -570,7 +570,7 @@ class AppDatabase extends _$AppDatabase {
         ]);
     }
 
-    return await query.get();
+    return query;
   }
 
   Future<UserTask> _putTaskInQueue(

@@ -94,8 +94,9 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
                       return SafeArea(
                         top: false,
                         bottom: false,
-                        child: ListView(
-                          children: suggestions.toList(),
+                        child: _TaskSearchView(
+                          searchController: _searchController,
+                          statusFilter: _searchStatus,
                         ),
                       );
                     },
@@ -127,16 +128,7 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
                         },
                       );
                     },
-                    suggestionsBuilder: (context, controller) async {
-                      final tasks = await database.searchTasks(
-                        _searchStatus,
-                        controller.text,
-                      );
-                      return tasks.map((task) => TaskCard(
-                            key: ValueKey(task.id),
-                            task: task,
-                          ));
-                    },
+                    suggestionsBuilder: (context, controller) => const [],
                     viewLeading: BackButton(
                       style: const ButtonStyle(
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -496,6 +488,65 @@ class _SortingPicker extends StatelessWidget {
       ],
       onChanged: (value) => onSortingChanged?.call(value),
       value: sorting,
+    );
+  }
+}
+
+class _TaskSearchView extends StatefulWidget {
+  const _TaskSearchView({
+    required this.searchController,
+    required this.statusFilter,
+  });
+
+  final TaskStatus statusFilter;
+  final TextEditingController searchController;
+
+  @override
+  State<_TaskSearchView> createState() => _TaskSearchViewState();
+}
+
+class _TaskSearchViewState extends State<_TaskSearchView> {
+  List<UserTask> _previousResults = [];
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder(
+      valueListenable: widget.searchController,
+      builder: (context, value, child) {
+        return Consumer(builder: (context, ref, child) {
+          final filter = TaskFilter(
+            status: widget.statusFilter,
+            searchQuery: value.text,
+          );
+          final data = ref.watch(filteredTasksPod(filter));
+
+          if (data case AsyncError()) {
+            return Center(
+              child: Text(context.tr("general_error")),
+            );
+          }
+
+          final tasks = data.valueOrNull ?? _previousResults;
+          _previousResults = tasks;
+
+          return Stack(
+            children: [
+              AnimatedOpacity(
+                opacity: data.isLoading ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 300),
+                child: const LinearProgressIndicator(),
+              ),
+              ListView.builder(
+                itemCount: tasks.length,
+                itemBuilder: (context, index) {
+                  final task = tasks[index];
+                  return _buildTask(task);
+                },
+              ),
+            ],
+          );
+        });
+      },
     );
   }
 }

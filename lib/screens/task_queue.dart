@@ -8,7 +8,6 @@ import 'package:round_task/provider.dart';
 import 'package:round_task/screens/task_view.dart';
 import 'package:round_task/widgets/select_dropdown.dart';
 import 'package:round_task/widgets/task_card.dart';
-import 'package:round_task/widgets/time_tracking_banner.dart';
 
 const _listPadding = EdgeInsets.only(bottom: 100, top: 40);
 
@@ -78,239 +77,233 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
   Widget build(BuildContext context) {
     final database = ref.watch(databasePod);
 
-    return TimeTrackingScreenWrapper(
-      child: Scaffold(
-        body: SafeArea(
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: SearchAnchor(
-                    searchController: _searchController,
-                    isFullScreen: true,
-                    viewBuilder: (suggestions) {
-                      return SafeArea(
-                        top: false,
-                        bottom: false,
-                        child: _TaskSearchView(
-                          searchController: _searchController,
-                          statusFilter: _searchStatus,
-                        ),
-                      );
-                    },
-                    builder: (context, controller) {
-                      return SearchBar(
-                        controller: controller,
-                        focusNode: _searchFocusNode,
-                        hintText: context.tr("search"),
-                        leading: const Icon(Icons.search),
-                        trailing: [
-                          IconButton(
-                            onPressed: () {
-                              _unfocusSearchBar();
-                              context.push("/settings");
-                            },
-                            icon: const Icon(Icons.settings),
-                          )
-                        ],
-                        onTapOutside: (event) {
-                          _unfocusSearchBar();
-                        },
-                        onTap: () {
-                          _unfocusSearchBar();
-                          controller.openView();
-                        },
-                        onChanged: (value) {
-                          _unfocusSearchBar();
-                          controller.openView();
-                        },
-                      );
-                    },
-                    suggestionsBuilder: (context, controller) => const [],
-                    viewLeading: BackButton(
-                      style: const ButtonStyle(
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: SizedBox(
+                width: double.infinity,
+                child: SearchAnchor(
+                  searchController: _searchController,
+                  isFullScreen: true,
+                  viewBuilder: (suggestions) {
+                    return SafeArea(
+                      top: false,
+                      bottom: false,
+                      child: _TaskSearchView(
+                        searchController: _searchController,
+                        statusFilter: _searchStatus,
                       ),
-                      onPressed: () {
-                        Navigator.of(context).pop();
+                    );
+                  },
+                  builder: (context, controller) {
+                    return SearchBar(
+                      controller: controller,
+                      focusNode: _searchFocusNode,
+                      hintText: context.tr("search"),
+                      leading: const Icon(Icons.search),
+                      trailing: [
+                        IconButton(
+                          onPressed: () {
+                            _unfocusSearchBar();
+                            context.push("/settings");
+                          },
+                          icon: const Icon(Icons.settings),
+                        )
+                      ],
+                      onTapOutside: (event) {
                         _unfocusSearchBar();
                       },
+                      onTap: () {
+                        _unfocusSearchBar();
+                        controller.openView();
+                      },
+                      onChanged: (value) {
+                        _unfocusSearchBar();
+                        controller.openView();
+                      },
+                    );
+                  },
+                  suggestionsBuilder: (context, controller) => const [],
+                  viewLeading: BackButton(
+                    style: const ButtonStyle(
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      _unfocusSearchBar();
+                    },
                   ),
                 ),
               ),
-              Expanded(
-                child: PageStorage(
-                  bucket: _bucket,
-                  child: TabBarView(
-                    controller: _tabController,
-                    children: [
-                      Consumer(builder: (context, ref, child) {
-                        final queuedTasks =
-                            ref.watch(queuedTasksPod(_queuedTasksSorting));
-                        return queuedTasks.when(
-                          loading: () =>
-                              const Center(child: CircularProgressIndicator()),
+            ),
+            Expanded(
+              child: PageStorage(
+                bucket: _bucket,
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    Consumer(builder: (context, ref, child) {
+                      final queuedTasks =
+                          ref.watch(queuedTasksPod(_queuedTasksSorting));
+                      return queuedTasks.when(
+                        loading: () =>
+                            const Center(child: CircularProgressIndicator()),
+                        error: (error, stackTrace) => Center(
+                          child: Text(context.tr("general_error")),
+                        ),
+                        data: (tasks) => _QueuedTasksTab(
+                          sorting: _queuedTasksSorting,
+                          tasks: tasks,
+                          database: database,
+                          onSortingChanged: (sorting) {
+                            setState(() {
+                              _queuedTasksSorting = sorting;
+                            });
+                          },
+                        ),
+                      );
+                    }),
+                    Consumer(
+                      builder: (context, ref, child) {
+                        final pendingTasks =
+                            ref.watch(pendingTasksPod(_pendingTasksSorting));
+
+                        return pendingTasks.when(
+                          loading: () => const Center(
+                            child: CircularProgressIndicator(),
+                          ),
                           error: (error, stackTrace) => Center(
                             child: Text(context.tr("general_error")),
                           ),
-                          data: (tasks) => _QueuedTasksTab(
-                            sorting: _queuedTasksSorting,
+                          data: (tasks) => _PendingTasksTab(
+                            sorting: _pendingTasksSorting,
                             tasks: tasks,
-                            database: database,
                             onSortingChanged: (sorting) {
                               setState(() {
-                                _queuedTasksSorting = sorting;
+                                _pendingTasksSorting = sorting;
                               });
                             },
                           ),
                         );
-                      }),
-                      Consumer(
-                        builder: (context, ref, child) {
-                          final pendingTasks =
-                              ref.watch(pendingTasksPod(_pendingTasksSorting));
+                      },
+                    ),
+                    Consumer(
+                      builder: (context, ref, child) {
+                        final archivedTasks = ref.watch(archivedTasksPod);
 
-                          return pendingTasks.when(
-                            loading: () => const Center(
-                              child: CircularProgressIndicator(),
-                            ),
-                            error: (error, stackTrace) => Center(
-                              child: Text(context.tr("general_error")),
-                            ),
-                            data: (tasks) => _PendingTasksTab(
-                              sorting: _pendingTasksSorting,
-                              tasks: tasks,
-                              onSortingChanged: (sorting) {
-                                setState(() {
-                                  _pendingTasksSorting = sorting;
-                                });
-                              },
-                            ),
-                          );
-                        },
-                      ),
-                      Consumer(
-                        builder: (context, ref, child) {
-                          final archivedTasks = ref.watch(archivedTasksPod);
-
-                          return archivedTasks.when(
-                            loading: () => const Center(
-                              child: CircularProgressIndicator(),
-                            ),
-                            error: (error, stackTrace) => Center(
-                              child: Text(context.tr("general_error")),
-                            ),
-                            data: (tasks) => AnimatedReorderableListView(
-                              key: const PageStorageKey("archivedTasks"),
-                              padding: _listPadding,
-                              shrinkWrap: true,
-                              items: tasks,
-                              isSameItem: (a, b) => a.id == b.id,
-                              onReorder: (oldIndex, newIndex) {},
-                              nonDraggableItems: tasks,
-                              enableSwap: true,
-                              itemBuilder: (context, index) =>
-                                  _buildTask(tasks[index]),
-                            ),
-                          );
-                        },
-                      )
-                    ],
-                  ),
+                        return archivedTasks.when(
+                          loading: () => const Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                          error: (error, stackTrace) => Center(
+                            child: Text(context.tr("general_error")),
+                          ),
+                          data: (tasks) => AnimatedReorderableListView(
+                            key: const PageStorageKey("archivedTasks"),
+                            padding: _listPadding,
+                            shrinkWrap: true,
+                            items: tasks,
+                            isSameItem: (a, b) => a.id == b.id,
+                            onReorder: (oldIndex, newIndex) {},
+                            nonDraggableItems: tasks,
+                            enableSwap: true,
+                            itemBuilder: (context, index) =>
+                                _buildTask(tasks[index]),
+                          ),
+                        );
+                      },
+                    )
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-        bottomNavigationBar: ValueListenableBuilder(
-            valueListenable: _currentIndex,
-            builder: (context, selectedIndex, child) {
-              return NavigationBar(
-                selectedIndex: selectedIndex,
-                onDestinationSelected: (value) {
-                  _tabController.index = value;
-                },
-                destinations: [
-                  Consumer(
-                    builder: (context, ref, child) {
-                      final queuedTasks =
-                          ref.watch(queuedTasksPod(_queuedTasksSorting));
+      ),
+      bottomNavigationBar: ValueListenableBuilder(
+          valueListenable: _currentIndex,
+          builder: (context, selectedIndex, child) {
+            return NavigationBar(
+              selectedIndex: selectedIndex,
+              onDestinationSelected: (value) {
+                _tabController.index = value;
+              },
+              destinations: [
+                Consumer(
+                  builder: (context, ref, child) {
+                    final queuedTasks =
+                        ref.watch(queuedTasksPod(_queuedTasksSorting));
 
-                      final label = switch (queuedTasks) {
-                        AsyncData(
-                          value: List(isNotEmpty: true, :final length)
-                        ) =>
-                          context.tr(
-                            "queued.amount",
-                            args: [length.toString()],
-                          ),
-                        _ => context.tr("queued.none"),
-                      };
-
-                      return NavigationDestination(
-                        icon: const Icon(Icons.low_priority),
-                        label: label,
-                      );
-                    },
-                  ),
-                  Consumer(
-                    builder: (context, ref, child) {
-                      final pendingTasks =
-                          ref.watch(pendingTasksPod(_pendingTasksSorting));
-
-                      final label = switch (pendingTasks) {
-                        AsyncData(
-                          value: List(isNotEmpty: true, :final length)
-                        ) =>
-                          context.tr(
-                            "pending.amount",
-                            args: [length.toString()],
-                          ),
-                        _ => context.tr("pending.none"),
-                      };
-
-                      return NavigationDestination(
-                        icon: const Icon(Icons.pending_actions),
-                        label: label,
-                      );
-                    },
-                  ),
-                  Consumer(builder: (context, ref, child) {
-                    final archivedTasks = ref.watch(archivedTasksPod);
-
-                    final label = switch (archivedTasks) {
+                    final label = switch (queuedTasks) {
                       AsyncData(value: List(isNotEmpty: true, :final length)) =>
                         context.tr(
-                          "archived.amount",
+                          "queued.amount",
                           args: [length.toString()],
                         ),
-                      _ => context.tr("archived.none"),
+                      _ => context.tr("queued.none"),
                     };
 
                     return NavigationDestination(
-                      icon: const Icon(Icons.archive),
+                      icon: const Icon(Icons.low_priority),
                       label: label,
                     );
-                  }),
-                ],
-              );
-            }),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () {
-            context.push(
-              "/task",
-              extra: TaskViewParams(
-                null,
-                addToQueue: _searchStatus == TaskStatus.active,
-                autofocusTitle: true,
-              ),
+                  },
+                ),
+                Consumer(
+                  builder: (context, ref, child) {
+                    final pendingTasks =
+                        ref.watch(pendingTasksPod(_pendingTasksSorting));
+
+                    final label = switch (pendingTasks) {
+                      AsyncData(value: List(isNotEmpty: true, :final length)) =>
+                        context.tr(
+                          "pending.amount",
+                          args: [length.toString()],
+                        ),
+                      _ => context.tr("pending.none"),
+                    };
+
+                    return NavigationDestination(
+                      icon: const Icon(Icons.pending_actions),
+                      label: label,
+                    );
+                  },
+                ),
+                Consumer(builder: (context, ref, child) {
+                  final archivedTasks = ref.watch(archivedTasksPod);
+
+                  final label = switch (archivedTasks) {
+                    AsyncData(value: List(isNotEmpty: true, :final length)) =>
+                      context.tr(
+                        "archived.amount",
+                        args: [length.toString()],
+                      ),
+                    _ => context.tr("archived.none"),
+                  };
+
+                  return NavigationDestination(
+                    icon: const Icon(Icons.archive),
+                    label: label,
+                  );
+                }),
+              ],
             );
-          },
-          child: const Icon(Icons.add),
-        ),
+          }),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          context.push(
+            "/task",
+            extra: TaskViewParams(
+              null,
+              addToQueue: _searchStatus == TaskStatus.active,
+              autofocusTitle: true,
+            ),
+          );
+        },
+        child: const Icon(Icons.add),
       ),
     );
   }

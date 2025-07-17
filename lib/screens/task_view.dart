@@ -16,7 +16,6 @@ import 'package:round_task/widgets/date_time_input.dart';
 import 'package:round_task/widgets/recurrence_picker.dart';
 import 'package:round_task/widgets/second_tick_provider.dart';
 import 'package:round_task/widgets/sliver_material_reorderable_list.dart';
-import 'package:round_task/widgets/time_tracking_banner.dart';
 import 'package:rrule/rrule.dart';
 
 class TaskViewParams {
@@ -325,248 +324,242 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
     final originalTask = widget.originalTask;
     final task = widget.task;
     final database = ref.watch(databasePod);
-    final currentlyTrackedTask = ref.watch(currentlyTrackedTaskPod).valueOrNull;
     final isCreatingTask = originalTask == null;
-    final isCurrentlyTracking =
-        task != null && currentlyTrackedTask?.id == task.id;
 
-    return TimeTrackingScreenWrapper(
-      disabled: isCurrentlyTracking,
-      child: ScaffoldMessenger(
-        key: scaffoldMessengerKey,
-        child: Scaffold(
-          appBar: AppBar(
-            title: Text(context.tr(
-              isCreatingTask ? "create_task" : "edit_task",
-            )),
-            actions: [
-              if (originalTask != null)
-                IconButton(
-                  onPressed: () async {
-                    await database.softDeleteTask(originalTask);
+    return ScaffoldMessenger(
+      key: scaffoldMessengerKey,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(context.tr(
+            isCreatingTask ? "create_task" : "edit_task",
+          )),
+          actions: [
+            if (originalTask != null)
+              IconButton(
+                onPressed: () async {
+                  await database.softDeleteTask(originalTask);
 
-                    if (!context.mounted) return;
-                    parentScaffoldMessenger.showSnackBar(
-                      SnackBar(
-                        content: Text(context.tr("task_deleted")),
-                        action: SnackBarAction(
-                          label: context.tr("undo"),
-                          onPressed: () =>
-                              database.undoSoftDeleteTask(originalTask),
-                        ),
+                  if (!context.mounted) return;
+                  parentScaffoldMessenger.showSnackBar(
+                    SnackBar(
+                      content: Text(context.tr("task_deleted")),
+                      action: SnackBarAction(
+                        label: context.tr("undo"),
+                        onPressed: () =>
+                            database.undoSoftDeleteTask(originalTask),
                       ),
-                    );
-                    context.pop();
-                  },
-                  icon: const Icon(Icons.delete),
-                ),
-            ],
-          ),
-          body: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: CustomScrollView(
-                controller: scrollController,
-                slivers: [
-                  SliverList.list(
-                    children: [
-                      TextField(
-                        autofocus: widget.focusTitle,
-                        focusNode: titleFocusNode,
-                        controller: titleController,
-                        decoration:
-                            InputDecoration(labelText: context.tr("title")),
-                        keyboardType: TextInputType.multiline,
-                        maxLines: null,
-                        textInputAction: TextInputAction.done,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.singleLineFormatter,
-                        ],
-                        onTapOutside: (event) => titleFocusNode.unfocus(),
+                    ),
+                  );
+                  context.pop();
+                },
+                icon: const Icon(Icons.delete),
+              ),
+          ],
+        ),
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: CustomScrollView(
+              controller: scrollController,
+              slivers: [
+                SliverList.list(
+                  children: [
+                    TextField(
+                      autofocus: widget.focusTitle,
+                      focusNode: titleFocusNode,
+                      controller: titleController,
+                      decoration:
+                          InputDecoration(labelText: context.tr("title")),
+                      keyboardType: TextInputType.multiline,
+                      maxLines: null,
+                      textInputAction: TextInputAction.done,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.singleLineFormatter,
+                      ],
+                      onTapOutside: (event) => titleFocusNode.unfocus(),
+                    ),
+                    TextField(
+                      focusNode: descriptionFocusNode,
+                      controller: descriptionController,
+                      decoration: InputDecoration(
+                        labelText: context.tr("description"),
                       ),
-                      TextField(
-                        focusNode: descriptionFocusNode,
-                        controller: descriptionController,
-                        decoration: InputDecoration(
-                          labelText: context.tr("description"),
-                        ),
-                        maxLines: null,
-                        onTapOutside: (event) => descriptionFocusNode.unfocus(),
-                      ),
-                      DateTimeInput(
-                        label: Text(context.tr("start_date")),
-                        controller: startDateController,
-                      ),
-                      ValueListenableBuilder(
-                        valueListenable: startDateController,
-                        builder: (context, startDate, child) {
-                          return DateTimeInput(
-                            label: Text(context.tr("end_date")),
-                            controller: endDateController,
-                            firstDate: startDate,
-                            defaultHour: 23,
-                            defaultMinute: 59,
-                          );
-                        },
-                      ),
-                      ValueListenableBuilder(
-                        valueListenable: startDateController,
-                        builder: (context, startDate, child) {
-                          if (startDate == null) return const SizedBox.shrink();
+                      maxLines: null,
+                      onTapOutside: (event) => descriptionFocusNode.unfocus(),
+                    ),
+                    DateTimeInput(
+                      label: Text(context.tr("start_date")),
+                      controller: startDateController,
+                    ),
+                    ValueListenableBuilder(
+                      valueListenable: startDateController,
+                      builder: (context, startDate, child) {
+                        return DateTimeInput(
+                          label: Text(context.tr("end_date")),
+                          controller: endDateController,
+                          firstDate: startDate,
+                          defaultHour: 23,
+                          defaultMinute: 59,
+                        );
+                      },
+                    ),
+                    ValueListenableBuilder(
+                      valueListenable: startDateController,
+                      builder: (context, startDate, child) {
+                        if (startDate == null) return const SizedBox.shrink();
 
-                          return Wrap(
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [
-                              Text(context.tr("recurrence")),
-                              TextButton(
-                                onPressed: () async {
-                                  final rule = await showRecurrencePicker(
-                                    context,
-                                    initialRecurrenceRule: recurrenceRule,
-                                    initialWeekDays: [startDate.weekday],
-                                  );
+                        return Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text(context.tr("recurrence")),
+                            TextButton(
+                              onPressed: () async {
+                                final rule = await showRecurrencePicker(
+                                  context,
+                                  initialRecurrenceRule: recurrenceRule,
+                                  initialWeekDays: [startDate.weekday],
+                                );
 
-                                  if (rule == null) return;
+                                if (rule == null) return;
+                                setState(() {
+                                  recurrenceRule = rule;
+                                });
+                              },
+                              child: Text(context.tr(recurrenceRule == null
+                                  ? "add_recurrence"
+                                  : "edit_recurrence")),
+                            ),
+                            if (recurrenceRule != null)
+                              IconButton(
+                                onPressed: () {
                                   setState(() {
-                                    recurrenceRule = rule;
+                                    recurrenceRule = null;
                                   });
                                 },
-                                child: Text(context.tr(recurrenceRule == null
-                                    ? "add_recurrence"
-                                    : "edit_recurrence")),
+                                icon: const Icon(Icons.delete),
                               ),
-                              if (recurrenceRule != null)
-                                IconButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      recurrenceRule = null;
-                                    });
-                                  },
-                                  icon: const Icon(Icons.delete),
-                                ),
-                            ],
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 8),
-                      ValueListenableBuilder(
-                        valueListenable: autoInserDateController,
-                        builder: (context, date, child) {
-                          return _QueuePositionPicker(
-                            controller: positionController,
-                            startDate: date,
-                          );
-                        },
-                      ),
-                      if (!isCreatingTask && task != null) ...[
-                        const SizedBox(height: 16),
-                        IntrinsicHeight(
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Expanded(
-                                flex: 4,
-                                child: _TimeMeasurementButton(
-                                    task: task,
-                                    database: database,
-                                    style: const ButtonStyle(
-                                      shape: WidgetStatePropertyAll(
-                                        RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.horizontal(
-                                            left: buttonRadius,
-                                          ),
-                                        ),
-                                      ),
-                                    )),
-                              ),
-                              const SizedBox(width: 2),
-                              Expanded(
-                                child: IconButton.filledTonal(
-                                  onPressed: () {
-                                    context.push(
-                                      "/task/measurements",
-                                      extra: TaskTimeMeasurementsParams(
-                                        task: task,
-                                      ),
-                                    );
-                                  },
+                          ],
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    ValueListenableBuilder(
+                      valueListenable: autoInserDateController,
+                      builder: (context, date, child) {
+                        return _QueuePositionPicker(
+                          controller: positionController,
+                          startDate: date,
+                        );
+                      },
+                    ),
+                    if (!isCreatingTask && task != null) ...[
+                      const SizedBox(height: 16),
+                      IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(
+                              flex: 4,
+                              child: _TimeMeasurementButton(
+                                  task: task,
+                                  database: database,
                                   style: const ButtonStyle(
                                     shape: WidgetStatePropertyAll(
                                       RoundedRectangleBorder(
                                         borderRadius: BorderRadius.horizontal(
-                                          right: buttonRadius,
+                                          left: buttonRadius,
                                         ),
                                       ),
                                     ),
+                                  )),
+                            ),
+                            const SizedBox(width: 2),
+                            Expanded(
+                              child: IconButton.filledTonal(
+                                onPressed: () {
+                                  context.push(
+                                    "/task/measurements",
+                                    extra: TaskTimeMeasurementsParams(
+                                      task: task,
+                                    ),
+                                  );
+                                },
+                                style: const ButtonStyle(
+                                  shape: WidgetStatePropertyAll(
+                                    RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.horizontal(
+                                        right: buttonRadius,
+                                      ),
+                                    ),
                                   ),
-                                  icon: const Icon(Icons.history),
                                 ),
-                              )
-                            ],
-                          ),
+                                icon: const Icon(Icons.history),
+                              ),
+                            )
+                          ],
                         ),
-                      ],
-                      const Divider(),
+                      ),
                     ],
-                  ),
-                  widget.subTasksValue.when(
-                    error: (error, stackTrace) => SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Text(context.tr("error_loading_subtasks")),
-                      ),
-                    ),
-                    loading: () => const SliverToBoxAdapter(
-                      child: Padding(
-                        padding: EdgeInsets.all(16),
-                        child: LinearProgressIndicator(),
-                      ),
-                    ),
-                    data: (subTasks) => _SubTasksSliver(
-                      onRemoveSubTask: _onRemoveSubTask,
-                      subTasks: subTasks,
-                      subTasksController: _subTasksController,
-                      scrollController: scrollController,
+                    const Divider(),
+                  ],
+                ),
+                widget.subTasksValue.when(
+                  error: (error, stackTrace) => SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(context.tr("error_loading_subtasks")),
                     ),
                   ),
-                ],
-              ),
+                  loading: () => const SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.all(16),
+                      child: LinearProgressIndicator(),
+                    ),
+                  ),
+                  data: (subTasks) => _SubTasksSliver(
+                    onRemoveSubTask: _onRemoveSubTask,
+                    subTasks: subTasks,
+                    subTasksController: _subTasksController,
+                    scrollController: scrollController,
+                  ),
+                ),
+              ],
             ),
           ),
-          bottomNavigationBar: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(8),
-              child: Row(children: [
+        ),
+        bottomNavigationBar: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Row(children: [
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () async {
+                    await _save(database, extra: [
+                      if (_getTaskEditAction() case final action?) action,
+                    ]);
+                    if (!context.mounted) return;
+                    context.pop();
+                  },
+                  child: Text(context.tr("save")),
+                ),
+              ),
+              if (originalTask?.status == TaskStatus.active) ...[
+                const SizedBox(width: 8),
                 Expanded(
-                  child: ElevatedButton(
+                  child: FilledButton(
                     onPressed: () async {
-                      await _save(database, extra: [
-                        if (_getTaskEditAction() case final action?) action,
+                      await _save(database, markAsDone: true, extra: [
+                        StopTimeMeasurement(DateTime.now()),
                       ]);
+
                       if (!context.mounted) return;
                       context.pop();
                     },
-                    child: Text(context.tr("save")),
+                    child: Text(context.tr("done")),
                   ),
                 ),
-                if (originalTask?.status == TaskStatus.active) ...[
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: () async {
-                        await _save(database, markAsDone: true, extra: [
-                          StopTimeMeasurement(DateTime.now()),
-                        ]);
-
-                        if (!context.mounted) return;
-                        context.pop();
-                      },
-                      child: Text(context.tr("done")),
-                    ),
-                  ),
-                ],
-              ]),
-            ),
+              ],
+            ]),
           ),
         ),
       ),

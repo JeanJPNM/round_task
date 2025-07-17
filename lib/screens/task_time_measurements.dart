@@ -9,7 +9,6 @@ import 'package:round_task/provider.dart';
 import 'package:round_task/widgets/bottom_sheet_safe_area.dart';
 import 'package:round_task/widgets/date_time_input.dart';
 import 'package:round_task/widgets/second_tick_provider.dart';
-import 'package:round_task/widgets/time_tracking_banner.dart';
 
 final class TaskTimeMeasurementsParams {
   const TaskTimeMeasurementsParams({required this.task});
@@ -84,86 +83,82 @@ class _TaskTimeMeasurementsState extends ConsumerState<TaskTimeMeasurements> {
       ),
     );
     final database = ref.watch(databasePod);
-    final currentlyTrackedTask = ref.watch(currentlyTrackedTaskPod).valueOrNull;
 
-    return TimeTrackingScreenWrapper(
-      disabled: currentlyTrackedTask?.id == task.id,
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(context.tr("task_time_measurements_title")),
-          bottom:
-              _TotalDurationBanner(task: task, measurementSum: measurementSum),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(context.tr("task_time_measurements_title")),
+        bottom:
+            _TotalDurationBanner(task: task, measurementSum: measurementSum),
+      ),
+      body: measurements.when(
+        loading: () => const Center(
+          child: CircularProgressIndicator(),
         ),
-        body: measurements.when(
-          loading: () => const Center(
-            child: CircularProgressIndicator(),
-          ),
-          error: (error, stack) => Center(
-            child: Text('Error: $error'),
-          ),
-          data: (measurements) {
-            final itemCount = measurements.length;
-            final activeStart = widget.task.activeTimeMeasurementStart;
-            final totalCount = activeStart != null ? itemCount + 1 : itemCount;
-
-            return ListView.builder(
-              reverse: true,
-              padding: MediaQuery.paddingOf(context),
-              itemCount: totalCount,
-              itemBuilder: (context, index) {
-                if (index == 0 && activeStart != null) {
-                  return _TimeMeasurementItem(start: activeStart, end: null);
-                }
-
-                if (activeStart != null) index--;
-
-                final measurement = measurements[index];
-                return _TimeMeasurementItem(
-                  start: measurement.start,
-                  end: measurement.end,
-                  onChange: (result) async {
-                    switch (result) {
-                      case _MeasurementDeleted():
-                        await _removeMeasurement(database, measurement);
-                        return;
-                      case _MeasurementEdited(
-                          start: final start,
-                          end: final end,
-                        ):
-                        await _putMeasurement(
-                          database,
-                          measurement.copyWith(start: start, end: end),
-                        );
-                    }
-                  },
-                );
-              },
-            );
-          },
+        error: (error, stack) => Center(
+          child: Text('Error: $error'),
         ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () async {
-            final now = DateTime.now();
-            final result = await _showTimeMeasurementEditor(
-              context,
-              start: now,
-              end: now,
-              allowDelete: false,
-            );
+        data: (measurements) {
+          final itemCount = measurements.length;
+          final activeStart = widget.task.activeTimeMeasurementStart;
+          final totalCount = activeStart != null ? itemCount + 1 : itemCount;
 
-            if (result case _MeasurementEdited(:final start, :final end)) {
-              await _putMeasurement(
-                database,
-                TimeMeasurementsCompanion.insert(
-                  taskId: task.id,
-                  start: start,
-                  end: end,
-                ),
+          return ListView.builder(
+            reverse: true,
+            padding: MediaQuery.paddingOf(context),
+            itemCount: totalCount,
+            itemBuilder: (context, index) {
+              if (index == 0 && activeStart != null) {
+                return _TimeMeasurementItem(start: activeStart, end: null);
+              }
+
+              if (activeStart != null) index--;
+
+              final measurement = measurements[index];
+              return _TimeMeasurementItem(
+                start: measurement.start,
+                end: measurement.end,
+                onChange: (result) async {
+                  switch (result) {
+                    case _MeasurementDeleted():
+                      await _removeMeasurement(database, measurement);
+                      return;
+                    case _MeasurementEdited(
+                        start: final start,
+                        end: final end,
+                      ):
+                      await _putMeasurement(
+                        database,
+                        measurement.copyWith(start: start, end: end),
+                      );
+                  }
+                },
               );
-            }
-          },
-          child: const Icon(Icons.add),
-        ),
+            },
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          final now = DateTime.now();
+          final result = await _showTimeMeasurementEditor(
+            context,
+            start: now,
+            end: now,
+            allowDelete: false,
+          );
+
+          if (result case _MeasurementEdited(:final start, :final end)) {
+            await _putMeasurement(
+              database,
+              TimeMeasurementsCompanion.insert(
+                taskId: task.id,
+                start: start,
+                end: end,
+              ),
+            );
+          }
+        },
+        child: const Icon(Icons.add),
       ),
     );
   }

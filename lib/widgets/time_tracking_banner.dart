@@ -8,9 +8,6 @@ import 'package:round_task/provider.dart';
 import 'package:round_task/screens/task_view.dart';
 import 'package:round_task/widgets/second_tick_provider.dart';
 
-const _duration = Duration(milliseconds: 500);
-const _curve = Curves.easeInOut;
-
 class TimeTrackingBanner extends StatelessWidget {
   const TimeTrackingBanner({
     super.key,
@@ -61,14 +58,18 @@ class TimeTrackingBanner extends StatelessWidget {
   }
 }
 
-class TimeTrackingScreenWrapper extends ConsumerWidget {
-  const TimeTrackingScreenWrapper({
+class TimeTrackingBannerShell extends ConsumerWidget {
+  const TimeTrackingBannerShell({
     super.key,
     required this.child,
-    this.disabled = false,
+    this.duration = const Duration(milliseconds: 500),
+    this.curve = Curves.easeInOut,
+    this.isDisabled = _defaultIsDisabled,
   });
 
-  final bool disabled;
+  final Duration duration;
+  final Curve curve;
+  final bool Function(int trackedTaskId) isDisabled;
   final Widget child;
 
   @override
@@ -77,14 +78,15 @@ class TimeTrackingScreenWrapper extends ConsumerWidget {
     late final colorScheme = Theme.of(context).colorScheme;
     late final statusBarBrightness =
         ThemeData.estimateBrightnessForColor(colorScheme.onPrimary);
-    final hideBanner = disabled || currentlyTrackedTask == null;
+    final hideBanner =
+        currentlyTrackedTask == null || isDisabled(currentlyTrackedTask.id);
 
     return Column(
       children: [
         AnimatedSwitcher(
-          duration: _duration,
-          switchInCurve: _curve,
-          switchOutCurve: _curve,
+          duration: duration,
+          switchInCurve: curve,
+          switchOutCurve: curve.flipped,
           transitionBuilder: (child, animation) {
             return SizeTransition(
               sizeFactor: animation,
@@ -114,3 +116,5 @@ class TimeTrackingScreenWrapper extends ConsumerWidget {
     );
   }
 }
+
+bool _defaultIsDisabled(int trackedTaskId) => false;

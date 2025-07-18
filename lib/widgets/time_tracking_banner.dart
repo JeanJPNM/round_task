@@ -72,44 +72,137 @@ class TimeTrackingBannerShell extends ConsumerWidget {
   final bool Function(int trackedTaskId) isDisabled;
   final Widget child;
 
+  Widget _buildBanner(BuildContext context, UserTask task) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final statusBarBrightness =
+        ThemeData.estimateBrightnessForColor(colorScheme.onPrimary);
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarBrightness: statusBarBrightness,
+        statusBarIconBrightness: statusBarBrightness,
+      ),
+      child: TimeTrackingBanner(task: task),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentlyTrackedTask = ref.watch(currentlyTrackedTaskPod).valueOrNull;
-    late final colorScheme = Theme.of(context).colorScheme;
-    late final statusBarBrightness =
-        ThemeData.estimateBrightnessForColor(colorScheme.onPrimary);
     final hideBanner =
         currentlyTrackedTask == null || isDisabled(currentlyTrackedTask.id);
 
+    return _AnimatedBannerShell(
+      duration: duration,
+      curve: curve,
+      banner: hideBanner ? null : _buildBanner(context, currentlyTrackedTask),
+      child: child,
+    );
+  }
+}
+
+class _AnimatedBannerShell extends StatefulWidget {
+  const _AnimatedBannerShell({
+    required this.duration,
+    required this.curve,
+    required this.banner,
+    required this.child,
+  });
+
+  final Duration duration;
+  final Curve curve;
+  final Widget? banner;
+  final Widget child;
+
+  @override
+  State<_AnimatedBannerShell> createState() => __AnimatedBannerShellState();
+}
+
+class __AnimatedBannerShellState extends State<_AnimatedBannerShell>
+    with TickerProviderStateMixin {
+  Widget _currentBanner = const SizedBox.shrink();
+  late final _controller = AnimationController(
+    duration: widget.duration,
+    vsync: this,
+  );
+
+  late final _animation = CurvedAnimation(
+    parent: _controller,
+    curve: widget.curve,
+    reverseCurve: widget.curve.flipped,
+  );
+
+  @override
+  void initState() {
+    super.initState();
+
+    if (widget.banner case final banner?) {
+      _currentBanner = banner;
+      _controller.value = 1.0;
+    }
+
+    _controller.addStatusListener((status) {
+      if (status == AnimationStatus.dismissed) {
+        setState(() {
+          _currentBanner = const SizedBox.shrink();
+        });
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant _AnimatedBannerShell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // we are not updating the animation properties
+    // because they are not going to change anyway
+
+    if (widget.banner != oldWidget.banner) {
+      if (widget.banner case final banner?) {
+        setState(() {
+          _currentBanner = banner;
+        });
+        _controller.forward();
+      } else {
+        _controller.reverse();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _animation.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       children: [
-        AnimatedSwitcher(
-          duration: duration,
-          switchInCurve: curve,
-          switchOutCurve: curve.flipped,
-          transitionBuilder: (child, animation) {
-            return SizeTransition(
-              sizeFactor: animation,
-              axis: Axis.vertical,
-              child: child,
-            );
-          },
-          child: hideBanner
-              ? const SizedBox.shrink()
-              : AnnotatedRegion<SystemUiOverlayStyle>(
-                  value: SystemUiOverlayStyle(
-                    statusBarColor: Colors.transparent,
-                    statusBarBrightness: statusBarBrightness,
-                    statusBarIconBrightness: statusBarBrightness,
-                  ),
-                  child: TimeTrackingBanner(task: currentlyTrackedTask),
-                ),
+        SizeTransition(
+          sizeFactor: _animation,
+          axis: Axis.vertical,
+          child: _currentBanner,
         ),
         Expanded(
-          child: MediaQuery.removePadding(
-            removeTop: !hideBanner,
-            context: context,
-            child: child,
+          child: AnimatedBuilder(
+            animation: _animation,
+            builder: (context, child) {
+              final data = MediaQuery.of(context);
+              final value = 1 - _animation.value;
+              return MediaQuery(
+                data: data.copyWith(
+                  padding: data.padding.copyWith(
+                    top: data.padding.top * value,
+                  ),
+                  viewPadding: data.viewPadding.copyWith(
+                    top: data.viewPadding.top * value,
+                  ),
+                ),
+                child: widget.child,
+              );
+            },
           ),
         ),
       ],

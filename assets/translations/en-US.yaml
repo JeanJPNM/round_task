@@ -41,6 +41,7 @@ queue_position:
   end: At the end
 start_time_measurement: Start time measurement
 stop_time_measurement: Stop time measurement
+time_measurement_stopped: Time measurement stopped
 add_subtask: Add subtask
 
 

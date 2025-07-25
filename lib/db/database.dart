@@ -223,6 +223,12 @@ class StopTimeMeasurement extends TaskEditAction {
   final DateTime reference;
 }
 
+class UndoStopTimeMeasurement extends TaskEditAction {
+  const UndoStopTimeMeasurement(this.originalStart);
+
+  final DateTime originalStart;
+}
+
 class PutTimeMeasurement extends TaskEditAction {
   PutTimeMeasurement(this.measurement);
 
@@ -386,6 +392,8 @@ class AppDatabase extends _$AppDatabase {
             task = await _startTimeMeasurement(task, reference);
           case StopTimeMeasurement(:final reference):
             task = await _stopTimeMeasurement(task, reference);
+          case UndoStopTimeMeasurement(originalStart: final reference):
+            task = await _undoStopTimeMeasurement(task, reference);
           case PutSubTasks():
           case RemoveSubTasks():
           case PutTimeMeasurement():
@@ -421,6 +429,7 @@ class AppDatabase extends _$AppDatabase {
             case RemoveTaskFromQueue():
             case StartTimeMeasurement():
             case StopTimeMeasurement():
+            case UndoStopTimeMeasurement():
           }
         }
       });
@@ -637,6 +646,19 @@ class AppDatabase extends _$AppDatabase {
 
     return task.copyWith(
       activeTimeMeasurementStart: const Value(null),
+    );
+  }
+
+  Future<UserTask> _undoStopTimeMeasurement(
+    UserTask task,
+    DateTime reference,
+  ) async {
+    await (delete(timeMeasurements)
+          ..where((t) => t.start.equalsValue(reference)))
+        .go();
+
+    return task.copyWith(
+      activeTimeMeasurementStart: Value(reference),
     );
   }
 }

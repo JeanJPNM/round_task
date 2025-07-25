@@ -1043,14 +1043,30 @@ class _TimeMeasurementButtonState extends State<_TimeMeasurementButton> {
     await widget.database.writeTask(widget.task, [
       StartTimeMeasurement(DateTime.now()),
     ]);
-    if (!mounted) return;
   }
 
   Future<void> _stop() async {
+    final originalStart = widget.task.activeTimeMeasurementStart;
+    if (originalStart == null) return;
+
     await widget.database.writeTask(widget.task, [
       StopTimeMeasurement(DateTime.now()),
     ]);
+
     if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(context.tr("time_measurement_stopped")),
+        action: SnackBarAction(
+          label: context.tr("undo"),
+          onPressed: () async {
+            await widget.database.writeTask(widget.task, [
+              UndoStopTimeMeasurement(originalStart),
+            ]);
+          },
+        ),
+      ),
+    );
   }
 
   Widget _buildTransition(Widget child, Animation<double> animation) {

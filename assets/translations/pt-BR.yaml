@@ -41,6 +41,7 @@ queue_position:
   end: No fim
 start_time_measurement: Iniciar medição de tempo
 stop_time_measurement: Parar medição de tempo
+time_measurement_stopped: Medição de tempo parada
 add_subtask: Adicionar subtarefa
 
 

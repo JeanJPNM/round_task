@@ -84,20 +84,20 @@ final filteredTasksPod = StreamProvider.family.autoDispose((
 final taskByIdPod =
     StreamProvider.autoDispose.family<db.UserTask?, int>((ref, taskId) {
   final db = ref.watch(databasePod);
-  return db.getTaskByIdStream(taskId);
+  return db.getTaskById(taskId).watchSingleOrNull();
 });
 
 final taskSubTasksPod =
     StreamProvider.autoDispose.family<List<db.SubTask>, int>((ref, taskId) {
   final database = ref.watch(databasePod);
-  return database.getSubTasksStream(taskId);
+  return database.getSubTasks(taskId).watch();
 });
 
 final taskTimeMeasurementsPod = StreamProvider.autoDispose
     .family<List<db.TimeMeasurement>, int>((ref, taskId) {
   final database = ref.watch(databasePod);
 
-  return database.getTimeMeasurementsStream(taskId);
+  return database.getTimeMeasurements(taskId).watch();
 });
 
 final appSettingsPod = StreamProvider.autoDispose((ref) {

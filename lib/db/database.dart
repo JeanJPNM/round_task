@@ -325,23 +325,20 @@ class AppDatabase extends _$AppDatabase {
         .watchSingleOrNull();
   }
 
-  Stream<UserTask?> getTaskByIdStream(int taskId) {
-    return (select(userTasks)..where((t) => t.id.equals(taskId)))
-        .watchSingleOrNull();
+  SingleOrNullSelectable<UserTask?> getTaskById(int taskId) {
+    return (select(userTasks)..where((t) => t.id.equals(taskId)));
   }
 
-  Stream<List<SubTask>> getSubTasksStream(int taskId) {
+  MultiSelectable<SubTask> getSubTasks(int taskId) {
     return (select(subTasks)
-          ..where((s) => s.taskId.equals(taskId))
-          ..orderBy([(t) => OrderingTerm.asc(t.reference)]))
-        .watch();
+      ..where((s) => s.taskId.equals(taskId))
+      ..orderBy([(t) => OrderingTerm.asc(t.reference)]));
   }
 
-  Stream<List<TimeMeasurement>> getTimeMeasurementsStream(int taskId) {
+  MultiSelectable<TimeMeasurement> getTimeMeasurements(int taskId) {
     return (select(timeMeasurements)
-          ..where((t) => t.taskId.equals(taskId))
-          ..orderBy([(t) => OrderingTerm.desc(t.start)]))
-        .watch();
+      ..where((t) => t.taskId.equals(taskId))
+      ..orderBy([(t) => OrderingTerm.desc(t.start)]));
   }
 
   Stream<AppSettings> getAppSettingsStream() {

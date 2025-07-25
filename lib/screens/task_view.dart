@@ -211,7 +211,7 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
     );
   }
 
-  Future<void> _save(
+  Future<Future<void> Function()?> _save(
     AppDatabase db, {
     bool markAsDone = false,
     List<TaskEditAction> extra = const [],
@@ -243,11 +243,37 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
       recurrence: recurrence,
     );
 
+    final preservedTask = widget.task;
+    final preservedSubTasks = widget.subTasksValue.valueOrNull;
+
     await db.writeTask(taskCompanion, [
       PutSubTasks(put),
       RemoveSubTasks(remove),
       ...extra,
     ]);
+
+    if (preservedTask == null) return null;
+
+    return () async {
+      List<int>? remove;
+
+      if (preservedSubTasks != null) {
+        final newSubTasks = await db.getSubTasks(preservedTask.id).get();
+        final idsToRemove = Set<int>.from(newSubTasks.map((e) => e.id));
+        idsToRemove.removeAll(preservedSubTasks.map((subTask) => subTask.id));
+        remove = idsToRemove.toList();
+      }
+
+      await db.writeTask(preservedTask, [
+        if (preservedTask.activeTimeMeasurementStart case final start?)
+          UndoStopTimeMeasurement(start),
+        if (remove != null) RemoveSubTasks(remove),
+        if (preservedSubTasks != null)
+          PutSubTasks([
+            for (final subTask in preservedSubTasks) subTask.toCompanion(false),
+          ]),
+      ]);
+    };
   }
 
   ({
@@ -534,11 +560,21 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
               Expanded(
                 child: ElevatedButton(
                   onPressed: () async {
-                    await _save(database, extra: [
+                    final undo = await _save(database, extra: [
                       if (_getTaskEditAction() case final action?) action,
                     ]);
                     if (!context.mounted) return;
                     context.pop();
+
+                    if (undo == null) return;
+
+                    parentScaffoldMessenger.showSnackBar(SnackBar(
+                      content: Text(context.tr("task_saved")),
+                      action: SnackBarAction(
+                        label: context.tr("undo"),
+                        onPressed: undo,
+                      ),
+                    ));
                   },
                   child: Text(context.tr("save")),
                 ),
@@ -548,12 +584,23 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
                 Expanded(
                   child: FilledButton(
                     onPressed: () async {
-                      await _save(database, markAsDone: true, extra: [
-                        StopTimeMeasurement(DateTime.now()),
-                      ]);
+                      final undo = await _save(
+                        database,
+                        markAsDone: true,
+                        extra: [StopTimeMeasurement(DateTime.now())],
+                      );
 
                       if (!context.mounted) return;
                       context.pop();
+
+                      if (undo == null) return;
+                      parentScaffoldMessenger.showSnackBar(SnackBar(
+                        content: Text(context.tr("task_done")),
+                        action: SnackBarAction(
+                          label: context.tr("undo"),
+                          onPressed: undo,
+                        ),
+                      ));
                     },
                     child: Text(context.tr("done")),
                   ),

@@ -43,6 +43,8 @@ start_time_measurement: Start time measurement
 stop_time_measurement: Stop time measurement
 time_measurement_stopped: Time measurement stopped
 add_subtask: Add subtask
+task_saved: Task saved
+task_done: Task done
 
 
 select_date: Select date

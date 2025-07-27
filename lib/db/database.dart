@@ -213,6 +213,12 @@ class RemoveSubTasks extends TaskEditAction {
   final List<int> subTasksIds;
 }
 
+class RestoreSubTasks extends TaskEditAction {
+  const RestoreSubTasks(this.originalSubTasks);
+
+  final List<SubTask> originalSubTasks;
+}
+
 class StartTimeMeasurement extends TaskEditAction {
   const StartTimeMeasurement(this.reference);
   final DateTime reference;
@@ -325,7 +331,7 @@ class AppDatabase extends _$AppDatabase {
         .watchSingleOrNull();
   }
 
-  SingleOrNullSelectable<UserTask?> getTaskById(int taskId) {
+  SingleOrNullSelectable<UserTask> getTaskById(int taskId) {
     return (select(userTasks)..where((t) => t.id.equals(taskId)));
   }
 
@@ -361,11 +367,11 @@ class AppDatabase extends _$AppDatabase {
     }
   }
 
-  Future<void> writeTask(
+  Future<UserTask> writeTask(
     Insertable<UserTask> taskInsertable, [
     List<TaskEditAction> actions = const [],
   ]) async {
-    final DateTime? autoInsertDate = await transaction(() async {
+    final UserTask task = await transaction(() async {
       var task = await into(userTasks).insertReturning(
         taskInsertable,
         onConflict: DoUpdate(
@@ -393,6 +399,7 @@ class AppDatabase extends _$AppDatabase {
             task = await _undoStopTimeMeasurement(task, reference);
           case PutSubTasks():
           case RemoveSubTasks():
+          case RestoreSubTasks():
           case PutTimeMeasurement():
           case RemoveTimeMeasurement():
         }
@@ -404,18 +411,31 @@ class AppDatabase extends _$AppDatabase {
         for (final action in actions) {
           switch (action) {
             case PutSubTasks(:final subTasks):
-              batch.insertAllOnConflictUpdate(this.subTasks,
-                  subTasks.map((s) => s.copyWith(taskId: Value(task.id))));
+              final taskId = Value(task.id);
+              batch.insertAllOnConflictUpdate(
+                this.subTasks,
+                subTasks.map((s) => s.copyWith(taskId: taskId)),
+              );
             case RemoveSubTasks(subTasksIds: final subTasksIds):
               batch.deleteWhere(
                 subTasks,
                 (t) => t.id.isIn(subTasksIds),
               );
+            case RestoreSubTasks(:final originalSubTasks):
+              batch.deleteWhere(subTasks, (t) => t.taskId.equals(task.id));
+              batch.insertAll(subTasks, originalSubTasks);
+
             case PutTimeMeasurement(:final measurement):
+              final data = switch (measurement) {
+                TimeMeasurementsCompanion c => c.copyWith(
+                    taskId: Value(task.id),
+                  ),
+                final m => m,
+              };
               batch.insert(
                 timeMeasurements,
-                measurement,
-                onConflict: DoUpdate((_) => measurement),
+                data,
+                onConflict: DoUpdate((_) => data),
               );
             case RemoveTimeMeasurement(:final measurement):
               batch.deleteWhere(
@@ -431,10 +451,12 @@ class AppDatabase extends _$AppDatabase {
         }
       });
 
-      return task.autoInsertDate;
+      return task;
     });
 
-    _queuer.tryUpdate(autoInsertDate);
+    _queuer.tryUpdate(task.autoInsertDate);
+
+    return task;
   }
 
   Future<void> softDeleteTask(UserTask task) async {

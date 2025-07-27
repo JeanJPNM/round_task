@@ -255,23 +255,10 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
     if (preservedTask == null) return null;
 
     return () async {
-      List<int>? remove;
-
-      if (preservedSubTasks != null) {
-        final newSubTasks = await db.getSubTasks(preservedTask.id).get();
-        final idsToRemove = Set<int>.from(newSubTasks.map((e) => e.id));
-        idsToRemove.removeAll(preservedSubTasks.map((subTask) => subTask.id));
-        remove = idsToRemove.toList();
-      }
-
       await db.writeTask(preservedTask, [
         if (preservedTask.activeTimeMeasurementStart case final start?)
           UndoStopTimeMeasurement(start),
-        if (remove != null) RemoveSubTasks(remove),
-        if (preservedSubTasks != null)
-          PutSubTasks([
-            for (final subTask in preservedSubTasks) subTask.toCompanion(false),
-          ]),
+        if (preservedSubTasks != null) RestoreSubTasks(preservedSubTasks),
       ]);
     };
   }

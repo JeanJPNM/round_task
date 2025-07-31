@@ -84,6 +84,10 @@ class TaskCard extends ConsumerWidget {
       );
     }
 
+    if (task.endDate != null) {
+      SecondTickProvider.of(context);
+    }
+
     final tintColor = switch (task.endDate) {
       final endDate? when endDate.isBefore(now) => customColors.overdueColor,
       final endDate? when endDate.isBefore(now.add(const Duration(days: 1))) =>

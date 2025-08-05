@@ -1,12 +1,10 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:relative_time/relative_time.dart';
 import 'package:round_task/custom_colors.dart';
 import 'package:round_task/db/database.dart';
 import 'package:round_task/formatting.dart';
-import 'package:round_task/provider.dart';
 import 'package:round_task/screens/task_view.dart';
 import 'package:round_task/widgets/animated_progress_bar.dart';
 import 'package:round_task/widgets/second_tick_provider.dart';
@@ -14,7 +12,7 @@ import 'package:round_task/widgets/second_tick_provider.dart';
 const _radius = Radius.circular(12.0);
 const _paddingValue = 15.0;
 
-class TaskCard extends ConsumerWidget {
+class TaskCard extends StatelessWidget {
   const TaskCard({
     super.key,
     required this.task,
@@ -49,7 +47,7 @@ class TaskCard extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final customColors = theme.extension<CustomColors>()!;
     final ColorScheme(
@@ -58,10 +56,9 @@ class TaskCard extends ConsumerWidget {
       :primary,
     ) = theme.colorScheme;
 
-    final currentlyTrackedTask = ref.watch(currentlyTrackedTaskPod).valueOrNull;
     final now = DateTime.now();
 
-    if (currentlyTrackedTask?.id == task.id) {
+    if (task.activeTimeMeasurementStart != null) {
       final buttonStyle = const FilledButton(
         child: null,
         onPressed: null,

@@ -631,8 +631,7 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
-  Future<UserTask> _startTimeMeasurement(
-    UserTask task,
+  Future<void> _stopAllTimeMeasurements(
     DateTime now,
   ) async {
     final currentlyActive = await (_selectTasks()
@@ -640,10 +639,16 @@ class AppDatabase extends _$AppDatabase {
         .get();
 
     for (final active in currentlyActive) {
-      // stop all other time measurements
       final modifiedActive = await _stopTimeMeasurement(active, now);
       await update(userTasks).replace(modifiedActive);
     }
+  }
+
+  Future<UserTask> _startTimeMeasurement(
+    UserTask task,
+    DateTime now,
+  ) async {
+    await _stopAllTimeMeasurements(now);
 
     return task.copyWith(
       activeTimeMeasurementStart: Value(now),
@@ -672,6 +677,8 @@ class AppDatabase extends _$AppDatabase {
     UserTask task,
     DateTime reference,
   ) async {
+    await _stopAllTimeMeasurements(DateTime.now());
+
     await (delete(timeMeasurements)
           ..where((t) => t.start.equalsValue(reference)))
         .go();

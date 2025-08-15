@@ -4,7 +4,6 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   dynamic_color
-  isar_flutter_libs
   sqlite3_flutter_libs
 )
 

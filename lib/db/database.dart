@@ -290,12 +290,7 @@ class AppDatabase extends _$AppDatabase {
     return super.close();
   }
 
-  Future<void> init({
-    Future<void> Function(AppDatabase)? runIsarMigration,
-  }) async {
-    if (runIsarMigration != null) {
-      await runIsarMigration(this);
-    }
+  Future<void> init() async {
     await _queuer.init();
   }
 

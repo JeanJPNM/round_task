@@ -6,12 +6,9 @@ import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:isar/isar.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:round_task/db/db.dart' as db;
-import 'package:round_task/models/task.dart';
-import 'package:round_task/models/time_measurement.dart';
 import 'package:sqlite3/sqlite3.dart';
 
 final databasePod = NotifierProvider<DatabaseNotifier, db.AppDatabase>(
@@ -159,18 +156,11 @@ extension on AsyncData<List<db.UserTask>> {
   }
 }
 
-typedef _IsarMigrationData = ({
-  List<db.UserTasksCompanion> tasks,
-  List<db.SubTasksCompanion> subTasks,
-  List<db.TimeMeasurementsCompanion> timeMeasurements,
-});
-
 class DatabaseNotifier extends Notifier<db.AppDatabase> {
   late final String databasePath;
 
   @override
   db.AppDatabase build() {
-    final completer = Completer<_IsarMigrationData?>();
     final executor = LazyDatabase(() async {
       final dir = Platform.isAndroid || Platform.isIOS
           ? await getApplicationDocumentsDirectory()
@@ -178,24 +168,6 @@ class DatabaseNotifier extends Notifier<db.AppDatabase> {
 
       databasePath = join(dir.path, "round_task.sqlite");
       final file = File(databasePath);
-      final isarFile = File(join(dir.path, '${Isar.defaultName}.isar'));
-
-      if (await isarFile.exists()) {
-        final isar = await Isar.open(
-          [UserTaskSchema, SubTaskSchema, TaskDirSchema, TimeMeasurementSchema],
-          directory: dir.path,
-        );
-        final companions = await _getIsarCompanions(isar);
-        completer.complete(companions);
-        await isar.close(deleteFromDisk: true);
-        final lockFile = File(join(dir.path, '${Isar.defaultName}.isar-lck'));
-
-        if (await lockFile.exists()) {
-          await lockFile.delete();
-        }
-      } else {
-        completer.complete(null);
-      }
 
       return NativeDatabase.createInBackground(file);
     });
@@ -203,12 +175,7 @@ class DatabaseNotifier extends Notifier<db.AppDatabase> {
     final database = db.AppDatabase(executor);
     ref.onDispose(() => state.close());
 
-    database.init(runIsarMigration: (database) async {
-      final data = await completer.future;
-      if (data == null) return;
-
-      await _runIsarMigration(database, data);
-    });
+    database.init();
 
     return database;
   }
@@ -251,73 +218,4 @@ class DatabaseNotifier extends Notifier<db.AppDatabase> {
       await state.init();
     }
   }
-}
-
-Future<_IsarMigrationData> _getIsarCompanions(Isar isar) async {
-  final tasks = await isar.userTasks.where().anyId().findAll();
-
-  final taskCompanions = <db.UserTasksCompanion>[];
-  final subTaskCompanions = <db.SubTasksCompanion>[];
-  final timeMeasurementCompanions = <db.TimeMeasurementsCompanion>[];
-  for (final (index, task) in tasks.indexed) {
-    final taskId = index + 1;
-    final taskCompanion = db.UserTasksCompanion.insert(
-      id: Value(taskId),
-      title: task.title,
-      description: task.description,
-      reference: Value(task.reference),
-      activeTimeMeasurementStart: Value(task.activeTimeMeasurementStart),
-      startDate: Value(task.startDate),
-      endDate: Value(task.endDate),
-      progress: Value(task.progress),
-      recurrence: Value(task.recurrence),
-      status: switch (task) {
-        UserTask(reference: _?) => db.TaskStatus.active,
-        UserTask(archived: true) => db.TaskStatus.archived,
-        _ => db.TaskStatus.pending,
-      },
-      createdAt: task.creationDate,
-      updatedByUserAt: task.lastTouched,
-    );
-
-    await task.subTasks.load();
-    await task.timeMeasurements.load();
-
-    taskCompanions.add(taskCompanion);
-    subTaskCompanions.addAll(task.subTasks.map((subTask) {
-      return db.SubTasksCompanion.insert(
-        taskId: taskId,
-        title: subTask.name,
-        done: subTask.done,
-        reference: subTask.reference,
-      );
-    }));
-    timeMeasurementCompanions
-        .addAll(task.timeMeasurements.map((timeMeasurement) {
-      return db.TimeMeasurementsCompanion.insert(
-        taskId: taskId,
-        start: timeMeasurement.startTime,
-        end: timeMeasurement.endTime,
-      );
-    }));
-  }
-
-  return (
-    tasks: taskCompanions,
-    subTasks: subTaskCompanions,
-    timeMeasurements: timeMeasurementCompanions,
-  );
-}
-
-Future<void> _runIsarMigration(
-  db.AppDatabase database,
-  _IsarMigrationData data,
-) async {
-  final (:tasks, :subTasks, :timeMeasurements) = data;
-
-  await database.batch((batch) {
-    batch.insertAll(database.userTasks, tasks);
-    batch.insertAll(database.subTasks, subTasks);
-    batch.insertAll(database.timeMeasurements, timeMeasurements);
-  });
 }

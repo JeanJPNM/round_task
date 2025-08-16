@@ -65,3 +65,21 @@ extension BrightnessExtension on Brightness {
     };
   }
 }
+
+extension ColorExtension on Color {
+  WidgetStateProperty<Color?> toOverlayColorProperty() {
+    return WidgetStateProperty.resolveWith((Set<WidgetState> states) {
+      if (states.contains(WidgetState.pressed)) {
+        return withAlpha(26);
+      }
+      if (states.contains(WidgetState.hovered)) {
+        return withAlpha(20);
+      }
+      if (states.contains(WidgetState.focused)) {
+        return withAlpha(26);
+      }
+
+      return null;
+    });
+  }
+}

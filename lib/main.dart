@@ -11,6 +11,7 @@ import 'package:round_task/custom_colors.dart';
 import 'package:round_task/db/database.dart';
 import 'package:round_task/provider.dart';
 import 'package:round_task/screens/app_settings.dart';
+import 'package:round_task/screens/calendar_view.dart';
 import 'package:round_task/screens/task_queue.dart';
 import 'package:round_task/screens/task_time_measurements.dart';
 import 'package:round_task/screens/task_view.dart';
@@ -31,10 +32,19 @@ final _router = GoRouter(
       GoRoute(
         path: "/task",
         pageBuilder: (context, state) {
+          final child = switch (state.extra) {
+            TaskViewParams params => TaskViewScreen(params: params),
+            LazyTaskViewParams params => LazyTaskViewScreen(params: params),
+            _ => const Scaffold(
+                body: Center(
+                  child: Text("Invalid task page parameter"),
+                ),
+              ),
+          };
           return _buildPage(
             context,
             state,
-            child: TaskViewScreen(params: state.extra as TaskViewParams),
+            child: child,
           );
         },
         routes: [
@@ -57,6 +67,14 @@ final _router = GoRouter(
           context,
           state,
           child: const SettingsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: "/calendar_view",
+        pageBuilder: (context, state) => _buildPage(
+          context,
+          state,
+          child: const CalendarViewScreen(),
         ),
       ),
     ]),
@@ -189,13 +207,18 @@ Widget _buildShell(BuildContext context, GoRouterState state, Widget child) {
       duration: const Duration(milliseconds: 800),
       curve: Curves.easeInOutCubicEmphasized,
       isDisabled: (trackedTaskId) {
-        final task = switch (state.extra) {
-          TaskViewParams(:final task?) => task,
-          TaskTimeMeasurementsParams(:final task) => task,
+        if (state.fullPath == '/calendar_view') {
+          return true;
+        }
+
+        final taskId = switch (state.extra) {
+          TaskViewParams(:final task?) => task.id,
+          LazyTaskViewParams(:final taskId) => taskId,
+          TaskTimeMeasurementsParams(:final task) => task.id,
           _ => null
         };
 
-        return task?.id == trackedTaskId;
+        return taskId == trackedTaskId;
       },
       child: child,
     ),

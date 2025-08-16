@@ -94,13 +94,19 @@ final taskTimeMeasurementsPod = StreamProvider.autoDispose
     .family<List<db.TimeMeasurement>, int>((ref, taskId) {
   final database = ref.watch(databasePod);
 
-  return database.getTimeMeasurements(taskId).watch();
+  return database.getTaskTimeMeasurements(taskId).watch();
+});
+
+final allTimeMeasurementsPod = StreamProvider.autoDispose((ref) {
+  final database = ref.watch(databasePod);
+
+  return database.getAllTimeMeasurements().watch();
 });
 
 final appSettingsPod = StreamProvider.autoDispose((ref) {
   final database = ref.watch(databasePod);
 
-  return database.getAppSettingsStream();
+  return database.getAppSettings();
 });
 
 @immutable

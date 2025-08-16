@@ -108,6 +108,13 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
                         IconButton(
                           onPressed: () {
                             _unfocusSearchBar();
+                            context.push("/calendar_view");
+                          },
+                          icon: const Icon(Icons.history),
+                        ),
+                        IconButton(
+                          onPressed: () {
+                            _unfocusSearchBar();
                             context.push("/settings");
                           },
                           icon: const Icon(Icons.settings),

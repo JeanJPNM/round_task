@@ -153,6 +153,8 @@ class TimeMeasurements extends Table {
   late final end = integer().map(const DateTimeConverter())();
 }
 
+typedef TitledTimeMeasurement = ({String title, TimeMeasurement measurement});
+
 enum AppBrightness with DatabaseEnum {
   system(0),
   light(1),
@@ -336,13 +338,47 @@ class AppDatabase extends _$AppDatabase {
       ..orderBy([(t) => OrderingTerm.asc(t.reference)]));
   }
 
-  MultiSelectable<TimeMeasurement> getTimeMeasurements(int taskId) {
+  MultiSelectable<TimeMeasurement> getTaskTimeMeasurements(int taskId) {
     return (select(timeMeasurements)
       ..where((t) => t.taskId.equals(taskId))
       ..orderBy([(t) => OrderingTerm.desc(t.start)]));
   }
 
-  Stream<AppSettings> getAppSettingsStream() {
+  MultiSelectable<TitledTimeMeasurement> getAllTimeMeasurements({
+    DateTime? after,
+    DateTime? before,
+  }) {
+    final query = select(timeMeasurements).join([
+      innerJoin(userTasks, timeMeasurements.taskId.equalsExp(userTasks.id),
+          useColumns: false)
+    ]);
+    query.addColumns([
+      userTasks.title,
+    ]);
+
+    query.where(userTasks.deletedAt.isNull());
+
+    if (after != null) {
+      query.where(timeMeasurements.start
+          .isSmallerOrEqualValue(after.millisecondsSinceEpoch));
+    }
+    if (before != null) {
+      query.where(timeMeasurements.end
+          .isSmallerOrEqualValue(before.millisecondsSinceEpoch));
+    }
+    query.orderBy([OrderingTerm.asc(timeMeasurements.start)]);
+
+    return query.map<TitledTimeMeasurement>((row) {
+      final measurement = row.readTable(timeMeasurements);
+      final title = row.read(userTasks.title)!;
+      return (
+        title: title,
+        measurement: measurement,
+      );
+    });
+  }
+
+  Stream<AppSettings> getAppSettings() {
     return (select(appSettingsTable)..limit(1))
         .watchSingleOrNull()
         .map((settings) => settings ?? _defaultSettings);

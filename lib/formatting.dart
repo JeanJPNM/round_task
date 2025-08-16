@@ -1,3 +1,6 @@
+import 'dart:ui' show Locale;
+
+import 'package:duration/locale.dart';
 import 'package:intl/intl.dart';
 
 String formatDate(String languageTag, DateTime now, DateTime date) {
@@ -27,4 +30,9 @@ String formatDuration(Duration duration) {
     return "$hours:${padded(minutes)}:${padded(seconds)}";
   }
   return "$minutes:${padded(seconds)}";
+}
+
+extension LocaleExtension on Locale {
+  DurationLocale get durationLocale =>
+      DurationLocale.fromLanguageCode(languageCode) ?? englishLocale;
 }

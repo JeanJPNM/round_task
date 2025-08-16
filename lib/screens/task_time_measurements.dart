@@ -1,5 +1,4 @@
 import 'package:duration/duration.dart';
-import 'package:duration/locale.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -30,12 +29,20 @@ class TaskTimeMeasurements extends ConsumerStatefulWidget {
 }
 
 class _TaskTimeMeasurementsState extends ConsumerState<TaskTimeMeasurements> {
+  late UserTask _task;
+
+  @override
+  void initState() {
+    super.initState();
+    _task = widget.task;
+  }
+
   Future<void> _putMeasurement(
     AppDatabase database,
     Insertable<TimeMeasurement> measurement,
   ) async {
     await database.writeTask(
-      widget.task,
+      _task,
       [PutTimeMeasurement(measurement)],
     );
   }
@@ -45,7 +52,7 @@ class _TaskTimeMeasurementsState extends ConsumerState<TaskTimeMeasurements> {
     TimeMeasurement measurement,
   ) async {
     await database.writeTask(
-      widget.task,
+      _task,
       [RemoveTimeMeasurement(measurement)],
     );
 
@@ -68,12 +75,21 @@ class _TaskTimeMeasurementsState extends ConsumerState<TaskTimeMeasurements> {
     );
   }
 
+  Future<void> _updateActiveMeasurement(
+    AppDatabase database,
+    DateTime start,
+  ) async {
+    await database.writeTask(
+      _task.copyWith(activeTimeMeasurementStart: Value(start)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final task = widget.task;
-    final measurements = ref.watch(taskTimeMeasurementsPod(task.id));
+    _task = ref.watch(taskByIdPod(_task.id)).valueOrNull ?? _task;
+    final measurements = ref.watch(taskTimeMeasurementsPod(_task.id));
     final measurementSum = ref.watch(
-      taskTimeMeasurementsPod(task.id).select(
+      taskTimeMeasurementsPod(_task.id).select(
         (measurements) => measurements.whenData(
           (data) => data.fold(
             Duration.zero,
@@ -88,7 +104,7 @@ class _TaskTimeMeasurementsState extends ConsumerState<TaskTimeMeasurements> {
       appBar: AppBar(
         title: Text(context.tr("task_time_measurements_title")),
         bottom:
-            _TotalDurationBanner(task: task, measurementSum: measurementSum),
+            _TotalDurationBanner(task: _task, measurementSum: measurementSum),
       ),
       body: measurements.when(
         loading: () => const Center(
@@ -99,7 +115,7 @@ class _TaskTimeMeasurementsState extends ConsumerState<TaskTimeMeasurements> {
         ),
         data: (measurements) {
           final itemCount = measurements.length;
-          final activeStart = widget.task.activeTimeMeasurementStart;
+          final activeStart = _task.activeTimeMeasurementStart;
           final totalCount = activeStart != null ? itemCount + 1 : itemCount;
 
           return ListView.builder(
@@ -108,7 +124,15 @@ class _TaskTimeMeasurementsState extends ConsumerState<TaskTimeMeasurements> {
             itemCount: totalCount,
             itemBuilder: (context, index) {
               if (index == 0 && activeStart != null) {
-                return _TimeMeasurementItem(start: activeStart, end: null);
+                return _TimeMeasurementItem(
+                  start: activeStart,
+                  end: null,
+                  onChange: (result) async {
+                    if (result case _MeasurementEdited(:final start)) {
+                      await _updateActiveMeasurement(database, start);
+                    }
+                  },
+                );
               }
 
               if (activeStart != null) index--;
@@ -151,7 +175,7 @@ class _TaskTimeMeasurementsState extends ConsumerState<TaskTimeMeasurements> {
             await _putMeasurement(
               database,
               TimeMeasurementsCompanion.insert(
-                taskId: task.id,
+                taskId: _task.id,
                 start: start,
                 end: end,
               ),
@@ -192,6 +216,8 @@ class _TotalDurationBanner extends StatelessWidget
 
     if (total == Duration.zero) return const SizedBox.shrink();
 
+    final locale = Localizations.localeOf(context);
+
     return Align(
       alignment: Alignment.centerLeft,
       child: Padding(
@@ -199,10 +225,7 @@ class _TotalDurationBanner extends StatelessWidget
         child: Text(
           context.tr("task_time_measurements_total", args: [
             total.pretty(
-              locale: DurationLocale.fromLanguageCode(
-                    Localizations.localeOf(context).languageCode,
-                  ) ??
-                  const EnglishDurationLocale(),
+              locale: locale.durationLocale,
               tersity: DurationTersity.second,
               upperTersity: DurationTersity.hour,
               maxUnits: 2,
@@ -218,18 +241,31 @@ class _TimeMeasurementItem extends StatelessWidget {
   const _TimeMeasurementItem({
     required this.start,
     this.end,
-    this.onChange,
+    required this.onChange,
   });
 
   final DateTime start;
   final DateTime? end;
-  final void Function(_EditorResult)? onChange;
+  final void Function(_EditorResult) onChange;
 
   Future<void> _handleTap(BuildContext context) async {
-    final result = await _showTimeMeasurementEditor(context,
-        start: start, end: end!, allowDelete: true);
+    final _EditorResult? result;
+    if (end case final end?) {
+      result = await _showTimeMeasurementEditor(
+        context,
+        start: start,
+        end: end,
+        allowDelete: true,
+      );
+    } else {
+      final value = await _showActiveTimeMeasurementEditor(
+        context,
+        start: start,
+      );
+      result = value == null ? null : _MeasurementEdited(value, value);
+    }
     if (result == null) return;
-    onChange?.call(result);
+    onChange(result);
   }
 
   @override
@@ -242,14 +278,13 @@ class _TimeMeasurementItem extends StatelessWidget {
 
     return ListTile(
       selected: isRunning,
-      onTap: isRunning || onChange == null ? null : () => _handleTap(context),
+      onTap: () => _handleTap(context),
       title: Text(
         formatDate(locale.toLanguageTag(), now, start),
       ),
       subtitle: Text(
         end.difference(start).pretty(
-              locale: DurationLocale.fromLanguageCode(locale.languageCode) ??
-                  const EnglishDurationLocale(),
+              locale: locale.durationLocale,
               tersity: DurationTersity.second,
               upperTersity: DurationTersity.hour,
             ),
@@ -394,6 +429,104 @@ class __TimeMeasurementEditorState extends State<_TimeMeasurementEditor> {
                             final end = endController.value!;
                             final result = _MeasurementEdited(start, end);
                             Navigator.of(context).pop(result);
+                          }
+                        : null,
+                    child: Text(context.tr("ok")),
+                  );
+                },
+              ),
+            ],
+          )
+        ],
+      ),
+    );
+  }
+}
+
+Future<DateTime?> _showActiveTimeMeasurementEditor(
+  BuildContext context, {
+  required DateTime start,
+}) async {
+  return await showModalBottomSheet<DateTime?>(
+    context: context,
+    isScrollControlled: true,
+    builder: (context) => BottomSheetSafeArea(
+      basePadding: const EdgeInsets.all(16),
+      child: _ActiveTimeMeasurementEditor(
+        start: start,
+      ),
+    ),
+  );
+}
+
+class _ActiveTimeMeasurementEditor extends StatefulWidget {
+  const _ActiveTimeMeasurementEditor({
+    required this.start,
+  });
+
+  final DateTime start;
+
+  @override
+  State<_ActiveTimeMeasurementEditor> createState() =>
+      __ActiveTimeMeasurementEditorState();
+}
+
+class __ActiveTimeMeasurementEditorState
+    extends State<_ActiveTimeMeasurementEditor> {
+  final startController = DateTimeEditingController();
+  final isValid = ValueNotifier<bool>(true);
+
+  @override
+  void initState() {
+    super.initState();
+
+    startController.addListener(_runValidation);
+
+    startController.value = widget.start;
+  }
+
+  void _runValidation() {
+    final start = startController.value;
+
+    isValid.value = start?.isBefore(DateTime.now()) ?? false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return IntrinsicWidth(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(context.tr("measurement_start_time")),
+              DateTimeInput(
+                allowDelete: false,
+                controller: startController,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: Text(context.tr("cancel")),
+              ),
+              ValueListenableBuilder<bool>(
+                valueListenable: isValid,
+                builder: (context, valid, child) {
+                  return FilledButton(
+                    onPressed: valid
+                        ? () {
+                            final start = startController.value!;
+                            Navigator.of(context).pop(start);
                           }
                         : null,
                     child: Text(context.tr("ok")),

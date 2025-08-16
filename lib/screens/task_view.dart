@@ -30,6 +30,12 @@ class TaskViewParams {
   final bool autofocusTitle;
 }
 
+class LazyTaskViewParams {
+  LazyTaskViewParams(this.taskId);
+
+  final int taskId;
+}
+
 class TaskViewScreen extends ConsumerWidget {
   const TaskViewScreen({super.key, required this.params});
 
@@ -52,6 +58,27 @@ class TaskViewScreen extends ConsumerWidget {
       focusTitle: params.autofocusTitle,
       subTasksValue: subTasks,
     );
+  }
+}
+
+class LazyTaskViewScreen extends ConsumerWidget {
+  const LazyTaskViewScreen({
+    super.key,
+    required this.params,
+  });
+
+  final LazyTaskViewParams params;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ref.watch(taskByIdPod(params.taskId)).when(
+          data: (task) => TaskViewScreen(params: TaskViewParams(task)),
+          error: (error, stackTrace) => Scaffold(
+            body: Center(child: Text(error.toString())),
+          ),
+          loading: () =>
+              const Scaffold(body: Center(child: CircularProgressIndicator())),
+        );
   }
 }
 

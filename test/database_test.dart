@@ -208,7 +208,7 @@ void main() {
     ]);
 
     final taskId = insertedTask.id;
-    final timeMeasurements = await db.getTimeMeasurements(taskId).get();
+    final timeMeasurements = await db.getTaskTimeMeasurements(taskId).get();
 
     expect(timeMeasurements.first.taskId, equals(taskId));
   });
@@ -324,7 +324,7 @@ void main() {
 
     final taskId = insertedTask.id;
     final subTasks = await db.getSubTasks(taskId).get();
-    final timeMeasurements = await db.getTimeMeasurements(taskId).get();
+    final timeMeasurements = await db.getTaskTimeMeasurements(taskId).get();
 
     expect(subTasks, hasLength(2));
     expect(timeMeasurements, hasLength(1));
@@ -333,7 +333,8 @@ void main() {
     await db.deleteTask(insertedTask);
     final deletedTask = await db.getTaskById(taskId).getSingleOrNull();
     final deletedSubTasks = await db.getSubTasks(taskId).get();
-    final deletedTimeMeasurements = await db.getTimeMeasurements(taskId).get();
+    final deletedTimeMeasurements =
+        await db.getTaskTimeMeasurements(taskId).get();
 
     expect(deletedTask, isNull);
     expect(deletedSubTasks, isEmpty);
@@ -367,6 +368,33 @@ void main() {
 
     expect(fetchedTask.recurrence, isNull);
     expect(fetchedTask.endDate, isNull);
+  });
+
+  test("getAllTimeMeasurements should ignore soft-deleted tasks", () async {
+    // 1. Create a task and add a time measurement
+    final task = UserTasksCompanion.insert(
+      title: 'Test Task',
+      description: 'Test Description',
+      status: TaskStatus.active,
+      createdAt: DateTime.now(),
+      updatedByUserAt: DateTime.now(),
+    );
+    final insertedTask = await db.writeTask(task, [
+      PutTimeMeasurement(
+        TimeMeasurementsCompanion.insert(
+          taskId: -1,
+          start: DateTime.now(),
+          end: DateTime.now().add(const Duration(minutes: 30)),
+        ),
+      ),
+    ]);
+
+    // 2. Soft-delete the task
+    await db.softDeleteTask(insertedTask);
+
+    // 3. Verify the time measurement is not returned in getAllTimeMeasurements
+    final measurements = await db.getAllTimeMeasurements().get();
+    expect(measurements, isEmpty);
   });
 }
 

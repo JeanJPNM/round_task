@@ -84,6 +84,20 @@ measurement_deleted: Time measurement for {} deleted
 task_time_measurements_total: 'Total: {}'
 
 
+calendar_view:
+  title: History
+  current_month_and_year: '{month} {year}'
+  event_details_duration: 'Duration: {}'
+  event_details_start_end: 'From {start} to {end}'
+  edit_task: Open task
+  event_schedule_tile_subtitle: '{start} to {end} ({duration})'
+  view_mode:
+    single_day: Day
+    three_days: Three days
+    week: Week
+    schedule: Schedule
+
+
 settings: Settings
 
 error_loading_settings: Error loading settings

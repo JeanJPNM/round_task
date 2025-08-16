@@ -54,16 +54,12 @@ class TaskCard extends StatelessWidget {
       :outlineVariant,
       :surfaceContainerLow,
       :primary,
+      :onPrimary
     ) = theme.colorScheme;
 
     final now = DateTime.now();
 
     if (task.activeTimeMeasurementStart != null) {
-      final buttonStyle = const FilledButton(
-        child: null,
-        onPressed: null,
-      ).defaultStyleOf(context);
-
       return Card.filled(
         clipBehavior: Clip.antiAlias,
         color: primary,
@@ -75,7 +71,7 @@ class TaskCard extends StatelessWidget {
           _TaskCardContent(
             task: task,
             now: now,
-            overlayColor: buttonStyle.overlayColor,
+            overlayColor: onPrimary.toOverlayColorProperty(),
           ),
         ),
       );

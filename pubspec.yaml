@@ -59,6 +59,7 @@ dependencies:
   downloadsfolder: ^1.2.0
   dropdown_button2: ^2.3.9
   flex_color_picker: ^3.7.1
+  kalender: ^0.12.0
 
 dev_dependencies:
   flutter_test:

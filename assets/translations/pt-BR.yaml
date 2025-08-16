@@ -84,6 +84,20 @@ measurement_deleted: Medição de tempo de {} excluída
 task_time_measurements_total: 'Total: {}'
 
 
+calendar_view:
+  title: Histórico
+  current_month_and_year: '{month} de {year}'
+  event_details_duration: 'Duração: {}'
+  event_details_start_end: 'De {start} até {end}'
+  edit_task: Ver tarefa
+  event_schedule_tile_subtitle: '{start} a {end} ({duration})'
+  view_mode:
+    single_day: Dia
+    three_days: Três dias
+    week: Semana
+    schedule: Agenda
+
+
 settings: Configurações
 
 error_loading_settings: Erro ao carregar configurações

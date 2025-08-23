@@ -15,11 +15,7 @@ class AppDrawerDestination {
 }
 
 const appDrawerDestinations = [
-  AppDrawerDestination(
-    icon: Icon(Icons.task_alt),
-    key: "tasks",
-    route: "/",
-  ),
+  AppDrawerDestination(icon: Icon(Icons.task_alt), key: "tasks", route: "/"),
   AppDrawerDestination(
     icon: Icon(Icons.calendar_today),
     route: "/calendar_view",
@@ -61,17 +57,38 @@ class AppDrawer extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final routerState = GoRouterState.of(context);
-    final selectedIndex = appDrawerDestinations.indexWhere(
-      (destination) => destination.route == routerState.matchedLocation,
+    int? selectedIndex = appDrawerDestinations.indexWhere(
+      (destination) => destination.route == routerState.fullPath,
     );
+
+    if (selectedIndex < 0) selectedIndex = null;
+
     return NavigationDrawer(
-      selectedIndex: selectedIndex >= 0 ? selectedIndex : null,
+      selectedIndex: selectedIndex,
       onDestinationSelected: (value) {
         if (value == selectedIndex) return;
         final destination = appDrawerDestinations[value];
-
         close(context);
-        context.pushReplacement(destination.route);
+
+        if (selectedIndex == null) {
+          context.go(destination.route);
+          return;
+        }
+
+        final selected = appDrawerDestinations[selectedIndex];
+        if (selected.route == '/') {
+          // push other screens on top of the main one
+          // makes the back button go back to the main screen
+          context.push(destination.route);
+        } else if (destination.route == '/') {
+          // reset the navigation stack when going back to main screen
+          // this allows the user to press the back button to exit the app
+          context.go("/");
+        } else {
+          // use pushReplacement to navigate between other screens
+          // also makes the back button go back to the main screen
+          context.pushReplacement(destination.route);
+        }
       },
       children: [
         Padding(

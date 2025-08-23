@@ -237,21 +237,7 @@ Widget _buildShell(BuildContext context, GoRouterState state, Widget child) {
       },
       child: Scaffold(
         drawer: const AppDrawer(),
-        // go back to the main screen if the user presses back on one
-        // of the other top-level screens
-        body: ScaffoldMessenger(
-          child: PopScope(
-            canPop: appDrawerDestinations
-                .where((destination) => destination.route != "/")
-                .every((destination) => destination.route != state.fullPath),
-            child: child,
-            onPopInvokedWithResult: (didPop, result) {
-              if (didPop) return;
-
-              context.pushReplacement("/");
-            },
-          ),
-        ),
+        body: ScaffoldMessenger(child: child),
       ),
     ),
   );

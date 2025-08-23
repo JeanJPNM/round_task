@@ -22,35 +22,28 @@ import 'package:round_task/widgets/time_tracking_banner.dart';
 
 final _router = GoRouter(
   routes: [
-    ShellRoute(builder: _buildShell, routes: [
-      GoRoute(
-        path: "/",
-        pageBuilder: (context, state) => _buildMainPage(
-          context,
-          state,
-          child: const TaskQueueScreen(),
+    ShellRoute(
+      builder: _buildShell,
+      routes: [
+        GoRoute(
+          path: "/",
+          pageBuilder: (context, state) =>
+              _buildMainPage(context, state, child: const TaskQueueScreen()),
         ),
-      ),
-      GoRoute(
-        path: "/task",
-        pageBuilder: (context, state) {
-          final child = switch (state.extra) {
-            TaskViewParams params => TaskViewScreen(params: params),
-            LazyTaskViewParams params => LazyTaskViewScreen(params: params),
-            _ => const Scaffold(
-                body: Center(
-                  child: Text("Invalid task page parameter"),
-                ),
+        GoRoute(
+          path: "/task",
+          pageBuilder: (context, state) {
+            final child = switch (state.extra) {
+              TaskViewParams params => TaskViewScreen(params: params),
+              LazyTaskViewParams params => LazyTaskViewScreen(params: params),
+              _ => const Scaffold(
+                body: Center(child: Text("Invalid task page parameter")),
               ),
-          };
-          return _buildPage(
-            context,
-            state,
-            child: child,
-          );
-        },
-        routes: [
-          GoRoute(
+            };
+            return _buildPage(context, state, child: child);
+          },
+          routes: [
+            GoRoute(
               path: "measurements",
               pageBuilder: (context, state) {
                 return _buildPage(
@@ -60,34 +53,27 @@ final _router = GoRouter(
                     params: state.extra as TaskTimeMeasurementsParams,
                   ),
                 );
-              }),
-        ],
-      ),
-      GoRoute(
-        path: "/settings",
-        pageBuilder: (context, state) => _buildMainPage(
-          context,
-          state,
-          child: const SettingsScreen(),
+              },
+            ),
+          ],
         ),
-      ),
-      GoRoute(
-        path: "/calendar_view",
-        pageBuilder: (context, state) => _buildMainPage(
-          context,
-          state,
-          child: const CalendarViewScreen(),
+        GoRoute(
+          path: "/settings",
+          pageBuilder: (context, state) =>
+              _buildMainPage(context, state, child: const SettingsScreen()),
         ),
-      ),
-      GoRoute(
-        path: "/trash_bin",
-        pageBuilder: (context, state) => _buildMainPage(
-          context,
-          state,
-          child: const TrashBinScreen(),
+        GoRoute(
+          path: "/calendar_view",
+          pageBuilder: (context, state) =>
+              _buildMainPage(context, state, child: const CalendarViewScreen()),
         ),
-      ),
-    ]),
+        GoRoute(
+          path: "/trash_bin",
+          pageBuilder: (context, state) =>
+              _buildMainPage(context, state, child: const TrashBinScreen()),
+        ),
+      ],
+    ),
   ],
 );
 
@@ -96,18 +82,17 @@ Future<void> main() async {
   await initializeDateFormatting();
 
   await EasyLocalization.ensureInitialized();
-  runApp(ProviderScope(
-    child: EasyLocalization(
-      supportedLocales: const [
-        Locale("en", "US"),
-        Locale("pt", "BR"),
-      ],
-      fallbackLocale: const Locale("en", "US"),
-      path: "assets/translations",
-      assetLoader: const YamlAssetLoader(),
-      child: const SecondTickProvider(child: MyApp()),
+  runApp(
+    ProviderScope(
+      child: EasyLocalization(
+        supportedLocales: const [Locale("en", "US"), Locale("pt", "BR")],
+        fallbackLocale: const Locale("en", "US"),
+        path: "assets/translations",
+        assetLoader: const YamlAssetLoader(),
+        child: const SecondTickProvider(child: MyApp()),
+      ),
     ),
-  ));
+  );
 }
 
 class MyApp extends ConsumerWidget {
@@ -117,9 +102,11 @@ class MyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final seedColor = ref.watch(
-        appSettingsPod.select((settings) => settings.valueOrNull?.seedColor));
+      appSettingsPod.select((settings) => settings.valueOrNull?.seedColor),
+    );
     final appBrightness = ref.watch(
-        appSettingsPod.select((settings) => settings.valueOrNull?.brightness));
+      appSettingsPod.select((settings) => settings.valueOrNull?.brightness),
+    );
     return DynamicColorBuilder(
       builder: (lightDynamic, darkDynamic) {
         final ColorScheme lightScheme, darkScheme;
@@ -143,10 +130,12 @@ class MyApp extends ConsumerWidget {
         final lightCustomColors = CustomColors.light.harmonized(lightScheme);
         final darkCustomColors = CustomColors.dark.harmonized(darkScheme);
 
-        final pageTransitionsTheme = PageTransitionsTheme(builders: {
-          for (final platform in TargetPlatform.values)
-            platform: const FadeForwardsPageTransitionsBuilder(),
-        });
+        final pageTransitionsTheme = PageTransitionsTheme(
+          builders: {
+            for (final platform in TargetPlatform.values)
+              platform: const FadeForwardsPageTransitionsBuilder(),
+          },
+        );
 
         return MaterialApp.router(
           routerConfig: _router,
@@ -168,8 +157,9 @@ class MyApp extends ConsumerWidget {
             pageTransitionsTheme: pageTransitionsTheme,
             extensions: [darkCustomColors],
           ),
-          localizationsDelegates: context.localizationDelegates
-              .followedBy([RelativeTimeLocalizations.delegate]),
+          localizationsDelegates: context.localizationDelegates.followedBy([
+            RelativeTimeLocalizations.delegate,
+          ]),
           supportedLocales: context.supportedLocales,
           locale: context.locale,
         );
@@ -240,7 +230,7 @@ Widget _buildShell(BuildContext context, GoRouterState state, Widget child) {
           TaskViewParams(:final task?) => task.id,
           LazyTaskViewParams(:final taskId) => taskId,
           TaskTimeMeasurementsParams(:final task) => task.id,
-          _ => null
+          _ => null,
         };
 
         return taskId == trackedTaskId;
@@ -249,16 +239,18 @@ Widget _buildShell(BuildContext context, GoRouterState state, Widget child) {
         drawer: const AppDrawer(),
         // go back to the main screen if the user presses back on one
         // of the other top-level screens
-        body: PopScope(
-          canPop: appDrawerDestinations
-              .where((destination) => destination.route != "/")
-              .every((destination) => destination.route != state.fullPath),
-          child: child,
-          onPopInvokedWithResult: (didPop, result) {
-            if (didPop) return;
+        body: ScaffoldMessenger(
+          child: PopScope(
+            canPop: appDrawerDestinations
+                .where((destination) => destination.route != "/")
+                .every((destination) => destination.route != state.fullPath),
+            child: child,
+            onPopInvokedWithResult: (didPop, result) {
+              if (didPop) return;
 
-            context.pushReplacement("/");
-          },
+              context.pushReplacement("/");
+            },
+          ),
         ),
       ),
     ),

@@ -102,8 +102,9 @@ class UserTasks extends Table {
   late final id = integer().autoIncrement()();
   late final title = text()();
   late final description = text()();
-  late final status =
-      integer().map(const CodeEnumConverter(TaskStatus.fromDbCode))();
+  late final status = integer().map(
+    const CodeEnumConverter(TaskStatus.fromDbCode),
+  )();
   late final reference = integer().nullable()();
   late final progress = real().nullable()();
   late final createdAt = integer().map(const DateTimeConverter())();
@@ -111,19 +112,23 @@ class UserTasks extends Table {
   late final deletedAt = integer().map(const DateTimeConverter()).nullable()();
   late final startDate = integer().map(const DateTimeConverter()).nullable()();
   late final endDate = integer().map(const DateTimeConverter()).nullable()();
-  late final autoInsertDate =
-      integer().map(const DateTimeConverter()).nullable().generatedAs(
-            coalesce([
-              startDate,
-              endDate - Constant(const Duration(days: 1).inMilliseconds),
-            ]),
-            stored: true,
-          )();
-  late final activeTimeMeasurementStart =
-      integer().map(const DateTimeConverter()).nullable()();
+  late final autoInsertDate = integer()
+      .map(const DateTimeConverter())
+      .nullable()
+      .generatedAs(
+        coalesce([
+          startDate,
+          endDate - Constant(const Duration(days: 1).inMilliseconds),
+        ]),
+        stored: true,
+      )();
+  late final activeTimeMeasurementStart = integer()
+      .map(const DateTimeConverter())
+      .nullable()();
 
-  late final recurrence =
-      text().map(const RecurrenceRuleConverter()).nullable()();
+  late final recurrence = text()
+      .map(const RecurrenceRuleConverter())
+      .nullable()();
 }
 
 @TableIndex(name: "idx_sub_tasks_task_id", columns: {#taskId})
@@ -177,17 +182,14 @@ enum AppBrightness with DatabaseEnum {
 class AppSettingsTable extends Table {
   late final id = integer().autoIncrement()();
 
-  late final brightness =
-      integer().map(const CodeEnumConverter(AppBrightness.fromDbCode))();
+  late final brightness = integer().map(
+    const CodeEnumConverter(AppBrightness.fromDbCode),
+  )();
 
   late final seedColor = integer().map(const ColorConverter()).nullable()();
 }
 
-enum QueueInsertionPosition {
-  start,
-  end,
-  preferred,
-}
+enum QueueInsertionPosition { start, end, preferred }
 
 sealed class TaskEditAction {
   const TaskEditAction();
@@ -258,12 +260,9 @@ class RemoveTimeMeasurement extends TaskEditAction {
   final TimeMeasurement measurement;
 }
 
-@DriftDatabase(tables: [
-  UserTasks,
-  SubTasks,
-  TimeMeasurements,
-  AppSettingsTable,
-])
+@DriftDatabase(
+  tables: [UserTasks, SubTasks, TimeMeasurements, AppSettingsTable],
+)
 class AppDatabase extends _$AppDatabase {
   // After generating code, this class needs to define a `schemaVersion` getter
   // and a constructor telling drift where the database should be stored.
@@ -287,11 +286,13 @@ class AppDatabase extends _$AppDatabase {
       beforeOpen: (details) async {
         await customStatement('PRAGMA foreign_keys = ON');
       },
-      onUpgrade: stepByStep(from1To2: (m, schema) async {
-        await m.createIndex(schema.idxTimeMeasurementsStart);
-        await m.createIndex(schema.idxTimeMeasurementsEnd);
-        await m.createTable(schema.appSettingsTable);
-      }),
+      onUpgrade: stepByStep(
+        from1To2: (m, schema) async {
+          await m.createIndex(schema.idxTimeMeasurementsStart);
+          await m.createIndex(schema.idxTimeMeasurementsEnd);
+          await m.createTable(schema.appSettingsTable);
+        },
+      ),
     );
   }
 
@@ -365,52 +366,58 @@ class AppDatabase extends _$AppDatabase {
     DateTime? before,
   }) {
     final query = select(timeMeasurements).join([
-      innerJoin(userTasks, timeMeasurements.taskId.equalsExp(userTasks.id),
-          useColumns: false)
+      innerJoin(
+        userTasks,
+        timeMeasurements.taskId.equalsExp(userTasks.id),
+        useColumns: false,
+      ),
     ]);
-    query.addColumns([
-      userTasks.title,
-    ]);
+    query.addColumns([userTasks.title]);
 
     query.where(userTasks.deletedAt.isNull());
 
     if (after != null) {
-      query.where(timeMeasurements.start
-          .isSmallerOrEqualValue(after.millisecondsSinceEpoch));
+      query.where(
+        timeMeasurements.start.isSmallerOrEqualValue(
+          after.millisecondsSinceEpoch,
+        ),
+      );
     }
     if (before != null) {
-      query.where(timeMeasurements.end
-          .isSmallerOrEqualValue(before.millisecondsSinceEpoch));
+      query.where(
+        timeMeasurements.end.isSmallerOrEqualValue(
+          before.millisecondsSinceEpoch,
+        ),
+      );
     }
     query.orderBy([OrderingTerm.asc(timeMeasurements.start)]);
 
     return query.map<TitledTimeMeasurement>((row) {
       final measurement = row.readTable(timeMeasurements);
       final title = row.read(userTasks.title)!;
-      return (
-        title: title,
-        measurement: measurement,
-      );
+      return (title: title, measurement: measurement);
     });
   }
 
   Stream<AppSettings> getAppSettings() {
-    return (select(appSettingsTable)..limit(1))
-        .watchSingleOrNull()
-        .map((settings) => settings ?? _defaultSettings);
+    return (select(appSettingsTable)..limit(1)).watchSingleOrNull().map(
+      (settings) => settings ?? _defaultSettings,
+    );
   }
 
   Future<void> saveAppSettings(AppSettingsTableCompanion settings) async {
-    final existing =
-        await (select(appSettingsTable)..limit(1)).getSingleOrNull();
+    final existing = await (select(
+      appSettingsTable,
+    )..limit(1)).getSingleOrNull();
 
     if (existing == null) {
-      await into(appSettingsTable).insert(
-        _defaultSettings.copyWithCompanion(settings),
-      );
+      await into(
+        appSettingsTable,
+      ).insert(_defaultSettings.copyWithCompanion(settings));
     } else {
-      await (update(appSettingsTable)..whereSamePrimaryKey(existing))
-          .write(settings);
+      await (update(
+        appSettingsTable,
+      )..whereSamePrimaryKey(existing)).write(settings);
     }
   }
 
@@ -468,10 +475,7 @@ class AppDatabase extends _$AppDatabase {
                 subTasks.map((s) => s.copyWith(taskId: taskId)),
               );
             case RemoveSubTasks(subTasksIds: final subTasksIds):
-              batch.deleteWhere(
-                subTasks,
-                (t) => t.id.isIn(subTasksIds),
-              );
+              batch.deleteWhere(subTasks, (t) => t.id.isIn(subTasksIds));
             case RestoreSubTasks(:final originalSubTasks):
               batch.deleteWhere(subTasks, (t) => t.taskId.equals(task.id));
               batch.insertAll(subTasks, originalSubTasks);
@@ -479,8 +483,8 @@ class AppDatabase extends _$AppDatabase {
             case PutTimeMeasurement(:final measurement):
               final data = switch (measurement) {
                 TimeMeasurementsCompanion c => c.copyWith(
-                    taskId: Value(task.id),
-                  ),
+                  taskId: Value(task.id),
+                ),
                 final m => m,
               };
               batch.insert(
@@ -523,8 +527,10 @@ class AppDatabase extends _$AppDatabase {
   Future<DateTime?> getNextPendingTaskDate() async {
     final query = selectOnly(userTasks)
       ..addColumns([userTasks.autoInsertDate])
-      ..where(userTasks.status.equalsValue(TaskStatus.pending) &
-          userTasks.autoInsertDate.isNotNull())
+      ..where(
+        userTasks.status.equalsValue(TaskStatus.pending) &
+            userTasks.autoInsertDate.isNotNull(),
+      )
       ..limit(1)
       ..orderBy([OrderingTerm.asc(userTasks.autoInsertDate)]);
 
@@ -542,23 +548,29 @@ class AppDatabase extends _$AppDatabase {
       // timer for this
       await deleteSoftDeletedTasks();
 
-      final tasks = await (_selectTasks()
-            ..where((t) =>
-                t.status.equalsValue(TaskStatus.pending) &
-                t.autoInsertDate
-                    .isSmallerOrEqualValue(now.millisecondsSinceEpoch))
-            ..orderBy([(t) => OrderingTerm.desc(t.autoInsertDate)]))
-          .get();
+      final tasks =
+          await (_selectTasks()
+                ..where(
+                  (t) =>
+                      t.status.equalsValue(TaskStatus.pending) &
+                      t.autoInsertDate.isSmallerOrEqualValue(
+                        now.millisecondsSinceEpoch,
+                      ),
+                )
+                ..orderBy([(t) => OrderingTerm.desc(t.autoInsertDate)]))
+              .get();
 
-      final firstReference = await (selectOnly(userTasks)
-            ..addColumns([userTasks.reference])
-            ..where(
-              userTasks.deletedAt.isNull() & userTasks.reference.isNotNull(),
-            )
-            ..orderBy([OrderingTerm.asc(userTasks.reference)])
-            ..limit(1))
-          .map((row) => row.read(userTasks.reference))
-          .getSingleOrNull();
+      final firstReference =
+          await (selectOnly(userTasks)
+                ..addColumns([userTasks.reference])
+                ..where(
+                  userTasks.deletedAt.isNull() &
+                      userTasks.reference.isNotNull(),
+                )
+                ..orderBy([OrderingTerm.asc(userTasks.reference)])
+                ..limit(1))
+              .map((row) => row.read(userTasks.reference))
+              .getSingleOrNull();
 
       var current = 0;
       var increment = _defaultSkipSize;
@@ -594,14 +606,16 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> deleteSoftDeletedTasks() async {
     final now = DateTime.now();
-    final threshold =
-        now.subtract(const Duration(days: 30)).millisecondsSinceEpoch;
+    final threshold = now
+        .subtract(const Duration(days: 30))
+        .millisecondsSinceEpoch;
 
     // delete all tasks that were soft deleted more than an hour ago
-    await (delete(userTasks)
-          ..where((t) =>
+    await (delete(userTasks)..where(
+          (t) =>
               t.deletedAt.isNotNull() &
-              t.deletedAt.isSmallerThanValue(threshold)))
+              t.deletedAt.isSmallerThanValue(threshold),
+        ))
         .go();
   }
 
@@ -619,10 +633,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   // TODO: just filter it on the dart side
-  MultiSelectable<UserTask> searchTasks(
-    TaskStatus status,
-    String searchText,
-  ) {
+  MultiSelectable<UserTask> searchTasks(TaskStatus status, String searchText) {
     final pattern = '%$searchText%';
     final query = _selectTasks()
       ..where((t) => t.status.equalsValue(status))
@@ -630,17 +641,11 @@ class AppDatabase extends _$AppDatabase {
 
     switch (status) {
       case TaskStatus.active:
-        query.orderBy([
-          (t) => OrderingTerm.asc(t.reference),
-        ]);
+        query.orderBy([(t) => OrderingTerm.asc(t.reference)]);
       case TaskStatus.pending:
-        query.orderBy([
-          (t) => OrderingTerm.asc(t.createdAt),
-        ]);
+        query.orderBy([(t) => OrderingTerm.asc(t.createdAt)]);
       case TaskStatus.archived:
-        query.orderBy([
-          (t) => OrderingTerm.desc(t.updatedByUserAt),
-        ]);
+        query.orderBy([(t) => OrderingTerm.desc(t.updatedByUserAt)]);
     }
 
     return query;
@@ -657,12 +662,13 @@ class AppDatabase extends _$AppDatabase {
         task.autoInsertDate?.isBefore(DateTime.now()) ?? false,
     };
 
-    final expr =
-        insertAtStart ? userTasks.reference.min() : userTasks.reference.max();
+    final expr = insertAtStart
+        ? userTasks.reference.min()
+        : userTasks.reference.max();
 
-    final previousReference = await (selectOnly(userTasks)..addColumns([expr]))
-        .map((row) => row.read(expr))
-        .getSingle();
+    final previousReference = await (selectOnly(
+      userTasks,
+    )..addColumns([expr])).map((row) => row.read(expr)).getSingle();
 
     final reference = switch ((previousReference, insertAtStart)) {
       (final r?, true) => r - _defaultSkipSize,
@@ -676,12 +682,11 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
-  Future<void> _stopAllTimeMeasurements(
-    DateTime now,
-  ) async {
-    final currentlyActive = await (_selectTasks()
-          ..where((t) => t.activeTimeMeasurementStart.isNotNull()))
-        .get();
+  Future<void> _stopAllTimeMeasurements(DateTime now) async {
+    final currentlyActive =
+        await (_selectTasks()
+              ..where((t) => t.activeTimeMeasurementStart.isNotNull()))
+            .get();
 
     for (final active in currentlyActive) {
       final modifiedActive = await _stopTimeMeasurement(active, now);
@@ -689,33 +694,25 @@ class AppDatabase extends _$AppDatabase {
     }
   }
 
-  Future<UserTask> _startTimeMeasurement(
-    UserTask task,
-    DateTime now,
-  ) async {
+  Future<UserTask> _startTimeMeasurement(UserTask task, DateTime now) async {
     await _stopAllTimeMeasurements(now);
 
-    return task.copyWith(
-      activeTimeMeasurementStart: Value(now),
-    );
+    return task.copyWith(activeTimeMeasurementStart: Value(now));
   }
 
   /// Needs to be wrapped in a write transaction
-  Future<UserTask> _stopTimeMeasurement(
-    UserTask task,
-    DateTime now,
-  ) async {
+  Future<UserTask> _stopTimeMeasurement(UserTask task, DateTime now) async {
     if (task.activeTimeMeasurementStart == null) return task;
 
-    await into(timeMeasurements).insert(TimeMeasurementsCompanion.insert(
-      taskId: task.id,
-      start: task.activeTimeMeasurementStart!,
-      end: now,
-    ));
-
-    return task.copyWith(
-      activeTimeMeasurementStart: const Value(null),
+    await into(timeMeasurements).insert(
+      TimeMeasurementsCompanion.insert(
+        taskId: task.id,
+        start: task.activeTimeMeasurementStart!,
+        end: now,
+      ),
     );
+
+    return task.copyWith(activeTimeMeasurementStart: const Value(null));
   }
 
   Future<UserTask> _undoStopTimeMeasurement(
@@ -724,13 +721,11 @@ class AppDatabase extends _$AppDatabase {
   ) async {
     await _stopAllTimeMeasurements(DateTime.now());
 
-    await (delete(timeMeasurements)
-          ..where((t) => t.start.equalsValue(reference)))
-        .go();
+    await (delete(
+      timeMeasurements,
+    )..where((t) => t.start.equalsValue(reference))).go();
 
-    return task.copyWith(
-      activeTimeMeasurementStart: Value(reference),
-    );
+    return task.copyWith(activeTimeMeasurementStart: Value(reference));
   }
 }
 

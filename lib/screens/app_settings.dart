@@ -23,11 +23,13 @@ class _AppSettingsState extends ConsumerState<SettingsScreen> {
       await action();
       return true;
     } catch (e, stackTrace) {
-      FlutterError.presentError(FlutterErrorDetails(
-        exception: e,
-        stack: stackTrace,
-        library: 'Round Task',
-      ));
+      FlutterError.presentError(
+        FlutterErrorDetails(
+          exception: e,
+          stack: stackTrace,
+          library: 'Round Task',
+        ),
+      );
       return false;
     }
   }
@@ -101,11 +103,13 @@ class _AppSettingsState extends ConsumerState<SettingsScreen> {
       ),
       body: settings.when(
         error: (error, stackTrace) {
-          FlutterError.presentError(FlutterErrorDetails(
-            exception: error,
-            stack: stackTrace,
-            library: 'Round Task',
-          ));
+          FlutterError.presentError(
+            FlutterErrorDetails(
+              exception: error,
+              stack: stackTrace,
+              library: 'Round Task',
+            ),
+          );
           return Center(child: Text(context.tr("error_loading_settings")));
         },
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -184,11 +188,7 @@ class _SectionHeader extends StatelessWidget {
     return DefaultTextStyle.merge(
       style: Theme.of(context).textTheme.titleMedium!,
       child: Padding(
-        padding: const EdgeInsets.only(
-          top: 16,
-          bottom: 16,
-          left: 16,
-        ),
+        padding: const EdgeInsets.only(top: 16, bottom: 16, left: 16),
         child: title,
       ),
     );
@@ -271,7 +271,7 @@ class _ColorPickerBottomSheetState extends State<_ColorPickerBottomSheet> {
               ColorPickerType.primary: true,
               ColorPickerType.accent: false,
               ColorPickerType.bw: false,
-              ColorPickerType.wheel: true
+              ColorPickerType.wheel: true,
             },
             pickerTypeLabels: {
               ColorPickerType.primary: context.tr("color_picker.primary"),

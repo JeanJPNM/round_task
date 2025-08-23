@@ -44,8 +44,13 @@ class _AnimatedProgressBarState
 
   @override
   void forEachTween(TweenVisitor<dynamic> visitor) {
-    _value = visitor(_value, widget.value,
-        (value) => Tween<double>(begin: value as double)) as Tween<double>?;
+    _value =
+        visitor(
+              _value,
+              widget.value,
+              (value) => Tween<double>(begin: value as double),
+            )
+            as Tween<double>?;
   }
 
   @override

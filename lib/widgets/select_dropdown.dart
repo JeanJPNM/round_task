@@ -40,14 +40,9 @@ class _SelectDropdownState<T> extends State<SelectDropdown<T>> {
         ),
         padding: const EdgeInsets.symmetric(horizontal: 8.0),
       ),
-      style: theme.textTheme.titleMedium?.copyWith(
-        color: textColor,
-      ),
+      style: theme.textTheme.titleMedium?.copyWith(color: textColor),
       iconStyleData: IconStyleData(
-        icon: Icon(
-          Icons.arrow_drop_down_rounded,
-          color: textColor,
-        ),
+        icon: Icon(Icons.arrow_drop_down_rounded, color: textColor),
       ),
       dropdownStyleData: DropdownStyleData(
         decoration: BoxDecoration(

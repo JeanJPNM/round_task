@@ -4,11 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:round_task/widgets/bottom_sheet_safe_area.dart';
 import 'package:rrule/rrule.dart';
 
-enum _EndOption {
-  never,
-  onDate,
-  afterOccurrences,
-}
+enum _EndOption { never, onDate, afterOccurrences }
 
 class RecurrencePicker extends StatefulWidget {
   const RecurrencePicker({
@@ -125,10 +121,7 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
           mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              context.tr("recurrence"),
-              style: theme.textTheme.titleSmall,
-            ),
+            Text(context.tr("recurrence"), style: theme.textTheme.titleSmall),
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -140,9 +133,7 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
                     textAlign: TextAlign.center,
                     controller: intervalController,
                     keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                    ],
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -181,47 +172,44 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
             ),
             ...switch (frequency) {
               Frequency.weekly => [
-                  Text(context.tr("repeat")),
-                  SegmentedButton(
-                    showSelectedIcon: false,
-                    multiSelectionEnabled: true,
-                    expandedInsets: const EdgeInsets.symmetric(vertical: 10),
-                    segments: [
-                      for (final (day, string) in const [
-                        (DateTime.sunday, "weekday_letter.sunday"),
-                        (DateTime.monday, "weekday_letter.monday"),
-                        (DateTime.tuesday, "weekday_letter.tuesday"),
-                        (DateTime.wednesday, "weekday_letter.wednesday"),
-                        (DateTime.thursday, "weekday_letter.thursday"),
-                        (DateTime.friday, "weekday_letter.friday"),
-                        (DateTime.saturday, "weekday_letter.saturday"),
-                      ])
-                        ButtonSegment(
-                          value: day,
-                          label: Text(context.tr(string)),
-                        ),
-                    ],
-                    selected: weekSelection,
-                    onSelectionChanged: (value) {
-                      setState(() {
-                        weekSelection = value;
-                      });
-                    },
-                  ),
-                ],
+                Text(context.tr("repeat")),
+                SegmentedButton(
+                  showSelectedIcon: false,
+                  multiSelectionEnabled: true,
+                  expandedInsets: const EdgeInsets.symmetric(vertical: 10),
+                  segments: [
+                    for (final (day, string) in const [
+                      (DateTime.sunday, "weekday_letter.sunday"),
+                      (DateTime.monday, "weekday_letter.monday"),
+                      (DateTime.tuesday, "weekday_letter.tuesday"),
+                      (DateTime.wednesday, "weekday_letter.wednesday"),
+                      (DateTime.thursday, "weekday_letter.thursday"),
+                      (DateTime.friday, "weekday_letter.friday"),
+                      (DateTime.saturday, "weekday_letter.saturday"),
+                    ])
+                      ButtonSegment(
+                        value: day,
+                        label: Text(context.tr(string)),
+                      ),
+                  ],
+                  selected: weekSelection,
+                  onSelectionChanged: (value) {
+                    setState(() {
+                      weekSelection = value;
+                    });
+                  },
+                ),
+              ],
               // TODO: handle montly on same day and montly
               // on same weekday
               _ => [],
             },
-            Text(
-              context.tr("ends"),
-              style: theme.textTheme.titleSmall,
-            ),
+            Text(context.tr("ends"), style: theme.textTheme.titleSmall),
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Radio(value: _EndOption.never),
-                Text(context.tr("end_option.never"))
+                Text(context.tr("end_option.never")),
               ],
             ),
             Row(
@@ -265,9 +253,7 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
                     controller: limitController,
                     enabled: endOption == _EndOption.afterOccurrences,
                     keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                    ],
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   ),
                 ),
                 Text(context.tr("end_option.after_second")),

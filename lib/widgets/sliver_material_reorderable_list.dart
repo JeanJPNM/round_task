@@ -21,18 +21,18 @@ class SliverMaterialReorderableList extends StatefulWidget {
     this.autoScrollerVelocityScalar,
     this.dragBoundaryProvider,
     this.mouseCursor,
-  })  : assert(
-          (itemExtent == null && prototypeItem == null) ||
-              (itemExtent == null && itemExtentBuilder == null) ||
-              (prototypeItem == null && itemExtentBuilder == null),
-          'You can only pass one of itemExtent, prototypeItem and itemExtentBuilder.',
-        ),
-        assert(
-          children.every((Widget w) => w.key != null),
-          'All children of this widget must have a key.',
-        ),
-        itemBuilder = ((BuildContext context, int index) => children[index]),
-        itemCount = children.length;
+  }) : assert(
+         (itemExtent == null && prototypeItem == null) ||
+             (itemExtent == null && itemExtentBuilder == null) ||
+             (prototypeItem == null && itemExtentBuilder == null),
+         'You can only pass one of itemExtent, prototypeItem and itemExtentBuilder.',
+       ),
+       assert(
+         children.every((Widget w) => w.key != null),
+         'All children of this widget must have a key.',
+       ),
+       itemBuilder = ((BuildContext context, int index) => children[index]),
+       itemCount = children.length;
 
   /// Creates a reorderable list from widget items that are created on demand.
   ///
@@ -78,13 +78,13 @@ class SliverMaterialReorderableList extends StatefulWidget {
     this.autoScrollerVelocityScalar,
     this.dragBoundaryProvider,
     this.mouseCursor,
-  })  : assert(itemCount >= 0),
-        assert(
-          (itemExtent == null && prototypeItem == null) ||
-              (itemExtent == null && itemExtentBuilder == null) ||
-              (prototypeItem == null && itemExtentBuilder == null),
-          'You can only pass one of itemExtent, prototypeItem and itemExtentBuilder.',
-        );
+  }) : assert(itemCount >= 0),
+       assert(
+         (itemExtent == null && prototypeItem == null) ||
+             (itemExtent == null && itemExtentBuilder == null) ||
+             (prototypeItem == null && itemExtentBuilder == null),
+         'You can only pass one of itemExtent, prototypeItem and itemExtentBuilder.',
+       );
 
   /// {@macro flutter.widgets.reorderable_list.itemBuilder}
   final IndexedWidgetBuilder itemBuilder;
@@ -175,13 +175,16 @@ class _SliverMaterialReorderableListState
     assert(() {
       if (item.key == null) {
         throw FlutterError(
-            'Every item of ReorderableListView must have a key.');
+          'Every item of ReorderableListView must have a key.',
+        );
       }
       return true;
     }());
 
-    final Key itemGlobalKey =
-        _SliverMaterialReorderableListChildGlobalKey(item.key!, this);
+    final Key itemGlobalKey = _SliverMaterialReorderableListChildGlobalKey(
+      item.key!,
+      this,
+    );
 
     if (widget.buildDefaultDragHandles) {
       switch (Theme.of(context).platform) {
@@ -193,14 +196,15 @@ class _SliverMaterialReorderableListState
             builder: (BuildContext context, Widget? child) {
               final MouseCursor effectiveMouseCursor =
                   WidgetStateProperty.resolveAs<MouseCursor>(
-                widget.mouseCursor ??
-                    const WidgetStateMouseCursor
-                        .fromMap(<WidgetStatesConstraint, MouseCursor>{
-                      WidgetState.dragged: SystemMouseCursors.grabbing,
-                      WidgetState.any: SystemMouseCursors.grab,
-                    }),
-                <WidgetState>{if (_dragging.value) WidgetState.dragged},
-              );
+                    widget.mouseCursor ??
+                        const WidgetStateMouseCursor.fromMap(
+                          <WidgetStatesConstraint, MouseCursor>{
+                            WidgetState.dragged: SystemMouseCursors.grabbing,
+                            WidgetState.any: SystemMouseCursors.grab,
+                          },
+                        ),
+                    <WidgetState>{if (_dragging.value) WidgetState.dragged},
+                  );
               return MouseRegion(cursor: effectiveMouseCursor, child: child);
             },
             child: const Icon(Icons.drag_handle),
@@ -219,7 +223,9 @@ class _SliverMaterialReorderableListState
                     child: Align(
                       alignment: AlignmentDirectional.bottomCenter,
                       child: ReorderableDragStartListener(
-                          index: index, child: dragHandle),
+                        index: index,
+                        child: dragHandle,
+                      ),
                     ),
                   ),
                 ],
@@ -237,7 +243,9 @@ class _SliverMaterialReorderableListState
                     child: Align(
                       alignment: AlignmentDirectional.centerEnd,
                       child: ReorderableDragStartListener(
-                          index: index, child: dragHandle),
+                        index: index,
+                        child: dragHandle,
+                      ),
                     ),
                   ),
                 ],
@@ -248,7 +256,10 @@ class _SliverMaterialReorderableListState
         case TargetPlatform.android:
         case TargetPlatform.fuchsia:
           return ReorderableDelayedDragStartListener(
-              key: itemGlobalKey, index: index, child: item);
+            key: itemGlobalKey,
+            index: index,
+            child: item,
+          );
       }
     }
 
@@ -308,7 +319,7 @@ class _SliverMaterialReorderableListState
 @optionalTypeArgs
 class _SliverMaterialReorderableListChildGlobalKey extends GlobalObjectKey {
   const _SliverMaterialReorderableListChildGlobalKey(this.subKey, this.state)
-      : super(subKey);
+    : super(subKey);
 
   final Key subKey;
   final State state;

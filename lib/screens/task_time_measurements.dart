@@ -16,10 +16,8 @@ final class TaskTimeMeasurementsParams {
 }
 
 class TaskTimeMeasurements extends ConsumerStatefulWidget {
-  TaskTimeMeasurements({
-    super.key,
-    required TaskTimeMeasurementsParams params,
-  }) : task = params.task;
+  TaskTimeMeasurements({super.key, required TaskTimeMeasurementsParams params})
+    : task = params.task;
 
   final UserTask task;
 
@@ -41,20 +39,14 @@ class _TaskTimeMeasurementsState extends ConsumerState<TaskTimeMeasurements> {
     AppDatabase database,
     Insertable<TimeMeasurement> measurement,
   ) async {
-    await database.writeTask(
-      _task,
-      [PutTimeMeasurement(measurement)],
-    );
+    await database.writeTask(_task, [PutTimeMeasurement(measurement)]);
   }
 
   Future<void> _removeMeasurement(
     AppDatabase database,
     TimeMeasurement measurement,
   ) async {
-    await database.writeTask(
-      _task,
-      [RemoveTimeMeasurement(measurement)],
-    );
+    await database.writeTask(_task, [RemoveTimeMeasurement(measurement)]);
 
     if (!mounted) return;
 
@@ -63,9 +55,10 @@ class _TaskTimeMeasurementsState extends ConsumerState<TaskTimeMeasurements> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          context.tr("measurement_deleted", args: [
-            formatDate(languageTag, now, measurement.start),
-          ]),
+          context.tr(
+            "measurement_deleted",
+            args: [formatDate(languageTag, now, measurement.start)],
+          ),
         ),
         action: SnackBarAction(
           label: context.tr("undo"),
@@ -103,16 +96,14 @@ class _TaskTimeMeasurementsState extends ConsumerState<TaskTimeMeasurements> {
     return Scaffold(
       appBar: AppBar(
         title: Text(context.tr("task_time_measurements_title")),
-        bottom:
-            _TotalDurationBanner(task: _task, measurementSum: measurementSum),
+        bottom: _TotalDurationBanner(
+          task: _task,
+          measurementSum: measurementSum,
+        ),
       ),
       body: measurements.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(),
-        ),
-        error: (error, stack) => Center(
-          child: Text('Error: $error'),
-        ),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stack) => Center(child: Text('Error: $error')),
         data: (measurements) {
           final itemCount = measurements.length;
           final activeStart = _task.activeTimeMeasurementStart;
@@ -146,10 +137,7 @@ class _TaskTimeMeasurementsState extends ConsumerState<TaskTimeMeasurements> {
                     case _MeasurementDeleted():
                       await _removeMeasurement(database, measurement);
                       return;
-                    case _MeasurementEdited(
-                        start: final start,
-                        end: final end,
-                      ):
+                    case _MeasurementEdited(start: final start, end: final end):
                       await _putMeasurement(
                         database,
                         measurement.copyWith(start: start, end: end),
@@ -223,14 +211,17 @@ class _TotalDurationBanner extends StatelessWidget
       child: Padding(
         padding: const EdgeInsets.only(bottom: 8.0, left: 16.0, right: 16.0),
         child: Text(
-          context.tr("task_time_measurements_total", args: [
-            total.pretty(
-              locale: locale.durationLocale,
-              tersity: DurationTersity.second,
-              upperTersity: DurationTersity.hour,
-              maxUnits: 2,
-            ),
-          ]),
+          context.tr(
+            "task_time_measurements_total",
+            args: [
+              total.pretty(
+                locale: locale.durationLocale,
+                tersity: DurationTersity.second,
+                upperTersity: DurationTersity.hour,
+                maxUnits: 2,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -279,11 +270,11 @@ class _TimeMeasurementItem extends StatelessWidget {
     return ListTile(
       selected: isRunning,
       onTap: () => _handleTap(context),
-      title: Text(
-        formatDate(locale.toLanguageTag(), now, start),
-      ),
+      title: Text(formatDate(locale.toLanguageTag(), now, start)),
       subtitle: Text(
-        end.difference(start).pretty(
+        end
+            .difference(start)
+            .pretty(
               locale: locale.durationLocale,
               tersity: DurationTersity.second,
               upperTersity: DurationTersity.hour,
@@ -392,10 +383,7 @@ class __TimeMeasurementEditorState extends State<_TimeMeasurementEditor> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(context.tr("measurement_start_time")),
-              DateTimeInput(
-                allowDelete: false,
-                controller: startController,
-              ),
+              DateTimeInput(allowDelete: false, controller: startController),
             ],
           ),
           const SizedBox(height: 8),
@@ -403,10 +391,7 @@ class __TimeMeasurementEditorState extends State<_TimeMeasurementEditor> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(context.tr("measurement_end_time")),
-              DateTimeInput(
-                allowDelete: false,
-                controller: endController,
-              ),
+              DateTimeInput(allowDelete: false, controller: endController),
             ],
           ),
           const SizedBox(height: 16),
@@ -436,7 +421,7 @@ class __TimeMeasurementEditorState extends State<_TimeMeasurementEditor> {
                 },
               ),
             ],
-          )
+          ),
         ],
       ),
     );
@@ -452,17 +437,13 @@ Future<DateTime?> _showActiveTimeMeasurementEditor(
     isScrollControlled: true,
     builder: (context) => BottomSheetSafeArea(
       basePadding: const EdgeInsets.all(16),
-      child: _ActiveTimeMeasurementEditor(
-        start: start,
-      ),
+      child: _ActiveTimeMeasurementEditor(start: start),
     ),
   );
 }
 
 class _ActiveTimeMeasurementEditor extends StatefulWidget {
-  const _ActiveTimeMeasurementEditor({
-    required this.start,
-  });
+  const _ActiveTimeMeasurementEditor({required this.start});
 
   final DateTime start;
 
@@ -503,10 +484,7 @@ class __ActiveTimeMeasurementEditorState
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(context.tr("measurement_start_time")),
-              DateTimeInput(
-                allowDelete: false,
-                controller: startController,
-              ),
+              DateTimeInput(allowDelete: false, controller: startController),
             ],
           ),
           const SizedBox(height: 16),
@@ -534,7 +512,7 @@ class __ActiveTimeMeasurementEditorState
                 },
               ),
             ],
-          )
+          ),
         ],
       ),
     );

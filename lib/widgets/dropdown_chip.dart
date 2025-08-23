@@ -169,10 +169,13 @@ class _DropdownMenuState<T> extends State<DropdownMenuChip<T>> {
   void initState() {
     super.initState();
     final entries = widget.dropdownMenuEntries;
-    buttonItemKeys =
-        List<GlobalKey>.generate(entries.length, (int index) => GlobalKey());
-    _menuHasEnabledItem =
-        entries.any((DropdownMenuEntry<T> entry) => entry.enabled);
+    buttonItemKeys = List<GlobalKey>.generate(
+      entries.length,
+      (int index) => GlobalKey(),
+    );
+    _menuHasEnabledItem = entries.any(
+      (DropdownMenuEntry<T> entry) => entry.enabled,
+    );
     final int index = entries.indexWhere(
       (DropdownMenuEntry<T> entry) => entry.value == widget.initialSelection,
     );
@@ -195,10 +198,13 @@ class _DropdownMenuState<T> extends State<DropdownMenuChip<T>> {
     if (oldWidget.dropdownMenuEntries != widget.dropdownMenuEntries) {
       currentHighlight = null;
       final entries = widget.dropdownMenuEntries;
-      buttonItemKeys =
-          List<GlobalKey>.generate(entries.length, (int index) => GlobalKey());
-      _menuHasEnabledItem =
-          entries.any((DropdownMenuEntry<T> entry) => entry.enabled);
+      buttonItemKeys = List<GlobalKey>.generate(
+        entries.length,
+        (int index) => GlobalKey(),
+      );
+      _menuHasEnabledItem = entries.any(
+        (DropdownMenuEntry<T> entry) => entry.enabled,
+      );
       if (_selectedEntryIndex != null) {
         final T oldSelectionValue =
             oldWidget.dropdownMenuEntries[_selectedEntryIndex!].value;
@@ -258,10 +264,13 @@ class _DropdownMenuState<T> extends State<DropdownMenuChip<T>> {
       final double padding = entry.leadingIcon == null
           ? (leadingPadding ?? _kDefaultHorizontalPadding)
           : _kDefaultHorizontalPadding;
-      ButtonStyle effectiveStyle = entry.style ??
+      ButtonStyle effectiveStyle =
+          entry.style ??
           MenuItemButton.styleFrom(
             padding: EdgeInsetsDirectional.only(
-                start: padding, end: _kDefaultHorizontalPadding),
+              start: padding,
+              end: _kDefaultHorizontalPadding,
+            ),
           );
 
       final ButtonStyle? themeStyle = MenuButtonTheme.of(context).style;
@@ -282,11 +291,13 @@ class _DropdownMenuState<T> extends State<DropdownMenuChip<T>> {
         // Query the Material 3 default style.
         // TODO(bleroux): replace once a standard way for accessing defaults will be defined.
         // See: https://github.com/flutter/flutter/issues/130135.
-        final ButtonStyle defaultStyle =
-            const MenuItemButton().defaultStyleOf(context);
+        final ButtonStyle defaultStyle = const MenuItemButton().defaultStyleOf(
+          context,
+        );
 
         Color? resolveFocusedColor(
-            WidgetStateProperty<Color?>? colorStateProperty) {
+          WidgetStateProperty<Color?>? colorStateProperty,
+        ) {
           return colorStateProperty?.resolve(const {WidgetState.focused});
         }
 
@@ -303,13 +314,15 @@ class _DropdownMenuState<T> extends State<DropdownMenuChip<T>> {
         // Defaults to onSurface.withOpacity(0.12).
         final Color focusedBackgroundColor =
             resolveFocusedColor(effectiveBackgroundColor) ??
-                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12);
+            Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12);
 
         effectiveStyle = effectiveStyle.copyWith(
-          backgroundColor:
-              WidgetStatePropertyAll<Color>(focusedBackgroundColor),
-          foregroundColor:
-              WidgetStatePropertyAll<Color>(focusedForegroundColor),
+          backgroundColor: WidgetStatePropertyAll<Color>(
+            focusedBackgroundColor,
+          ),
+          foregroundColor: WidgetStatePropertyAll<Color>(
+            focusedForegroundColor,
+          ),
           iconColor: WidgetStatePropertyAll<Color>(focusedIconColor),
           overlayColor: WidgetStatePropertyAll<Color>(focusedOverlayColor),
         );
@@ -452,8 +465,9 @@ class _DropdownMenuState<T> extends State<DropdownMenuChip<T>> {
     final DropdownMenuThemeData theme = DropdownMenuTheme.of(context);
     final DropdownMenuThemeData defaults = _DropdownMenuDefaultsM3(context);
     final entries = widget.dropdownMenuEntries;
-    _menuHasEnabledItem =
-        entries.any((DropdownMenuEntry<T> entry) => entry.enabled);
+    _menuHasEnabledItem = entries.any(
+      (DropdownMenuEntry<T> entry) => entry.enabled,
+    );
 
     final List<Widget> menu = _buildButtons(
       entries,
@@ -468,10 +482,12 @@ class _DropdownMenuState<T> extends State<DropdownMenuChip<T>> {
     final double? anchorWidth = getWidth(_anchorKey);
     if (anchorWidth != null) {
       effectiveMenuStyle = effectiveMenuStyle.copyWith(
-        minimumSize:
-            WidgetStateProperty.resolveWith<Size?>((Set<WidgetState> states) {
-          final double? effectiveMaximumWidth =
-              effectiveMenuStyle!.maximumSize?.resolve(states)?.width;
+        minimumSize: WidgetStateProperty.resolveWith<Size?>((
+          Set<WidgetState> states,
+        ) {
+          final double? effectiveMaximumWidth = effectiveMenuStyle!.maximumSize
+              ?.resolve(states)
+              ?.width;
           return Size(math.min(anchorWidth, effectiveMaximumWidth ?? 0.0), 0.0);
         }),
       );
@@ -488,12 +504,13 @@ class _DropdownMenuState<T> extends State<DropdownMenuChip<T>> {
       controller: _controller,
       menuChildren: menu,
       crossAxisUnconstrained: false,
-      builder:
-          (BuildContext context, MenuController controller, Widget? child) {
+      builder: (BuildContext context, MenuController controller, Widget? child) {
         assert(_initialMenu != null);
 
-        final Widget trailingButton =
-            switch ((widget.showTrailingIcon, controller.isOpen)) {
+        final Widget trailingButton = switch ((
+          widget.showTrailingIcon,
+          controller.isOpen,
+        )) {
           (false, _) => const SizedBox.shrink(),
           (true, true) =>
             widget.trailingIcon ?? const Icon(Icons.arrow_drop_up),
@@ -528,13 +545,15 @@ class _DropdownMenuState<T> extends State<DropdownMenuChip<T>> {
 
         return Shortcuts(
           shortcuts: const <ShortcutActivator, Intent>{
-            SingleActivator(LogicalKeyboardKey.arrowLeft):
-                ExtendSelectionByCharacterIntent(
+            SingleActivator(
+              LogicalKeyboardKey.arrowLeft,
+            ): ExtendSelectionByCharacterIntent(
               forward: false,
               collapseSelection: true,
             ),
-            SingleActivator(LogicalKeyboardKey.arrowRight):
-                ExtendSelectionByCharacterIntent(
+            SingleActivator(
+              LogicalKeyboardKey.arrowRight,
+            ): ExtendSelectionByCharacterIntent(
               forward: true,
               collapseSelection: true,
             ),
@@ -554,8 +573,12 @@ class _DropdownMenuState<T> extends State<DropdownMenuChip<T>> {
           const EdgeInsets.only(
             left: double.infinity,
             right: double.infinity,
-          ).add(const EdgeInsetsDirectional.only(
-              end: double.infinity, start: double.infinity)),
+          ).add(
+            const EdgeInsetsDirectional.only(
+              end: double.infinity,
+              start: double.infinity,
+            ),
+          ),
         ),
         child: menuAnchor,
       );
@@ -574,12 +597,15 @@ class _DropdownMenuState<T> extends State<DropdownMenuChip<T>> {
 
     return Actions(
       actions: <Type, Action<Intent>>{
-        _ArrowUpIntent:
-            CallbackAction<_ArrowUpIntent>(onInvoke: handleUpKeyInvoke),
-        _ArrowDownIntent:
-            CallbackAction<_ArrowDownIntent>(onInvoke: handleDownKeyInvoke),
+        _ArrowUpIntent: CallbackAction<_ArrowUpIntent>(
+          onInvoke: handleUpKeyInvoke,
+        ),
+        _ArrowDownIntent: CallbackAction<_ArrowDownIntent>(
+          onInvoke: handleDownKeyInvoke,
+        ),
         _EnterIntent: CallbackAction<_EnterIntent>(
-            onInvoke: (_) => _handleEditingComplete()),
+          onInvoke: (_) => _handleEditingComplete(),
+        ),
       },
       child: Stack(
         alignment: Alignment.center,
@@ -632,7 +658,9 @@ class _DropdownMenuBody extends MultiChildRenderObjectWidget {
 
   @override
   void updateRenderObject(
-      BuildContext context, _RenderDropdownMenuBody renderObject) {}
+    BuildContext context,
+    _RenderDropdownMenuBody renderObject,
+  ) {}
 }
 
 class _DropdownMenuBodyParentData extends ContainerBoxParentData<RenderBox> {}
@@ -640,8 +668,10 @@ class _DropdownMenuBodyParentData extends ContainerBoxParentData<RenderBox> {}
 class _RenderDropdownMenuBody extends RenderBox
     with
         ContainerRenderObjectMixin<RenderBox, _DropdownMenuBodyParentData>,
-        RenderBoxContainerDefaultsMixin<RenderBox,
-            _DropdownMenuBodyParentData> {
+        RenderBoxContainerDefaultsMixin<
+          RenderBox,
+          _DropdownMenuBodyParentData
+        > {
   _RenderDropdownMenuBody();
 
   @override
@@ -659,8 +689,10 @@ class _RenderDropdownMenuBody extends RenderBox
     RenderBox? child = firstChild;
 
     final double intrinsicWidth = getMaxIntrinsicWidth(constraints.maxHeight);
-    final double widthConstraint =
-        math.min(intrinsicWidth, constraints.maxWidth);
+    final double widthConstraint = math.min(
+      intrinsicWidth,
+      constraints.maxWidth,
+    );
     final BoxConstraints innerConstraints = BoxConstraints(
       maxWidth: widthConstraint,
       maxHeight: getMaxIntrinsicHeight(widthConstraint),
@@ -705,8 +737,10 @@ class _RenderDropdownMenuBody extends RenderBox
     double? maxHeight;
     RenderBox? child = firstChild;
     final double intrinsicWidth = getMaxIntrinsicWidth(constraints.maxHeight);
-    final double widthConstraint =
-        math.min(intrinsicWidth, constraints.maxWidth);
+    final double widthConstraint = math.min(
+      intrinsicWidth,
+      constraints.maxWidth,
+    );
     final BoxConstraints innerConstraints = BoxConstraints(
       maxWidth: widthConstraint,
       maxHeight: getMaxIntrinsicHeight(widthConstraint),
@@ -851,11 +885,11 @@ class _RenderDropdownMenuBody extends RenderBox
 // Hand coded defaults. These will be updated once we have tokens/spec.
 class _DropdownMenuDefaultsM3 extends DropdownMenuThemeData {
   _DropdownMenuDefaultsM3(this.context)
-      : super(
-            disabledColor: Theme.of(context)
-                .colorScheme
-                .onSurface
-                .withValues(alpha: 0.38));
+    : super(
+        disabledColor: Theme.of(
+          context,
+        ).colorScheme.onSurface.withValues(alpha: 0.38),
+      );
 
   final BuildContext context;
   late final ThemeData _theme = Theme.of(context);

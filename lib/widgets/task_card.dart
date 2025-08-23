@@ -13,10 +13,7 @@ const _radius = Radius.circular(12.0);
 const _paddingValue = 15.0;
 
 class TaskCard extends StatelessWidget {
-  const TaskCard({
-    super.key,
-    required this.task,
-  });
+  const TaskCard({super.key, required this.task});
 
   final UserTask task;
 
@@ -54,7 +51,7 @@ class TaskCard extends StatelessWidget {
       :outlineVariant,
       :surfaceContainerLow,
       :primary,
-      :onPrimary
+      :onPrimary,
     ) = theme.colorScheme;
 
     final now = DateTime.now();
@@ -107,11 +104,7 @@ class TaskCard extends StatelessWidget {
         side: BorderSide(color: borderColor, width: borderWidth),
       ),
       color: backgroundColor,
-      child: _TaskCardContent(
-        task: task,
-        now: now,
-        borderWidth: borderWidth,
-      ),
+      child: _TaskCardContent(task: task, now: now, borderWidth: borderWidth),
     );
   }
 }
@@ -135,16 +128,21 @@ class _TaskCardContent extends StatelessWidget {
     final languageTag = Localizations.localeOf(context).toLanguageTag();
 
     final timeMessage = switch (task) {
-      UserTask(status: TaskStatus.active, :final endDate?) =>
-        context.tr("task_card_end", args: [
+      UserTask(status: TaskStatus.active, :final endDate?) => context.tr(
+        "task_card_end",
+        args: [
           endDate.relativeTime(context),
           formatDate(languageTag, now, endDate),
-        ]),
+        ],
+      ),
       UserTask(status: TaskStatus.pending, :final autoInsertDate?) =>
-        context.tr("task_card_start", args: [
-          autoInsertDate.relativeTime(context),
-          formatDate(languageTag, now, autoInsertDate),
-        ]),
+        context.tr(
+          "task_card_start",
+          args: [
+            autoInsertDate.relativeTime(context),
+            formatDate(languageTag, now, autoInsertDate),
+          ],
+        ),
       _ => null,
     };
 
@@ -165,10 +163,7 @@ class _TaskCardContent extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  task.title,
-                  style: theme.textTheme.labelLarge,
-                ),
+                Text(task.title, style: theme.textTheme.labelLarge),
                 if (task.description.isNotEmpty)
                   Text(
                     task.description,
@@ -193,7 +188,7 @@ class _TaskCardContent extends StatelessWidget {
                 curve: Curves.easeInOut,
                 borderRadius: const BorderRadius.vertical(top: _radius),
               ),
-            )
+            ),
         ],
       ),
     );

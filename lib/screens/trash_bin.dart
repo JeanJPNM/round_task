@@ -26,10 +26,12 @@ class TrashBinScreen extends ConsumerWidget {
                 final confirmed = await showDialog<bool>(
                   context: context,
                   builder: (context) => AlertDialog(
-                    title:
-                        Text(context.tr("trash_bin.clear_confirmation.title")),
+                    title: Text(
+                      context.tr("trash_bin.clear_confirmation.title"),
+                    ),
                     content: Text(
-                        context.tr("trash_bin.clear_confirmation.content")),
+                      context.tr("trash_bin.clear_confirmation.content"),
+                    ),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(false),
@@ -60,9 +62,7 @@ class TrashBinScreen extends ConsumerWidget {
         error: (error, stack) => Center(child: Text(error.toString())),
         data: (tasks) {
           if (tasks.isEmpty) {
-            return Center(
-              child: Text(context.tr("trash_bin.empty")),
-            );
+            return Center(child: Text(context.tr("trash_bin.empty")));
           }
           return CustomScrollView(
             slivers: [
@@ -81,7 +81,7 @@ class TrashBinScreen extends ConsumerWidget {
                   final task = tasks[index];
                   return TaskCard(task: task);
                 },
-              )
+              ),
             ].map((sliver) => SliverSafeArea(sliver: sliver)).toList(),
           );
         },

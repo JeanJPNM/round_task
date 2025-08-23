@@ -22,95 +22,96 @@ final class Schema2 extends i0.VersionedSchema {
     idxTimeMeasurementsEnd,
   ];
   late final Shape0 userTasks = Shape0(
-      source: i0.VersionedTable(
-        entityName: 'user_tasks',
-        withoutRowId: false,
-        isStrict: false,
-        tableConstraints: [],
-        columns: [
-          _column_0,
-          _column_1,
-          _column_2,
-          _column_3,
-          _column_4,
-          _column_5,
-          _column_6,
-          _column_7,
-          _column_8,
-          _column_9,
-          _column_10,
-          _column_11,
-          _column_12,
-          _column_13,
-        ],
-        attachedDatabase: database,
-      ),
-      alias: null);
+    source: i0.VersionedTable(
+      entityName: 'user_tasks',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: [],
+      columns: [
+        _column_0,
+        _column_1,
+        _column_2,
+        _column_3,
+        _column_4,
+        _column_5,
+        _column_6,
+        _column_7,
+        _column_8,
+        _column_9,
+        _column_10,
+        _column_11,
+        _column_12,
+        _column_13,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
   late final Shape1 subTasks = Shape1(
-      source: i0.VersionedTable(
-        entityName: 'sub_tasks',
-        withoutRowId: false,
-        isStrict: false,
-        tableConstraints: [],
-        columns: [
-          _column_0,
-          _column_14,
-          _column_1,
-          _column_15,
-          _column_16,
-        ],
-        attachedDatabase: database,
-      ),
-      alias: null);
+    source: i0.VersionedTable(
+      entityName: 'sub_tasks',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: [],
+      columns: [_column_0, _column_14, _column_1, _column_15, _column_16],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
   late final Shape2 timeMeasurements = Shape2(
-      source: i0.VersionedTable(
-        entityName: 'time_measurements',
-        withoutRowId: false,
-        isStrict: false,
-        tableConstraints: [],
-        columns: [
-          _column_0,
-          _column_14,
-          _column_17,
-          _column_18,
-        ],
-        attachedDatabase: database,
-      ),
-      alias: null);
+    source: i0.VersionedTable(
+      entityName: 'time_measurements',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: [],
+      columns: [_column_0, _column_14, _column_17, _column_18],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
   late final Shape3 appSettingsTable = Shape3(
-      source: i0.VersionedTable(
-        entityName: 'app_settings_table',
-        withoutRowId: false,
-        isStrict: false,
-        tableConstraints: [],
-        columns: [
-          _column_0,
-          _column_19,
-          _column_20,
-        ],
-        attachedDatabase: database,
-      ),
-      alias: null);
-  final i1.Index idxUserTasksStatus = i1.Index('idx_user_tasks_status',
-      'CREATE INDEX idx_user_tasks_status ON user_tasks (status)');
+    source: i0.VersionedTable(
+      entityName: 'app_settings_table',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: [],
+      columns: [_column_0, _column_19, _column_20],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  final i1.Index idxUserTasksStatus = i1.Index(
+    'idx_user_tasks_status',
+    'CREATE INDEX idx_user_tasks_status ON user_tasks (status)',
+  );
   final i1.Index idxUserTasksAutoInsertDate = i1.Index(
-      'idx_user_tasks_auto_insert_date',
-      'CREATE INDEX idx_user_tasks_auto_insert_date ON user_tasks (auto_insert_date)');
-  final i1.Index idxUserTasksDeletedAt = i1.Index('idx_user_tasks_deleted_at',
-      'CREATE INDEX idx_user_tasks_deleted_at ON user_tasks (deleted_at)');
+    'idx_user_tasks_auto_insert_date',
+    'CREATE INDEX idx_user_tasks_auto_insert_date ON user_tasks (auto_insert_date)',
+  );
+  final i1.Index idxUserTasksDeletedAt = i1.Index(
+    'idx_user_tasks_deleted_at',
+    'CREATE INDEX idx_user_tasks_deleted_at ON user_tasks (deleted_at)',
+  );
   final i1.Index idxUserTasksActiveTimeMeasurementStart = i1.Index(
-      'idx_user_tasks_active_time_measurement_start',
-      'CREATE INDEX idx_user_tasks_active_time_measurement_start ON user_tasks (active_time_measurement_start)');
-  final i1.Index idxSubTasksTaskId = i1.Index('idx_sub_tasks_task_id',
-      'CREATE INDEX idx_sub_tasks_task_id ON sub_tasks (task_id)');
+    'idx_user_tasks_active_time_measurement_start',
+    'CREATE INDEX idx_user_tasks_active_time_measurement_start ON user_tasks (active_time_measurement_start)',
+  );
+  final i1.Index idxSubTasksTaskId = i1.Index(
+    'idx_sub_tasks_task_id',
+    'CREATE INDEX idx_sub_tasks_task_id ON sub_tasks (task_id)',
+  );
   final i1.Index idxTimeMeasurementsTaskId = i1.Index(
-      'idx_time_measurements_task_id',
-      'CREATE INDEX idx_time_measurements_task_id ON time_measurements (task_id)');
+    'idx_time_measurements_task_id',
+    'CREATE INDEX idx_time_measurements_task_id ON time_measurements (task_id)',
+  );
   final i1.Index idxTimeMeasurementsStart = i1.Index(
-      'idx_time_measurements_start',
-      'CREATE INDEX idx_time_measurements_start ON time_measurements (start)');
-  final i1.Index idxTimeMeasurementsEnd = i1.Index('idx_time_measurements_end',
-      'CREATE INDEX idx_time_measurements_end ON time_measurements ("end")');
+    'idx_time_measurements_start',
+    'CREATE INDEX idx_time_measurements_start ON time_measurements (start)',
+  );
+  final i1.Index idxTimeMeasurementsEnd = i1.Index(
+    'idx_time_measurements_end',
+    'CREATE INDEX idx_time_measurements_end ON time_measurements ("end")',
+  );
 }
 
 class Shape0 extends i0.VersionedTable {
@@ -147,50 +148,107 @@ class Shape0 extends i0.VersionedTable {
 }
 
 i1.GeneratedColumn<int> _column_0(String aliasedName) =>
-    i1.GeneratedColumn<int>('id', aliasedName, false,
-        hasAutoIncrement: true,
-        type: i1.DriftSqlType.int,
-        defaultConstraints:
-            i1.GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+    i1.GeneratedColumn<int>(
+      'id',
+      aliasedName,
+      false,
+      hasAutoIncrement: true,
+      type: i1.DriftSqlType.int,
+      defaultConstraints: i1.GeneratedColumn.constraintIsAlways(
+        'PRIMARY KEY AUTOINCREMENT',
+      ),
+    );
 i1.GeneratedColumn<String> _column_1(String aliasedName) =>
-    i1.GeneratedColumn<String>('title', aliasedName, false,
-        type: i1.DriftSqlType.string);
+    i1.GeneratedColumn<String>(
+      'title',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.string,
+    );
 i1.GeneratedColumn<String> _column_2(String aliasedName) =>
-    i1.GeneratedColumn<String>('description', aliasedName, false,
-        type: i1.DriftSqlType.string);
+    i1.GeneratedColumn<String>(
+      'description',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.string,
+    );
 i1.GeneratedColumn<int> _column_3(String aliasedName) =>
-    i1.GeneratedColumn<int>('status', aliasedName, false,
-        type: i1.DriftSqlType.int);
+    i1.GeneratedColumn<int>(
+      'status',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.int,
+    );
 i1.GeneratedColumn<int> _column_4(String aliasedName) =>
-    i1.GeneratedColumn<int>('reference', aliasedName, true,
-        type: i1.DriftSqlType.int);
+    i1.GeneratedColumn<int>(
+      'reference',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.int,
+    );
 i1.GeneratedColumn<double> _column_5(String aliasedName) =>
-    i1.GeneratedColumn<double>('progress', aliasedName, true,
-        type: i1.DriftSqlType.double);
+    i1.GeneratedColumn<double>(
+      'progress',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.double,
+    );
 i1.GeneratedColumn<int> _column_6(String aliasedName) =>
-    i1.GeneratedColumn<int>('created_at', aliasedName, false,
-        type: i1.DriftSqlType.int);
+    i1.GeneratedColumn<int>(
+      'created_at',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.int,
+    );
 i1.GeneratedColumn<int> _column_7(String aliasedName) =>
-    i1.GeneratedColumn<int>('updated_by_user_at', aliasedName, false,
-        type: i1.DriftSqlType.int);
+    i1.GeneratedColumn<int>(
+      'updated_by_user_at',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.int,
+    );
 i1.GeneratedColumn<int> _column_8(String aliasedName) =>
-    i1.GeneratedColumn<int>('deleted_at', aliasedName, true,
-        type: i1.DriftSqlType.int);
+    i1.GeneratedColumn<int>(
+      'deleted_at',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.int,
+    );
 i1.GeneratedColumn<int> _column_9(String aliasedName) =>
-    i1.GeneratedColumn<int>('start_date', aliasedName, true,
-        type: i1.DriftSqlType.int);
+    i1.GeneratedColumn<int>(
+      'start_date',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.int,
+    );
 i1.GeneratedColumn<int> _column_10(String aliasedName) =>
-    i1.GeneratedColumn<int>('end_date', aliasedName, true,
-        type: i1.DriftSqlType.int);
+    i1.GeneratedColumn<int>(
+      'end_date',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.int,
+    );
 i1.GeneratedColumn<int> _column_11(String aliasedName) =>
-    i1.GeneratedColumn<int>('auto_insert_date', aliasedName, true,
-        type: i1.DriftSqlType.int);
+    i1.GeneratedColumn<int>(
+      'auto_insert_date',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.int,
+    );
 i1.GeneratedColumn<int> _column_12(String aliasedName) =>
-    i1.GeneratedColumn<int>('active_time_measurement_start', aliasedName, true,
-        type: i1.DriftSqlType.int);
+    i1.GeneratedColumn<int>(
+      'active_time_measurement_start',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.int,
+    );
 i1.GeneratedColumn<String> _column_13(String aliasedName) =>
-    i1.GeneratedColumn<String>('recurrence', aliasedName, true,
-        type: i1.DriftSqlType.string);
+    i1.GeneratedColumn<String>(
+      'recurrence',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.string,
+    );
 
 class Shape1 extends i0.VersionedTable {
   Shape1({required super.source, required super.alias}) : super.aliased();
@@ -207,18 +265,32 @@ class Shape1 extends i0.VersionedTable {
 }
 
 i1.GeneratedColumn<int> _column_14(String aliasedName) =>
-    i1.GeneratedColumn<int>('task_id', aliasedName, false,
-        type: i1.DriftSqlType.int,
-        defaultConstraints: i1.GeneratedColumn.constraintIsAlways(
-            'REFERENCES user_tasks (id) ON DELETE CASCADE'));
+    i1.GeneratedColumn<int>(
+      'task_id',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.int,
+      defaultConstraints: i1.GeneratedColumn.constraintIsAlways(
+        'REFERENCES user_tasks (id) ON DELETE CASCADE',
+      ),
+    );
 i1.GeneratedColumn<bool> _column_15(String aliasedName) =>
-    i1.GeneratedColumn<bool>('done', aliasedName, false,
-        type: i1.DriftSqlType.bool,
-        defaultConstraints:
-            i1.GeneratedColumn.constraintIsAlways('CHECK ("done" IN (0, 1))'));
+    i1.GeneratedColumn<bool>(
+      'done',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.bool,
+      defaultConstraints: i1.GeneratedColumn.constraintIsAlways(
+        'CHECK ("done" IN (0, 1))',
+      ),
+    );
 i1.GeneratedColumn<int> _column_16(String aliasedName) =>
-    i1.GeneratedColumn<int>('reference', aliasedName, false,
-        type: i1.DriftSqlType.int);
+    i1.GeneratedColumn<int>(
+      'reference',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.int,
+    );
 
 class Shape2 extends i0.VersionedTable {
   Shape2({required super.source, required super.alias}) : super.aliased();
@@ -233,11 +305,19 @@ class Shape2 extends i0.VersionedTable {
 }
 
 i1.GeneratedColumn<int> _column_17(String aliasedName) =>
-    i1.GeneratedColumn<int>('start', aliasedName, false,
-        type: i1.DriftSqlType.int);
+    i1.GeneratedColumn<int>(
+      'start',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.int,
+    );
 i1.GeneratedColumn<int> _column_18(String aliasedName) =>
-    i1.GeneratedColumn<int>('end', aliasedName, false,
-        type: i1.DriftSqlType.int);
+    i1.GeneratedColumn<int>(
+      'end',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.int,
+    );
 
 class Shape3 extends i0.VersionedTable {
   Shape3({required super.source, required super.alias}) : super.aliased();
@@ -250,11 +330,19 @@ class Shape3 extends i0.VersionedTable {
 }
 
 i1.GeneratedColumn<int> _column_19(String aliasedName) =>
-    i1.GeneratedColumn<int>('brightness', aliasedName, false,
-        type: i1.DriftSqlType.int);
+    i1.GeneratedColumn<int>(
+      'brightness',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.int,
+    );
 i1.GeneratedColumn<int> _column_20(String aliasedName) =>
-    i1.GeneratedColumn<int>('seed_color', aliasedName, true,
-        type: i1.DriftSqlType.int);
+    i1.GeneratedColumn<int>(
+      'seed_color',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.int,
+    );
 i0.MigrationStepWithVersion migrationSteps({
   required Future<void> Function(i1.Migrator m, Schema2 schema) from1To2,
 }) {
@@ -273,8 +361,6 @@ i0.MigrationStepWithVersion migrationSteps({
 
 i1.OnUpgrade stepByStep({
   required Future<void> Function(i1.Migrator m, Schema2 schema) from1To2,
-}) =>
-    i0.VersionedSchema.stepByStepHelper(
-        step: migrationSteps(
-      from1To2: from1To2,
-    ));
+}) => i0.VersionedSchema.stepByStepHelper(
+  step: migrationSteps(from1To2: from1To2),
+);

@@ -5,10 +5,7 @@ import 'package:flutter/widgets.dart';
 /// Provides a second ticker used by task cards to keep their
 /// relative time strings up to date.
 class SecondTickProvider extends StatefulWidget {
-  const SecondTickProvider({
-    super.key,
-    required this.child,
-  });
+  const SecondTickProvider({super.key, required this.child});
 
   final Widget child;
 
@@ -55,8 +52,5 @@ class _SecondNotifier extends ValueNotifier<int> {
 }
 
 class _SecondTick extends InheritedNotifier<_SecondNotifier> {
-  const _SecondTick({
-    required super.notifier,
-    required super.child,
-  });
+  const _SecondTick({required super.notifier, required super.child});
 }

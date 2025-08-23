@@ -31,17 +31,14 @@ class _EventData {
   final int taskId;
   final TimeMeasurement? measurement;
 
-  _EventData({
-    required this.title,
-    required this.taskId,
-    this.measurement,
-  });
+  _EventData({required this.title, required this.taskId, this.measurement});
 }
 
-final eventsControllerPod = NotifierProvider.autoDispose<
-    _EventsControllerNotifier, EventsController<_EventData>>(
-  _EventsControllerNotifier.new,
-);
+final eventsControllerPod =
+    NotifierProvider.autoDispose<
+      _EventsControllerNotifier,
+      EventsController<_EventData>
+    >(_EventsControllerNotifier.new);
 
 class _EventsControllerNotifier
     extends AutoDisposeNotifier<EventsController<_EventData>> {
@@ -54,56 +51,55 @@ class _EventsControllerNotifier
     final controller = DefaultEventsController<_EventData>();
     ref.onDispose(controller.dispose);
     final timer = Timer.periodic(
-        const Duration(seconds: 10), (_) => _updateActiveEvent());
-    ref.onDispose(timer.cancel);
-    ref.listen(
-      fireImmediately: true,
-      allTimeMeasurementsPod,
-      (previous, next) {
-        final prev = previous?.valueOrNull ?? [];
-        final nex = next.valueOrNull ?? [];
-        if (prev.isEmpty && nex.isEmpty) return;
-
-        for (final id in _loadedIds) {
-          controller.removeById(id);
-        }
-
-        _loadedIds = controller.addEvents([
-          for (final (:measurement, :title) in nex)
-            CalendarEvent(
-              canModify: false,
-              dateTimeRange: DateTimeRange(
-                start: measurement.start,
-                end: measurement.end,
-              ),
-              data: _EventData(
-                title: title,
-                measurement: measurement,
-                taskId: measurement.taskId,
-              ),
-            ),
-        ]);
-      },
+      const Duration(seconds: 10),
+      (_) => _updateActiveEvent(),
     );
+    ref.onDispose(timer.cancel);
+    ref.listen(fireImmediately: true, allTimeMeasurementsPod, (previous, next) {
+      final prev = previous?.valueOrNull ?? [];
+      final nex = next.valueOrNull ?? [];
+      if (prev.isEmpty && nex.isEmpty) return;
 
-    ref.listen(
-      fireImmediately: true,
-      currentlyTrackedTaskPod,
-      (previous, next) {
-        final task = next.valueOrNull;
-        if (_activeEventId case final id?) {
-          controller.removeById(id);
-        }
-        if (task == null) return;
+      for (final id in _loadedIds) {
+        controller.removeById(id);
+      }
 
-        final start = task.activeTimeMeasurementStart!;
-        _activeEventId = controller.addEvent(CalendarEvent(
+      _loadedIds = controller.addEvents([
+        for (final (:measurement, :title) in nex)
+          CalendarEvent(
+            canModify: false,
+            dateTimeRange: DateTimeRange(
+              start: measurement.start,
+              end: measurement.end,
+            ),
+            data: _EventData(
+              title: title,
+              measurement: measurement,
+              taskId: measurement.taskId,
+            ),
+          ),
+      ]);
+    });
+
+    ref.listen(fireImmediately: true, currentlyTrackedTaskPod, (
+      previous,
+      next,
+    ) {
+      final task = next.valueOrNull;
+      if (_activeEventId case final id?) {
+        controller.removeById(id);
+      }
+      if (task == null) return;
+
+      final start = task.activeTimeMeasurementStart!;
+      _activeEventId = controller.addEvent(
+        CalendarEvent(
           data: _EventData(title: task.title, taskId: task.id),
           dateTimeRange: DateTimeRange(start: start, end: DateTime.now()),
           canModify: false,
-        ));
-      },
-    );
+        ),
+      );
+    });
 
     return controller;
   }
@@ -199,21 +195,21 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
     final eventsController = ref.watch(eventsControllerPod);
     final viewConfiguration = switch (_viewMode) {
       _ViewMode.singleDay => MultiDayViewConfiguration.singleDay(
-          initialHeightPerMinute: 2,
-          firstDayOfWeek: DateTime.sunday,
-          initialTimeOfDay: TimeOfDay.now(),
-        ),
+        initialHeightPerMinute: 2,
+        firstDayOfWeek: DateTime.sunday,
+        initialTimeOfDay: TimeOfDay.now(),
+      ),
       _ViewMode.threeDays => MultiDayViewConfiguration.custom(
-          numberOfDays: 3,
-          firstDayOfWeek: DateTime.sunday,
-          initialHeightPerMinute: 2,
-          initialTimeOfDay: TimeOfDay.now(),
-        ),
+        numberOfDays: 3,
+        firstDayOfWeek: DateTime.sunday,
+        initialHeightPerMinute: 2,
+        initialTimeOfDay: TimeOfDay.now(),
+      ),
       _ViewMode.week => MultiDayViewConfiguration.week(
-          initialHeightPerMinute: 2,
-          firstDayOfWeek: DateTime.sunday,
-          initialTimeOfDay: TimeOfDay.now(),
-        ),
+        initialHeightPerMinute: 2,
+        firstDayOfWeek: DateTime.sunday,
+        initialTimeOfDay: TimeOfDay.now(),
+      ),
       _ViewMode.schedule => ScheduleViewConfiguration.continuous(),
     };
     return Scaffold(
@@ -379,15 +375,22 @@ ScheduleTileComponents<_EventData> _scheduleTileComponents({
         },
         title: Text(data.title),
         subtitle: Text(
-          context.tr("calendar_view.event_schedule_tile_subtitle", namedArgs: {
-            "start": DateFormat.Hm(locale.toLanguageTag()).format(event.start),
-            "end": DateFormat.Hm(locale.toLanguageTag()).format(event.end),
-            "duration": event.end.difference(event.start).pretty(
-                  locale: locale.durationLocale,
-                  tersity: DurationTersity.second,
-                  upperTersity: DurationTersity.hour,
-                )
-          }),
+          context.tr(
+            "calendar_view.event_schedule_tile_subtitle",
+            namedArgs: {
+              "start": DateFormat.Hm(
+                locale.toLanguageTag(),
+              ).format(event.start),
+              "end": DateFormat.Hm(locale.toLanguageTag()).format(event.end),
+              "duration": event.end
+                  .difference(event.start)
+                  .pretty(
+                    locale: locale.durationLocale,
+                    tersity: DurationTersity.second,
+                    upperTersity: DurationTersity.hour,
+                  ),
+            },
+          ),
         ),
       );
     },
@@ -621,28 +624,28 @@ class _CalendarZoomDetectorState extends State<_CalendarZoomDetector> {
   Widget build(BuildContext context) {
     return RawGestureDetector(
       gestures: {
-        AllowMultipleGestureRecognizer: GestureRecognizerFactoryWithHandlers<
-            AllowMultipleGestureRecognizer>(
-          AllowMultipleGestureRecognizer.new,
-          (instance) {
-            instance.onStart = (details) {
-              _yOffset = details.localFocalPoint.dy;
-              _previousScale = 0;
-              if (details.pointerCount <= 1) return;
-              lock.value = true;
-            };
-            instance.onEnd = (_) => lock.value = false;
-            instance.onUpdate = (details) {
-              if (details.pointerCount <= 1) return;
-              final height = heightPerMinute?.value;
-              if (height == null) return;
-              final delta = -(_previousScale - math.log(details.verticalScale));
-              _previousScale = math.log(details.verticalScale);
-              final newHeight = height + delta;
-              update(height, newHeight);
-            };
-          },
-        ),
+        AllowMultipleGestureRecognizer:
+            GestureRecognizerFactoryWithHandlers<
+              AllowMultipleGestureRecognizer
+            >(AllowMultipleGestureRecognizer.new, (instance) {
+              instance.onStart = (details) {
+                _yOffset = details.localFocalPoint.dy;
+                _previousScale = 0;
+                if (details.pointerCount <= 1) return;
+                lock.value = true;
+              };
+              instance.onEnd = (_) => lock.value = false;
+              instance.onUpdate = (details) {
+                if (details.pointerCount <= 1) return;
+                final height = heightPerMinute?.value;
+                if (height == null) return;
+                final delta =
+                    -(_previousScale - math.log(details.verticalScale));
+                _previousScale = math.log(details.verticalScale);
+                final newHeight = height + delta;
+                update(height, newHeight);
+              };
+            }),
       },
       child: Listener(
         onPointerHover: (event) => _yOffset = event.localPosition.dy,
@@ -759,19 +762,13 @@ class _DetailsSheet extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Expanded(
-                child: Text(
-                  data.title,
-                  style: theme.textTheme.headlineSmall,
-                ),
+                child: Text(data.title, style: theme.textTheme.headlineSmall),
               ),
               const SizedBox(width: 8),
               IconButton(
                 onPressed: () {
                   context.pop();
-                  context.push(
-                    "/task",
-                    extra: LazyTaskViewParams(data.taskId),
-                  );
+                  context.push("/task", extra: LazyTaskViewParams(data.taskId));
                 },
                 icon: Icon(
                   Icons.launch,

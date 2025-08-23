@@ -69,10 +69,10 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
   }
 
   Widget _buildTask(UserTask task) => SizedBox(
-        key: ValueKey(task.id),
-        width: double.infinity,
-        child: TaskCard(task: task),
-      );
+    key: ValueKey(task.id),
+    width: double.infinity,
+    child: TaskCard(task: task),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -137,39 +137,40 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
                 child: TabBarView(
                   controller: _tabController,
                   children: [
-                    Consumer(builder: (context, ref, child) {
-                      final queuedTasks =
-                          ref.watch(queuedTasksPod(_queuedTasksSorting));
-                      return queuedTasks.when(
-                        loading: () =>
-                            const Center(child: CircularProgressIndicator()),
-                        error: (error, stackTrace) => Center(
-                          child: Text(context.tr("general_error")),
-                        ),
-                        data: (tasks) => _QueuedTasksTab(
-                          sorting: _queuedTasksSorting,
-                          tasks: tasks,
-                          database: database,
-                          onSortingChanged: (sorting) {
-                            setState(() {
-                              _queuedTasksSorting = sorting;
-                            });
-                          },
-                        ),
-                      );
-                    }),
                     Consumer(
                       builder: (context, ref, child) {
-                        final pendingTasks =
-                            ref.watch(pendingTasksPod(_pendingTasksSorting));
+                        final queuedTasks = ref.watch(
+                          queuedTasksPod(_queuedTasksSorting),
+                        );
+                        return queuedTasks.when(
+                          loading: () =>
+                              const Center(child: CircularProgressIndicator()),
+                          error: (error, stackTrace) =>
+                              Center(child: Text(context.tr("general_error"))),
+                          data: (tasks) => _QueuedTasksTab(
+                            sorting: _queuedTasksSorting,
+                            tasks: tasks,
+                            database: database,
+                            onSortingChanged: (sorting) {
+                              setState(() {
+                                _queuedTasksSorting = sorting;
+                              });
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                    Consumer(
+                      builder: (context, ref, child) {
+                        final pendingTasks = ref.watch(
+                          pendingTasksPod(_pendingTasksSorting),
+                        );
 
                         return pendingTasks.when(
-                          loading: () => const Center(
-                            child: CircularProgressIndicator(),
-                          ),
-                          error: (error, stackTrace) => Center(
-                            child: Text(context.tr("general_error")),
-                          ),
+                          loading: () =>
+                              const Center(child: CircularProgressIndicator()),
+                          error: (error, stackTrace) =>
+                              Center(child: Text(context.tr("general_error"))),
                           data: (tasks) => _PendingTasksTab(
                             sorting: _pendingTasksSorting,
                             tasks: tasks,
@@ -187,12 +188,10 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
                         final archivedTasks = ref.watch(archivedTasksPod);
 
                         return archivedTasks.when(
-                          loading: () => const Center(
-                            child: CircularProgressIndicator(),
-                          ),
-                          error: (error, stackTrace) => Center(
-                            child: Text(context.tr("general_error")),
-                          ),
+                          loading: () =>
+                              const Center(child: CircularProgressIndicator()),
+                          error: (error, stackTrace) =>
+                              Center(child: Text(context.tr("general_error"))),
                           data: (tasks) => AnimatedReorderableListView(
                             key: const PageStorageKey("archivedTasks"),
                             padding: _listPadding,
@@ -207,7 +206,7 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
                           ),
                         );
                       },
-                    )
+                    ),
                   ],
                 ),
               ),
@@ -216,63 +215,57 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
         ),
       ),
       bottomNavigationBar: ValueListenableBuilder(
-          valueListenable: _currentIndex,
-          builder: (context, selectedIndex, child) {
-            return NavigationBar(
-              selectedIndex: selectedIndex,
-              onDestinationSelected: (value) {
-                _tabController.index = value;
-              },
-              destinations: [
-                Consumer(
-                  builder: (context, ref, child) {
-                    final queuedTasks =
-                        ref.watch(queuedTasksPod(_queuedTasksSorting));
+        valueListenable: _currentIndex,
+        builder: (context, selectedIndex, child) {
+          return NavigationBar(
+            selectedIndex: selectedIndex,
+            onDestinationSelected: (value) {
+              _tabController.index = value;
+            },
+            destinations: [
+              Consumer(
+                builder: (context, ref, child) {
+                  final queuedTasks = ref.watch(
+                    queuedTasksPod(_queuedTasksSorting),
+                  );
 
-                    final label = switch (queuedTasks) {
-                      AsyncData(value: List(isNotEmpty: true, :final length)) =>
-                        context.tr(
-                          "queued.amount",
-                          args: [length.toString()],
-                        ),
-                      _ => context.tr("queued.none"),
-                    };
+                  final label = switch (queuedTasks) {
+                    AsyncData(value: List(isNotEmpty: true, :final length)) =>
+                      context.tr("queued.amount", args: [length.toString()]),
+                    _ => context.tr("queued.none"),
+                  };
 
-                    return NavigationDestination(
-                      icon: const Icon(Icons.low_priority),
-                      label: label,
-                    );
-                  },
-                ),
-                Consumer(
-                  builder: (context, ref, child) {
-                    final pendingTasks =
-                        ref.watch(pendingTasksPod(_pendingTasksSorting));
+                  return NavigationDestination(
+                    icon: const Icon(Icons.low_priority),
+                    label: label,
+                  );
+                },
+              ),
+              Consumer(
+                builder: (context, ref, child) {
+                  final pendingTasks = ref.watch(
+                    pendingTasksPod(_pendingTasksSorting),
+                  );
 
-                    final label = switch (pendingTasks) {
-                      AsyncData(value: List(isNotEmpty: true, :final length)) =>
-                        context.tr(
-                          "pending.amount",
-                          args: [length.toString()],
-                        ),
-                      _ => context.tr("pending.none"),
-                    };
+                  final label = switch (pendingTasks) {
+                    AsyncData(value: List(isNotEmpty: true, :final length)) =>
+                      context.tr("pending.amount", args: [length.toString()]),
+                    _ => context.tr("pending.none"),
+                  };
 
-                    return NavigationDestination(
-                      icon: const Icon(Icons.pending_actions),
-                      label: label,
-                    );
-                  },
-                ),
-                Consumer(builder: (context, ref, child) {
+                  return NavigationDestination(
+                    icon: const Icon(Icons.pending_actions),
+                    label: label,
+                  );
+                },
+              ),
+              Consumer(
+                builder: (context, ref, child) {
                   final archivedTasks = ref.watch(archivedTasksPod);
 
                   final label = switch (archivedTasks) {
                     AsyncData(value: List(isNotEmpty: true, :final length)) =>
-                      context.tr(
-                        "archived.amount",
-                        args: [length.toString()],
-                      ),
+                      context.tr("archived.amount", args: [length.toString()]),
                     _ => context.tr("archived.none"),
                   };
 
@@ -280,10 +273,12 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
                     icon: const Icon(Icons.archive),
                     label: label,
                   );
-                }),
-              ],
-            );
-          }),
+                },
+              ),
+            ],
+          );
+        },
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           context.push(
@@ -340,10 +335,7 @@ class _QueuedTasksTabState extends State<_QueuedTasksTab>
             child: _SortingPicker(
               defaultSorting: null,
               sorting: sorting,
-              entries: [
-                TaskSorting.endDate,
-                TaskSorting.autoInsertDate,
-              ],
+              entries: [TaskSorting.endDate, TaskSorting.autoInsertDate],
               onSortingChanged: (value) {
                 widget.onSortingChanged?.call(value);
               },
@@ -412,10 +404,7 @@ class __PendingTasksTabState extends State<_PendingTasksTab>
                 }
               },
               sorting: sorting,
-              entries: [
-                TaskSorting.endDate,
-                TaskSorting.autoInsertDate,
-              ],
+              entries: [TaskSorting.endDate, TaskSorting.autoInsertDate],
             ),
           ),
         ),
@@ -498,46 +487,46 @@ class _TaskSearchViewState extends State<_TaskSearchView> {
     return ValueListenableBuilder(
       valueListenable: widget.searchController,
       builder: (context, value, child) {
-        return Consumer(builder: (context, ref, child) {
-          final filter = TaskFilter(
-            status: widget.statusFilter,
-            searchQuery: value.text,
-          );
-          final data = ref.watch(filteredTasksPod(filter));
-
-          if (data case AsyncError()) {
-            return Center(
-              child: Text(context.tr("general_error")),
+        return Consumer(
+          builder: (context, ref, child) {
+            final filter = TaskFilter(
+              status: widget.statusFilter,
+              searchQuery: value.text,
             );
-          }
+            final data = ref.watch(filteredTasksPod(filter));
 
-          final tasks = data.valueOrNull ?? _previousResults;
-          _previousResults = tasks;
+            if (data case AsyncError()) {
+              return Center(child: Text(context.tr("general_error")));
+            }
 
-          return Stack(
-            children: [
-              AnimatedOpacity(
-                opacity: data.isLoading ? 1.0 : 0.0,
-                duration: const Duration(milliseconds: 300),
-                child: const LinearProgressIndicator(),
-              ),
-              ListView.builder(
-                itemCount: tasks.length,
-                itemBuilder: (context, index) {
-                  final task = tasks[index];
-                  return _buildTask(task);
-                },
-              ),
-            ],
-          );
-        });
+            final tasks = data.valueOrNull ?? _previousResults;
+            _previousResults = tasks;
+
+            return Stack(
+              children: [
+                AnimatedOpacity(
+                  opacity: data.isLoading ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 300),
+                  child: const LinearProgressIndicator(),
+                ),
+                ListView.builder(
+                  itemCount: tasks.length,
+                  itemBuilder: (context, index) {
+                    final task = tasks[index];
+                    return _buildTask(task);
+                  },
+                ),
+              ],
+            );
+          },
+        );
       },
     );
   }
 }
 
 Widget _buildTask(UserTask task) => SizedBox(
-      key: ValueKey(task.id),
-      width: double.infinity,
-      child: TaskCard(task: task),
-    );
+  key: ValueKey(task.id),
+  width: double.infinity,
+  child: TaskCard(task: task),
+);

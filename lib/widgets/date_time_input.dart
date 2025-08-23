@@ -23,8 +23,8 @@ class DateTimeInput extends StatefulWidget {
     DateTime? firstDate,
     DateTime? lastDate,
     this.allowDelete = true,
-  })  : firstDate = firstDate ?? DateTime(2000),
-        lastDate = lastDate ?? DateTime(2100);
+  }) : firstDate = firstDate ?? DateTime(2000),
+       lastDate = lastDate ?? DateTime(2100);
   final DateTimeEditingController? controller;
   final Widget? label;
   final DateTime firstDate;
@@ -129,10 +129,7 @@ class _DateTimeInputState extends State<DateTimeInput> {
 
         return Wrap(
           crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            widget.label!,
-            input,
-          ],
+          children: [widget.label!, input],
         );
       },
     );

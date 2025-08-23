@@ -9,10 +9,7 @@ import 'package:round_task/screens/task_view.dart';
 import 'package:round_task/widgets/second_tick_provider.dart';
 
 class TimeTrackingBanner extends StatelessWidget {
-  const TimeTrackingBanner({
-    super.key,
-    required this.task,
-  });
+  const TimeTrackingBanner({super.key, required this.task});
 
   final UserTask task;
   @override
@@ -26,9 +23,7 @@ class TimeTrackingBanner extends StatelessWidget {
       onPressed: () {
         context.push("/task", extra: TaskViewParams(task));
       },
-      style: const ButtonStyle(
-        shape: WidgetStatePropertyAll(LinearBorder()),
-      ),
+      style: const ButtonStyle(shape: WidgetStatePropertyAll(LinearBorder())),
       child: SafeArea(
         bottom: false,
         minimum: const EdgeInsets.symmetric(horizontal: 6.0),
@@ -44,11 +39,8 @@ class TimeTrackingBanner extends StatelessWidget {
                 Text(formatDuration(duration)),
                 const VerticalDivider(),
                 Flexible(
-                  child: Text(
-                    task.title,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                )
+                  child: Text(task.title, overflow: TextOverflow.ellipsis),
+                ),
               ],
             ),
           ),
@@ -74,8 +66,9 @@ class TimeTrackingBannerShell extends ConsumerWidget {
 
   Widget _buildBanner(BuildContext context, UserTask task) {
     final colorScheme = Theme.of(context).colorScheme;
-    final statusBarBrightness =
-        ThemeData.estimateBrightnessForColor(colorScheme.onPrimary);
+    final statusBarBrightness = ThemeData.estimateBrightnessForColor(
+      colorScheme.onPrimary,
+    );
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
@@ -193,9 +186,7 @@ class __AnimatedBannerShellState extends State<_AnimatedBannerShell>
               final value = 1 - _animation.value;
               return MediaQuery(
                 data: data.copyWith(
-                  padding: data.padding.copyWith(
-                    top: data.padding.top * value,
-                  ),
+                  padding: data.padding.copyWith(top: data.padding.top * value),
                   viewPadding: data.viewPadding.copyWith(
                     top: data.viewPadding.top * value,
                   ),

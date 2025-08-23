@@ -45,9 +45,9 @@ class TaskViewScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final (task, subTasks) = switch (params.task) {
       final task? => (
-          ref.watch(taskByIdPod(task.id)).valueOrNull ?? task,
-          ref.watch(taskSubTasksPod(task.id)),
-        ),
+        ref.watch(taskByIdPod(task.id)).valueOrNull ?? task,
+        ref.watch(taskSubTasksPod(task.id)),
+      ),
       _ => (null, const AsyncData(<SubTask>[])),
     };
 
@@ -62,20 +62,18 @@ class TaskViewScreen extends ConsumerWidget {
 }
 
 class LazyTaskViewScreen extends ConsumerWidget {
-  const LazyTaskViewScreen({
-    super.key,
-    required this.params,
-  });
+  const LazyTaskViewScreen({super.key, required this.params});
 
   final LazyTaskViewParams params;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return ref.watch(taskByIdPod(params.taskId)).when(
+    return ref
+        .watch(taskByIdPod(params.taskId))
+        .when(
           data: (task) => TaskViewScreen(params: TaskViewParams(task)),
-          error: (error, stackTrace) => Scaffold(
-            body: Center(child: Text(error.toString())),
-          ),
+          error: (error, stackTrace) =>
+              Scaffold(body: Center(child: Text(error.toString()))),
           loading: () =>
               const Scaffold(body: Center(child: CircularProgressIndicator())),
         );
@@ -136,13 +134,11 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
       recurrenceRule = task.recurrence;
     }
 
-    _subTasksController.setSubTasks(
-      widget.subTasksValue.valueOrNull ?? [],
-    );
+    _subTasksController.setSubTasks(widget.subTasksValue.valueOrNull ?? []);
     positionController.value =
         task?.status == TaskStatus.active || widget.addToQueue
-            ? QueueInsertionPosition.preferred
-            : null;
+        ? QueueInsertionPosition.preferred
+        : null;
     lockTaskInQueue = task?.autoInsertDate?.isBefore(DateTime.now()) ?? false;
 
     Listenable.merge([startDateController, endDateController]).addListener(() {
@@ -235,8 +231,9 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
       createdAt: task?.createdAt ?? now,
       updatedByUserAt: now,
       reference: Value.absentIfNull(task?.reference),
-      deletedAt:
-          restore ? const Value(null) : Value.absentIfNull(task?.deletedAt),
+      deletedAt: restore
+          ? const Value(null)
+          : Value.absentIfNull(task?.deletedAt),
     );
   }
 
@@ -249,10 +246,10 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
     final (:startDate, :endDate, :recurrence) = switch (markAsDone) {
       true => _getNextOccurrence(),
       false => (
-          startDate: startDateController.value,
-          endDate: endDateController.value,
-          recurrence: recurrenceRule,
-        ),
+        startDate: startDateController.value,
+        endDate: endDateController.value,
+        recurrence: recurrenceRule,
+      ),
     };
     final hasAutoInsertDate = (startDate, endDate) != (null, null);
 
@@ -294,11 +291,8 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
     };
   }
 
-  ({
-    DateTime? startDate,
-    DateTime? endDate,
-    RecurrenceRule? recurrence,
-  }) _getNextOccurrence() {
+  ({DateTime? startDate, DateTime? endDate, RecurrenceRule? recurrence})
+  _getNextOccurrence() {
     final startDate = startDateController.value;
     final endDate = endDateController.value;
     final recurrence = recurrenceRule;
@@ -308,8 +302,9 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
         final newStart = _nextDate(recurrence, startDate);
 
         final newEnd = switch ((newStart, endDate)) {
-          (final newStart?, final endDate?) =>
-            newStart.add(endDate.difference(startDate)),
+          (final newStart?, final endDate?) => newStart.add(
+            endDate.difference(startDate),
+          ),
           _ => null,
         };
 
@@ -322,7 +317,7 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
         return (
           startDate: newStart,
           endDate: newEnd,
-          recurrence: newRecurrence
+          recurrence: newRecurrence,
         );
       case (null, final endDate?, final recurrence?):
         final newEnd = _nextDate(recurrence, endDate);
@@ -340,15 +335,17 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
   }
 
   void _onRemoveSubTask(_SubTaskController controller) {
-    childScaffoldMessenger.showSnackBar(SnackBar(
-      content: Text(context.tr('subtask_deleted')),
-      action: SnackBarAction(
-        label: context.tr('undo'),
-        onPressed: () {
-          _subTasksController.markAsActive(controller);
-        },
+    childScaffoldMessenger.showSnackBar(
+      SnackBar(
+        content: Text(context.tr('subtask_deleted')),
+        action: SnackBarAction(
+          label: context.tr('undo'),
+          onPressed: () {
+            _subTasksController.markAsActive(controller);
+          },
+        ),
       ),
-    ));
+    );
   }
 
   TaskEditAction? _getTaskEditAction() {
@@ -374,9 +371,7 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
       key: scaffoldMessengerKey,
       child: Scaffold(
         appBar: AppBar(
-          title: Text(context.tr(
-            isCreatingTask ? "create_task" : "edit_task",
-          )),
+          title: Text(context.tr(isCreatingTask ? "create_task" : "edit_task")),
           actions: [
             if (task case UserTask(deletedAt: null))
               IconButton(
@@ -413,12 +408,14 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
                     builder: (context) {
                       return AlertDialog(
                         title: Text(
-                          context
-                              .tr("delete_task_permanently_confirmation.title"),
+                          context.tr(
+                            "delete_task_permanently_confirmation.title",
+                          ),
                         ),
                         content: Text(
                           context.tr(
-                              "delete_task_permanently_confirmation.content"),
+                            "delete_task_permanently_confirmation.content",
+                          ),
                         ),
                         actions: [
                           TextButton(
@@ -460,8 +457,9 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
                       autofocus: widget.focusTitle,
                       focusNode: titleFocusNode,
                       controller: titleController,
-                      decoration:
-                          InputDecoration(labelText: context.tr("title")),
+                      decoration: InputDecoration(
+                        labelText: context.tr("title"),
+                      ),
                       keyboardType: TextInputType.multiline,
                       maxLines: null,
                       textInputAction: TextInputAction.done,
@@ -517,9 +515,13 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
                                   recurrenceRule = rule;
                                 });
                               },
-                              child: Text(context.tr(recurrenceRule == null
-                                  ? "add_recurrence"
-                                  : "edit_recurrence")),
+                              child: Text(
+                                context.tr(
+                                  recurrenceRule == null
+                                      ? "add_recurrence"
+                                      : "edit_recurrence",
+                                ),
+                              ),
                             ),
                             if (recurrenceRule != null)
                               IconButton(
@@ -553,17 +555,18 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
                             Expanded(
                               flex: 4,
                               child: _TimeMeasurementButton(
-                                  task: task,
-                                  database: database,
-                                  style: const ButtonStyle(
-                                    shape: WidgetStatePropertyAll(
-                                      RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.horizontal(
-                                          left: buttonRadius,
-                                        ),
+                                task: task,
+                                database: database,
+                                style: const ButtonStyle(
+                                  shape: WidgetStatePropertyAll(
+                                    RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.horizontal(
+                                        left: buttonRadius,
                                       ),
                                     ),
-                                  )),
+                                  ),
+                                ),
+                              ),
                             ),
                             const SizedBox(width: 2),
                             Expanded(
@@ -587,7 +590,7 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
                                 ),
                                 icon: const Icon(Icons.history),
                               ),
-                            )
+                            ),
                           ],
                         ),
                       ),
@@ -629,27 +632,34 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () async {
-                        final undo = await _save(database, extra: [
-                          if (_getTaskEditAction() case final action?) action,
-                        ]);
+                        final undo = await _save(
+                          database,
+                          extra: [
+                            if (_getTaskEditAction() case final action?) action,
+                          ],
+                        );
                         if (!context.mounted) return;
                         context.pop();
 
                         if (undo == null) return;
 
-                        parentScaffoldMessenger.showSnackBar(SnackBar(
-                          content: Text(context.tr("task_saved")),
-                          action: SnackBarAction(
-                            label: context.tr("undo"),
-                            onPressed: undo,
+                        parentScaffoldMessenger.showSnackBar(
+                          SnackBar(
+                            content: Text(context.tr("task_saved")),
+                            action: SnackBarAction(
+                              label: context.tr("undo"),
+                              onPressed: undo,
+                            ),
                           ),
-                        ));
+                        );
                       },
                       child: Text(context.tr("save")),
                     ),
                   ),
-                if (originalTask
-                    case UserTask(deletedAt: null, status: TaskStatus.active))
+                if (originalTask case UserTask(
+                  deletedAt: null,
+                  status: TaskStatus.active,
+                ))
                   Expanded(
                     child: FilledButton(
                       onPressed: () async {
@@ -663,13 +673,15 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
                         context.pop();
 
                         if (undo == null) return;
-                        parentScaffoldMessenger.showSnackBar(SnackBar(
-                          content: Text(context.tr("task_done")),
-                          action: SnackBarAction(
-                            label: context.tr("undo"),
-                            onPressed: undo,
+                        parentScaffoldMessenger.showSnackBar(
+                          SnackBar(
+                            content: Text(context.tr("task_done")),
+                            action: SnackBarAction(
+                              label: context.tr("undo"),
+                              onPressed: undo,
+                            ),
                           ),
-                        ));
+                        );
                       },
                       child: Text(context.tr("done")),
                     ),
@@ -683,13 +695,15 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
                         context.pop();
 
                         if (undo == null) return;
-                        parentScaffoldMessenger.showSnackBar(SnackBar(
-                          content: Text(context.tr("task_restored")),
-                          action: SnackBarAction(
-                            label: context.tr("undo"),
-                            onPressed: undo,
+                        parentScaffoldMessenger.showSnackBar(
+                          SnackBar(
+                            content: Text(context.tr("task_restored")),
+                            action: SnackBarAction(
+                              label: context.tr("undo"),
+                              onPressed: undo,
+                            ),
                           ),
-                        ));
+                        );
                       },
                       child: Text(context.tr("restore")),
                     ),
@@ -773,20 +787,22 @@ class _SubTasksSliverState extends State<_SubTasksSliver> {
                       controller: controller,
                       onDelete: () => _removeSubTask(controller),
                     ),
-                  )
+                  ),
               ],
             );
           },
         ),
-        SliverList.list(children: [
-          TextButton(
-            onPressed: _addSubTask,
-            child: Text(context.tr("add_subtask")),
-          ),
-          const SizedBox(height: 8),
-          const Divider(),
-          const SizedBox(height: 8),
-        ])
+        SliverList.list(
+          children: [
+            TextButton(
+              onPressed: _addSubTask,
+              child: Text(context.tr("add_subtask")),
+            ),
+            const SizedBox(height: 8),
+            const Divider(),
+            const SizedBox(height: 8),
+          ],
+        ),
       ],
     );
   }
@@ -862,8 +878,9 @@ class __QueuePositionPickerState extends State<_QueuePositionPicker> {
               ? null
               : (value) {
                   setState(() {
-                    widget.controller.value =
-                        value ? QueueInsertionPosition.preferred : null;
+                    widget.controller.value = value
+                        ? QueueInsertionPosition.preferred
+                        : null;
                   });
                 },
         ),
@@ -916,8 +933,10 @@ class _SubTasksController extends ChangeNotifier {
 
   List<SubTasksCompanion> toCompanions({bool resetDone = false}) =>
       activeControllers
-          .mapIndexed((index, controller) =>
-              controller.toCompanion(index, resetDone: resetDone))
+          .mapIndexed(
+            (index, controller) =>
+                controller.toCompanion(index, resetDone: resetDone),
+          )
           .toList();
 
   void setSubTasks(List<SubTask> subTasks) {
@@ -976,11 +995,7 @@ class _SubTasksController extends ChangeNotifier {
 }
 
 class _SubTaskController {
-  _SubTaskController({
-    this.id,
-    required String title,
-    required bool done,
-  }) {
+  _SubTaskController({this.id, required String title, required bool done}) {
     textController.value = title;
     doneController.value = done;
   }
@@ -1010,17 +1025,18 @@ class _SubTaskController {
     void Function()? onDelete,
   }) async {
     final newText = await showModalBottomSheet<String>(
-        isScrollControlled: true,
-        context: context,
-        builder: (context) {
-          return BottomSheetSafeArea(
-            basePadding: const EdgeInsets.all(15.0),
-            child: _SubTaskEditor(
-              initialTitle: textController.value,
-              onDelete: onDelete,
-            ),
-          );
-        });
+      isScrollControlled: true,
+      context: context,
+      builder: (context) {
+        return BottomSheetSafeArea(
+          basePadding: const EdgeInsets.all(15.0),
+          child: _SubTaskEditor(
+            initialTitle: textController.value,
+            onDelete: onDelete,
+          ),
+        );
+      },
+    );
 
     if (newText != null) {
       textController.value = newText;
@@ -1031,10 +1047,7 @@ class _SubTaskController {
 }
 
 class _SubTaskCard extends StatefulWidget {
-  const _SubTaskCard({
-    required this.controller,
-    required this.onDelete,
-  });
+  const _SubTaskCard({required this.controller, required this.onDelete});
 
   final void Function() onDelete;
   final _SubTaskController controller;
@@ -1049,10 +1062,8 @@ class _SubTaskCardState extends State<_SubTaskCard> {
     final titleController = widget.controller.textController;
 
     return ListTile(
-      onTap: () => widget.controller.openView(
-        context,
-        onDelete: widget.onDelete,
-      ),
+      onTap: () =>
+          widget.controller.openView(context, onDelete: widget.onDelete),
       leading: ValueListenableBuilder(
         valueListenable: doneController,
         builder: (context, value, child) {
@@ -1073,10 +1084,7 @@ class _SubTaskCardState extends State<_SubTaskCard> {
 }
 
 class _SubTaskEditor extends StatefulWidget {
-  const _SubTaskEditor({
-    required this.initialTitle,
-    this.onDelete,
-  });
+  const _SubTaskEditor({required this.initialTitle, this.onDelete});
 
   final String initialTitle;
   final void Function()? onDelete;
@@ -1127,9 +1135,7 @@ class _SubTaskEditorState extends State<_SubTaskEditor> {
           keyboardType: TextInputType.multiline,
           maxLines: null,
           textInputAction: TextInputAction.done,
-          inputFormatters: [
-            FilteringTextInputFormatter.singleLineFormatter,
-          ],
+          inputFormatters: [FilteringTextInputFormatter.singleLineFormatter],
         ),
         const SizedBox(height: 16),
         Row(
@@ -1214,10 +1220,7 @@ class _TimeMeasurementButtonState extends State<_TimeMeasurementButton> {
     final offsetAnimation = animation.drive(tween);
     return FadeTransition(
       opacity: animation,
-      child: SlideTransition(
-        position: offsetAnimation,
-        child: child,
-      ),
+      child: SlideTransition(position: offsetAnimation, child: child),
     );
   }
 
@@ -1237,21 +1240,18 @@ class _TimeMeasurementButtonState extends State<_TimeMeasurementButton> {
         transitionBuilder: _buildTransition,
         duration: _duration,
         child: switch (start) {
-          null => Text(
-              key: _startKey,
-              context.tr("start_time_measurement"),
-            ),
+          null => Text(key: _startKey, context.tr("start_time_measurement")),
           _ => IntrinsicHeight(
-              key: _stopKey,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(formatDuration(now.difference(start))),
-                  const VerticalDivider(),
-                  Flexible(child: Text(context.tr("stop_time_measurement")))
-                ],
-              ),
+            key: _stopKey,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(formatDuration(now.difference(start))),
+                const VerticalDivider(),
+                Flexible(child: Text(context.tr("stop_time_measurement"))),
+              ],
             ),
+          ),
         },
       ),
     );
@@ -1274,7 +1274,9 @@ DateTime? _nextDate(RecurrenceRule rule, DateTime date) {
 }
 
 int _mapSubtaskIndex(
-    int relativeIndex, List<_SubTaskController> subTaskControllers) {
+  int relativeIndex,
+  List<_SubTaskController> subTaskControllers,
+) {
   var lastValidIndex = 0;
   var count = 0;
 

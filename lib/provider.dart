@@ -41,10 +41,7 @@ final _innerPendingTasksPod = StreamProvider((ref) {
   return database.getPendingTasksStream();
 });
 
-final pendingTasksPod = Provider.family.autoDispose((
-  ref,
-  TaskSorting sorting,
-) {
+final pendingTasksPod = Provider.family.autoDispose((ref, TaskSorting sorting) {
   final tasks = ref.watch(_innerPendingTasksPod);
 
   // tasks already come sorted by creation date
@@ -84,24 +81,26 @@ final filteredTasksPod = StreamProvider.family.autoDispose((
   return database.searchTasks(filter.status, filter.searchQuery).watch();
 });
 
-final taskByIdPod =
-    StreamProvider.autoDispose.family<db.UserTask?, int>((ref, taskId) {
+final taskByIdPod = StreamProvider.autoDispose.family<db.UserTask?, int>((
+  ref,
+  taskId,
+) {
   final db = ref.watch(databasePod);
   return db.getTaskById(taskId).watchSingleOrNull();
 });
 
-final taskSubTasksPod =
-    StreamProvider.autoDispose.family<List<db.SubTask>, int>((ref, taskId) {
-  final database = ref.watch(databasePod);
-  return database.getSubTasks(taskId).watch();
-});
+final taskSubTasksPod = StreamProvider.autoDispose
+    .family<List<db.SubTask>, int>((ref, taskId) {
+      final database = ref.watch(databasePod);
+      return database.getSubTasks(taskId).watch();
+    });
 
 final taskTimeMeasurementsPod = StreamProvider.autoDispose
     .family<List<db.TimeMeasurement>, int>((ref, taskId) {
-  final database = ref.watch(databasePod);
+      final database = ref.watch(databasePod);
 
-  return database.getTaskTimeMeasurements(taskId).watch();
-});
+      return database.getTaskTimeMeasurements(taskId).watch();
+    });
 
 final allTimeMeasurementsPod = StreamProvider.autoDispose((ref) {
   final database = ref.watch(databasePod);
@@ -117,10 +116,7 @@ final appSettingsPod = StreamProvider.autoDispose((ref) {
 
 @immutable
 class TaskFilter {
-  const TaskFilter({
-    required this.status,
-    required this.searchQuery,
-  });
+  const TaskFilter({required this.status, required this.searchQuery});
 
   final db.TaskStatus status;
   final String searchQuery;
@@ -161,10 +157,9 @@ int _compareNullableDatetime(DateTime? a, DateTime? b) {
 
 extension on AsyncData<List<db.UserTask>> {
   AsyncData<List<db.UserTask>> applySorting(TaskSorting sorting) {
-    return AsyncData(value.sortedByCompare(
-      sorting._keyOf,
-      _compareNullableDatetime,
-    ));
+    return AsyncData(
+      value.sortedByCompare(sorting._keyOf, _compareNullableDatetime),
+    );
   }
 }
 

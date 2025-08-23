@@ -68,7 +68,7 @@ void main() {
       updatedByUserAt: DateTime.now(),
     );
     final insertedTask = await db.writeTask(task);
-    await db.softDeleteTask(insertedTask);
+    await db.writeTask(insertedTask, [SoftDeleteTask(DateTime.now())]);
 
     // 2. Verify the task is soft-deleted
     final deletedTask = await (db.select(db.userTasks)
@@ -77,7 +77,7 @@ void main() {
     expect(deletedTask.deletedAt, isNotNull);
 
     // 3. Undo the soft-delete
-    await db.undoSoftDeleteTask(deletedTask);
+    await db.writeTask(deletedTask, [const UndoSoftDeleteTask()]);
 
     // 4. Verify the task is restored
     final restoredTask = await (db.select(db.userTasks)
@@ -390,7 +390,7 @@ void main() {
     ]);
 
     // 2. Soft-delete the task
-    await db.softDeleteTask(insertedTask);
+    await db.writeTask(insertedTask, [SoftDeleteTask(DateTime.now())]);
 
     // 3. Verify the time measurement is not returned in getAllTimeMeasurements
     final measurements = await db.getAllTimeMeasurements().get();

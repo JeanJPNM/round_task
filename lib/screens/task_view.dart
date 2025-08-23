@@ -205,6 +205,7 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
 
   UserTasksCompanion _getTaskCompanion({
     bool done = false,
+    bool restore = false,
     double? progress,
     DateTime? startDate,
     DateTime? endDate,
@@ -234,13 +235,15 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
       createdAt: task?.createdAt ?? now,
       updatedByUserAt: now,
       reference: Value.absentIfNull(task?.reference),
-      deletedAt: Value.absentIfNull(task?.deletedAt),
+      deletedAt:
+          restore ? const Value(null) : Value.absentIfNull(task?.deletedAt),
     );
   }
 
   Future<Future<void> Function()?> _save(
     AppDatabase db, {
     bool markAsDone = false,
+    bool restoreTask = false,
     List<TaskEditAction> extra = const [],
   }) async {
     final (:startDate, :endDate, :recurrence) = switch (markAsDone) {
@@ -264,6 +267,7 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
 
     final taskCompanion = _getTaskCompanion(
       done: markAsDone,
+      restore: restoreTask,
       progress: progress,
       startDate: startDate,
       endDate: endDate,
@@ -374,10 +378,14 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
             isCreatingTask ? "create_task" : "edit_task",
           )),
           actions: [
-            if (originalTask != null)
+            if (task case UserTask(deletedAt: null))
               IconButton(
                 onPressed: () async {
-                  await database.softDeleteTask(originalTask);
+                  final reference = DateTime.now();
+                  await database.writeTask(task, [
+                    StopTimeMeasurement(reference),
+                    SoftDeleteTask(reference),
+                  ]);
 
                   if (!context.mounted) return;
                   parentScaffoldMessenger.showSnackBar(
@@ -385,14 +393,58 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
                       content: Text(context.tr("task_deleted")),
                       action: SnackBarAction(
                         label: context.tr("undo"),
-                        onPressed: () =>
-                            database.undoSoftDeleteTask(originalTask),
+                        onPressed: () => database.writeTask(task, [
+                          const UndoSoftDeleteTask(),
+                          if (task.activeTimeMeasurementStart case final start?)
+                            UndoStopTimeMeasurement(start),
+                        ]),
                       ),
                     ),
                   );
                   context.pop();
                 },
                 icon: const Icon(Icons.delete),
+              ),
+            if (task case UserTask(deletedAt: _?))
+              IconButton(
+                onPressed: () async {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (context) {
+                      return AlertDialog(
+                        title: Text(
+                          context
+                              .tr("delete_task_permanently_confirmation.title"),
+                        ),
+                        content: Text(
+                          context.tr(
+                              "delete_task_permanently_confirmation.content"),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(false),
+                            child: Text(context.tr("cancel")),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(true),
+                            child: Text(context.tr("confirm")),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                  if (confirmed != true) return;
+                  await database.deleteTask(task);
+
+                  if (!context.mounted) return;
+                  parentScaffoldMessenger.showSnackBar(
+                    SnackBar(
+                      content: Text(context.tr("task_deleted_permanently")),
+                    ),
+                  );
+                  context.pop();
+                },
+                icon: const Icon(Icons.delete_forever),
               ),
           ],
         ),
@@ -570,57 +622,80 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
         bottomNavigationBar: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(8),
-            child: Row(children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () async {
-                    final undo = await _save(database, extra: [
-                      if (_getTaskEditAction() case final action?) action,
-                    ]);
-                    if (!context.mounted) return;
-                    context.pop();
+            child: Row(
+              spacing: 8,
+              children: [
+                if (originalTask case null || UserTask(deletedAt: null))
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        final undo = await _save(database, extra: [
+                          if (_getTaskEditAction() case final action?) action,
+                        ]);
+                        if (!context.mounted) return;
+                        context.pop();
 
-                    if (undo == null) return;
+                        if (undo == null) return;
 
-                    parentScaffoldMessenger.showSnackBar(SnackBar(
-                      content: Text(context.tr("task_saved")),
-                      action: SnackBarAction(
-                        label: context.tr("undo"),
-                        onPressed: undo,
-                      ),
-                    ));
-                  },
-                  child: Text(context.tr("save")),
-                ),
-              ),
-              if (originalTask?.status == TaskStatus.active) ...[
-                const SizedBox(width: 8),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: () async {
-                      final undo = await _save(
-                        database,
-                        markAsDone: true,
-                        extra: [StopTimeMeasurement(DateTime.now())],
-                      );
-
-                      if (!context.mounted) return;
-                      context.pop();
-
-                      if (undo == null) return;
-                      parentScaffoldMessenger.showSnackBar(SnackBar(
-                        content: Text(context.tr("task_done")),
-                        action: SnackBarAction(
-                          label: context.tr("undo"),
-                          onPressed: undo,
-                        ),
-                      ));
-                    },
-                    child: Text(context.tr("done")),
+                        parentScaffoldMessenger.showSnackBar(SnackBar(
+                          content: Text(context.tr("task_saved")),
+                          action: SnackBarAction(
+                            label: context.tr("undo"),
+                            onPressed: undo,
+                          ),
+                        ));
+                      },
+                      child: Text(context.tr("save")),
+                    ),
                   ),
-                ),
+                if (originalTask
+                    case UserTask(deletedAt: null, status: TaskStatus.active))
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () async {
+                        final undo = await _save(
+                          database,
+                          markAsDone: true,
+                          extra: [StopTimeMeasurement(DateTime.now())],
+                        );
+
+                        if (!context.mounted) return;
+                        context.pop();
+
+                        if (undo == null) return;
+                        parentScaffoldMessenger.showSnackBar(SnackBar(
+                          content: Text(context.tr("task_done")),
+                          action: SnackBarAction(
+                            label: context.tr("undo"),
+                            onPressed: undo,
+                          ),
+                        ));
+                      },
+                      child: Text(context.tr("done")),
+                    ),
+                  ),
+                if (originalTask case UserTask(deletedAt: _?))
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () async {
+                        final undo = await _save(database, restoreTask: true);
+                        if (!context.mounted) return;
+                        context.pop();
+
+                        if (undo == null) return;
+                        parentScaffoldMessenger.showSnackBar(SnackBar(
+                          content: Text(context.tr("task_restored")),
+                          action: SnackBarAction(
+                            label: context.tr("undo"),
+                            onPressed: undo,
+                          ),
+                        ));
+                      },
+                      child: Text(context.tr("restore")),
+                    ),
+                  ),
               ],
-            ]),
+            ),
           ),
         ),
       ),

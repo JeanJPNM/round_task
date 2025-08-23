@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:round_task/db/db.dart';
 import 'package:round_task/provider.dart';
+import 'package:round_task/widgets/app_drawer.dart';
 import 'package:round_task/widgets/bottom_sheet_safe_area.dart';
 import 'package:round_task/widgets/select_dropdown.dart';
 
@@ -95,6 +96,7 @@ class _AppSettingsState extends ConsumerState<SettingsScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: const AppDrawerButton(),
         title: Text(context.tr("settings")),
       ),
       body: settings.when(

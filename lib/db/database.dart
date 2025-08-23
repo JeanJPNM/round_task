@@ -203,6 +203,15 @@ class RemoveTaskFromQueue extends TaskEditAction {
   const RemoveTaskFromQueue();
 }
 
+class SoftDeleteTask extends TaskEditAction {
+  const SoftDeleteTask(this.deletedAt);
+  final DateTime deletedAt;
+}
+
+class UndoSoftDeleteTask extends TaskEditAction {
+  const UndoSoftDeleteTask();
+}
+
 class PutSubTasks extends TaskEditAction {
   PutSubTasks(this.subTasks);
 
@@ -321,6 +330,13 @@ class AppDatabase extends _$AppDatabase {
         .watch();
   }
 
+  Stream<List<UserTask>> getSoftDeletedTasksStream() async* {
+    yield* (select(userTasks)
+          ..where((t) => t.deletedAt.isNotNull())
+          ..orderBy([(t) => OrderingTerm.desc(t.deletedAt)]))
+        .watch();
+  }
+
   Stream<UserTask?> getCurrentlyTrackedTaskStream() async* {
     yield* (_selectTasks()
           ..where((t) => t.activeTimeMeasurementStart.isNotNull())
@@ -422,6 +438,10 @@ class AppDatabase extends _$AppDatabase {
               status: TaskStatus.pending,
               reference: const Value(null),
             );
+          case SoftDeleteTask(:final deletedAt):
+            task = task.copyWith(deletedAt: Value(deletedAt));
+          case UndoSoftDeleteTask():
+            task = task.copyWith(deletedAt: const Value(null));
           case StartTimeMeasurement(:final reference):
             task = await _startTimeMeasurement(task, reference);
           case StopTimeMeasurement(:final reference):
@@ -475,6 +495,8 @@ class AppDatabase extends _$AppDatabase {
               );
             case PutTaskInQueue():
             case RemoveTaskFromQueue():
+            case SoftDeleteTask():
+            case UndoSoftDeleteTask():
             case StartTimeMeasurement():
             case StopTimeMeasurement():
             case UndoStopTimeMeasurement():
@@ -490,20 +512,12 @@ class AppDatabase extends _$AppDatabase {
     return task;
   }
 
-  Future<void> softDeleteTask(UserTask task) async {
-    final now = DateTime.now();
-
-    await (update(userTasks)..whereSamePrimaryKey(task))
-        .write(UserTasksCompanion(deletedAt: Value(now)));
-  }
-
-  Future<void> undoSoftDeleteTask(UserTask task) async {
-    await (update(userTasks)..whereSamePrimaryKey(task))
-        .write(const UserTasksCompanion(deletedAt: Value(null)));
-  }
-
   Future<void> deleteTask(UserTask task) async {
     await (delete(userTasks)..whereSamePrimaryKey(task)).go();
+  }
+
+  Future<void> clearSoftDeletedTasks() async {
+    await (delete(userTasks)..where((t) => t.deletedAt.isNotNull())).go();
   }
 
   Future<DateTime?> getNextPendingTaskDate() async {
@@ -581,7 +595,7 @@ class AppDatabase extends _$AppDatabase {
   Future<void> deleteSoftDeletedTasks() async {
     final now = DateTime.now();
     final threshold =
-        now.subtract(const Duration(hours: 1)).millisecondsSinceEpoch;
+        now.subtract(const Duration(days: 30)).millisecondsSinceEpoch;
 
     // delete all tasks that were soft deleted more than an hour ago
     await (delete(userTasks)

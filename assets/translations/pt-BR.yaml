@@ -1,3 +1,7 @@
+app_name: Round Task
+tasks: Tarefas
+
+
 queued:
   none: Na fila
   amount: Na fila ({})
@@ -14,6 +18,7 @@ search: Buscar
 general_error: Ocorreu um erro.
 save: Salvar
 done: Concluir
+restore: Restaurar
 
 task_card_start: 'Início: {} ({})'
 task_card_end: 'Término: {} ({})'
@@ -26,6 +31,7 @@ order:
 create_task: Criar tarefa
 edit_task: Editar tarefa
 task_deleted: Tarefa excluída
+task_deleted_permanently: Tarefa excluída permanentemente
 subtask_deleted: Subtarefa excluída
 undo: Desfazer
 
@@ -45,6 +51,10 @@ time_measurement_stopped: Medição de tempo parada
 add_subtask: Adicionar subtarefa
 task_saved: Tarefa salva
 task_done: Tarefa concluída
+task_restored: Tarefa restaurada
+delete_task_permanently_confirmation:
+  title: Excluir tarefa permanentemente
+  content: Tem certeza de que deseja excluir esta tarefa permanentemente? Esta ação é irreversível.
 
 
 select_date: Selecionar data
@@ -75,6 +85,7 @@ end_option:
 
 cancel: Cancelar
 ok: Ok
+confirm: Confirmar
 
 
 task_time_measurements_title: Medições de tempo
@@ -96,6 +107,15 @@ calendar_view:
     three_days: Três dias
     week: Semana
     schedule: Agenda
+
+trash_bin:
+  title: Lixeira
+  info: Tarefas excluídas são armazenadas aqui por 30 dias antes de serem excluídas permanentemente.
+  empty: A lixeira está vazia.
+  clear: Esvaziar lixeira
+  clear_confirmation:
+    title: Esvaziar lixeira
+    content: Tem certeza de que deseja esvaziar a lixeira? Esta ação é irreversível.
 
 
 settings: Configurações

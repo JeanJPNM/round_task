@@ -15,6 +15,8 @@ import 'package:round_task/screens/calendar_view.dart';
 import 'package:round_task/screens/task_queue.dart';
 import 'package:round_task/screens/task_time_measurements.dart';
 import 'package:round_task/screens/task_view.dart';
+import 'package:round_task/screens/trash_bin.dart';
+import 'package:round_task/widgets/app_drawer.dart';
 import 'package:round_task/widgets/second_tick_provider.dart';
 import 'package:round_task/widgets/time_tracking_banner.dart';
 
@@ -23,7 +25,7 @@ final _router = GoRouter(
     ShellRoute(builder: _buildShell, routes: [
       GoRoute(
         path: "/",
-        pageBuilder: (context, state) => _buildPage(
+        pageBuilder: (context, state) => _buildMainPage(
           context,
           state,
           child: const TaskQueueScreen(),
@@ -63,7 +65,7 @@ final _router = GoRouter(
       ),
       GoRoute(
         path: "/settings",
-        pageBuilder: (context, state) => _buildPage(
+        pageBuilder: (context, state) => _buildMainPage(
           context,
           state,
           child: const SettingsScreen(),
@@ -71,10 +73,18 @@ final _router = GoRouter(
       ),
       GoRoute(
         path: "/calendar_view",
-        pageBuilder: (context, state) => _buildPage(
+        pageBuilder: (context, state) => _buildMainPage(
           context,
           state,
           child: const CalendarViewScreen(),
+        ),
+      ),
+      GoRoute(
+        path: "/trash_bin",
+        pageBuilder: (context, state) => _buildMainPage(
+          context,
+          state,
+          child: const TrashBinScreen(),
         ),
       ),
     ]),
@@ -189,6 +199,21 @@ class _OverlayAnnotations extends StatelessWidget {
   }
 }
 
+Page<dynamic> _buildMainPage(
+  BuildContext context,
+  GoRouterState state, {
+  required Widget child,
+}) {
+  return CustomTransitionPage<dynamic>(
+    key: state.pageKey,
+    child: _OverlayAnnotations(child: child),
+    arguments: state.extra,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      return FadeTransition(opacity: animation, child: child);
+    },
+  );
+}
+
 Page<dynamic> _buildPage(
   BuildContext context,
   GoRouterState state, {
@@ -220,7 +245,22 @@ Widget _buildShell(BuildContext context, GoRouterState state, Widget child) {
 
         return taskId == trackedTaskId;
       },
-      child: child,
+      child: Scaffold(
+        drawer: const AppDrawer(),
+        // go back to the main screen if the user presses back on one
+        // of the other top-level screens
+        body: PopScope(
+          canPop: appDrawerDestinations
+              .where((destination) => destination.route != "/")
+              .every((destination) => destination.route != state.fullPath),
+          child: child,
+          onPopInvokedWithResult: (didPop, result) {
+            if (didPop) return;
+
+            context.pushReplacement("/");
+          },
+        ),
+      ),
     ),
   );
 }

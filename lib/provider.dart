@@ -63,6 +63,12 @@ final archivedTasksPod = StreamProvider.autoDispose((ref) {
   return database.getArchivedTasksStream();
 });
 
+final softDeletedTasksPod = StreamProvider.autoDispose((ref) {
+  final database = ref.watch(databasePod);
+
+  return database.getSoftDeletedTasksStream();
+});
+
 final currentlyTrackedTaskPod = StreamProvider.autoDispose((ref) {
   final database = ref.watch(databasePod);
 

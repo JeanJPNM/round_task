@@ -1,3 +1,7 @@
+app_name: Round Task
+tasks: Tasks
+
+
 queued:
   none: Queued
   amount: Queued ({})
@@ -14,6 +18,7 @@ search: Search
 general_error: An error occurred.
 save: Save
 done: Done
+restore: Restore
 
 task_card_start: 'Start: {} ({})'
 task_card_end: 'End: {} ({})'
@@ -26,6 +31,7 @@ order:
 create_task: Create task
 edit_task: Edit task
 task_deleted: Task deleted
+task_deleted_permanently: Task deleted permanently
 subtask_deleted: Subtask deleted
 undo: Undo
 
@@ -45,6 +51,10 @@ time_measurement_stopped: Time measurement stopped
 add_subtask: Add subtask
 task_saved: Task saved
 task_done: Task done
+task_restored: Task restored
+delete_task_permanently_confirmation:
+  title: Delete task permanently
+  content: Are you sure you want to delete this task permanently? This action is irreversible.
 
 
 select_date: Select date
@@ -75,6 +85,7 @@ end_option:
 
 cancel: Cancel
 ok: Ok
+confirm: Confirm
 
 
 task_time_measurements_title: Task time measurements
@@ -96,6 +107,16 @@ calendar_view:
     three_days: Three days
     week: Week
     schedule: Schedule
+
+
+trash_bin:
+  title: Trash bin
+  info: Deleted tasks are kept here for 30 days before being permanently deleted.
+  empty: The trash bin is empty.
+  clear: Clear trash bin
+  clear_confirmation:
+    title: Clear trash bin
+    content: Are you sure you want to clear the trash bin? All tasks in the trash bin will be permanently deleted. This action is irreversible.
 
 
 settings: Settings

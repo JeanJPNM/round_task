@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:round_task/db/db.dart';
 import 'package:round_task/provider.dart';
 import 'package:round_task/screens/task_view.dart';
+import 'package:round_task/widgets/app_drawer.dart';
 import 'package:round_task/widgets/select_dropdown.dart';
 import 'package:round_task/widgets/task_card.dart';
 
@@ -103,23 +104,7 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
                       controller: controller,
                       focusNode: _searchFocusNode,
                       hintText: context.tr("search"),
-                      leading: const Icon(Icons.search),
-                      trailing: [
-                        IconButton(
-                          onPressed: () {
-                            _unfocusSearchBar();
-                            context.push("/calendar_view");
-                          },
-                          icon: const Icon(Icons.history),
-                        ),
-                        IconButton(
-                          onPressed: () {
-                            _unfocusSearchBar();
-                            context.push("/settings");
-                          },
-                          icon: const Icon(Icons.settings),
-                        )
-                      ],
+                      leading: const AppDrawerButton(),
                       onTapOutside: (event) {
                         _unfocusSearchBar();
                       },

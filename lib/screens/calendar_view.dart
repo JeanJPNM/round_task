@@ -15,6 +15,7 @@ import 'package:round_task/db/db.dart';
 import 'package:round_task/formatting.dart';
 import 'package:round_task/provider.dart';
 import 'package:round_task/screens/task_view.dart';
+import 'package:round_task/widgets/app_drawer.dart';
 import 'package:round_task/widgets/bottom_sheet_safe_area.dart';
 import 'package:round_task/widgets/dropdown_chip.dart';
 import 'package:round_task/widgets/second_tick_provider.dart';
@@ -217,6 +218,7 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
     };
     return Scaffold(
       appBar: AppBar(
+        leading: const AppDrawerButton(),
         title: Text(context.tr("calendar_view.title")),
       ),
       body: _CalendarZoomDetector(

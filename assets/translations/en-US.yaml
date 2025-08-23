@@ -117,6 +117,7 @@ trash_bin:
   clear_confirmation:
     title: Clear trash bin
     content: Are you sure you want to clear the trash bin? All tasks in the trash bin will be permanently deleted. This action is irreversible.
+  cleared: Trash bin cleared
 
 
 settings: Settings

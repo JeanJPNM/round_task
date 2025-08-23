@@ -116,6 +116,7 @@ trash_bin:
   clear_confirmation:
     title: Esvaziar lixeira
     content: Tem certeza de que deseja esvaziar a lixeira? Esta ação é irreversível.
+  cleared: Lixeira esvaziada
 
 
 settings: Configurações

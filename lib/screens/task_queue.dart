@@ -20,7 +20,7 @@ class TaskQueueScreen extends ConsumerStatefulWidget {
 }
 
 class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
-    with TickerProviderStateMixin {
+    with SingleTickerProviderStateMixin {
   final _bucket = PageStorageBucket();
   late final TabController _tabController;
   final _currentIndex = ValueNotifier(0);

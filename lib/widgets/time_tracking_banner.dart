@@ -112,7 +112,7 @@ class _AnimatedBannerShell extends StatefulWidget {
 }
 
 class __AnimatedBannerShellState extends State<_AnimatedBannerShell>
-    with TickerProviderStateMixin {
+    with SingleTickerProviderStateMixin {
   Widget _currentBanner = const SizedBox.shrink();
   late final _controller = AnimationController(
     duration: widget.duration,

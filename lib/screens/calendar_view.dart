@@ -225,6 +225,7 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
           viewConfiguration: viewConfiguration,
           components: CalendarComponents<_EventData>(
             multiDayComponents: MultiDayComponents(
+              bodyComponents: const MultiDayBodyComponents(),
               headerComponents: MultiDayHeaderComponents(
                 weekNumberBuilder: (visibleDateTimeRange, style) =>
                     const SizedBox.shrink(),

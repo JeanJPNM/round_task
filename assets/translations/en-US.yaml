@@ -50,8 +50,11 @@ recurrence: Recurrence
 add_recurrence: Add recurrence
 edit_recurrence: Edit recurrence
 queue_position:
+  queued_tooltip: Adds the task to the queue
   start: At the start
+  start_tooltip: Puts the task at the start of the queue
   end: At the end
+  end_tooltip: Puts the task at the end of the queue
 start_time_measurement: Start time measurement
 stop_time_measurement: Stop time measurement
 time_measurement_stopped: Time measurement stopped

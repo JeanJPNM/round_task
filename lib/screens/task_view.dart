@@ -881,6 +881,7 @@ class __QueuePositionPickerState extends State<_QueuePositionPicker> {
       children: [
         ChoiceChip(
           label: Text(context.tr("queued.none")),
+          tooltip: context.tr("queue_position.queued_tooltip"),
           selected: position != null,
           onSelected: _mustBeInQueue
               ? null
@@ -895,6 +896,7 @@ class __QueuePositionPickerState extends State<_QueuePositionPicker> {
         const SizedBox(width: 8),
         ChoiceChip(
           label: Text(context.tr("queue_position.start")),
+          tooltip: context.tr("queue_position.start_tooltip"),
           selected: position == QueueInsertionPosition.start,
           onSelected: position == null
               ? null
@@ -909,6 +911,7 @@ class __QueuePositionPickerState extends State<_QueuePositionPicker> {
         const SizedBox(width: 8),
         ChoiceChip(
           label: Text(context.tr("queue_position.end")),
+          tooltip: context.tr("queue_position.end_tooltip"),
           selected: position == QueueInsertionPosition.end,
           onSelected: position == null
               ? null

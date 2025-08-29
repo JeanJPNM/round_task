@@ -50,8 +50,11 @@ recurrence: Recorrência
 add_recurrence: Adicionar recorrência
 edit_recurrence: Editar recorrência
 queue_position:
+  queued_tooltip: Adiciona a tarefa à fila
   start: No início
+  start_tooltip: Coloca a tarefa no início da fila
   end: No fim
+  end_tooltip: Coloca a tarefa no fim da fila
 start_time_measurement: Iniciar medição de tempo
 stop_time_measurement: Parar medição de tempo
 time_measurement_stopped: Medição de tempo parada

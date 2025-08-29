@@ -12,6 +12,13 @@ import 'package:round_task/widgets/task_card.dart';
 
 const _listPadding = EdgeInsets.only(bottom: 100, top: 40);
 
+enum _QueuedTaskViewMode {
+  orderByEndDate,
+  orderByAutoInsertDate,
+  orderByReference,
+  groupByPriority,
+}
+
 class TaskQueueScreen extends ConsumerStatefulWidget {
   const TaskQueueScreen({super.key});
 
@@ -27,9 +34,16 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
   final _searchFocusNode = FocusNode();
   final _searchController = SearchController();
 
-  TaskStatus _searchStatus = TaskStatus.active;
-  TaskSorting? _queuedTasksSorting;
-  TaskSorting _pendingTasksSorting = TaskSorting.creationDate;
+  var _searchStatus = TaskStatus.active;
+  var _queuedTasksViewMode = _QueuedTaskViewMode.orderByReference;
+  var _pendingTasksSorting = TaskSorting.creationDate;
+
+  TaskSorting? get _queuedTasksSorting => switch (_queuedTasksViewMode) {
+    _QueuedTaskViewMode.orderByEndDate => TaskSorting.endDate,
+    _QueuedTaskViewMode.orderByAutoInsertDate => TaskSorting.autoInsertDate,
+    _QueuedTaskViewMode.orderByReference ||
+    _QueuedTaskViewMode.groupByPriority => null,
+  };
 
   @override
   void initState() {
@@ -148,12 +162,12 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
                           error: (error, stackTrace) =>
                               Center(child: Text(context.tr("general_error"))),
                           data: (tasks) => _QueuedTasksTab(
-                            sorting: _queuedTasksSorting,
+                            mode: _queuedTasksViewMode,
                             tasks: tasks,
                             database: database,
-                            onSortingChanged: (sorting) {
+                            onModeChanged: (sorting) {
                               setState(() {
-                                _queuedTasksSorting = sorting;
+                                _queuedTasksViewMode = sorting;
                               });
                             },
                           ),
@@ -298,16 +312,16 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
 
 class _QueuedTasksTab extends StatefulWidget {
   const _QueuedTasksTab({
-    required this.sorting,
+    required this.mode,
     required this.tasks,
     required this.database,
-    this.onSortingChanged,
+    this.onModeChanged,
   });
 
-  final TaskSorting? sorting;
+  final _QueuedTaskViewMode mode;
   final AppDatabase database;
   final List<UserTask> tasks;
-  final void Function(TaskSorting?)? onSortingChanged;
+  final void Function(_QueuedTaskViewMode)? onModeChanged;
 
   @override
   State<_QueuedTasksTab> createState() => _QueuedTasksTabState();
@@ -321,7 +335,7 @@ class _QueuedTasksTabState extends State<_QueuedTasksTab>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final sorting = widget.sorting;
+    final mode = widget.mode;
     final tasks = widget.tasks;
     final database = widget.database;
 
@@ -332,34 +346,153 @@ class _QueuedTasksTabState extends State<_QueuedTasksTab>
           alignment: Alignment.centerRight,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: _SortingPicker(
-              defaultSorting: null,
-              sorting: sorting,
-              entries: [TaskSorting.endDate, TaskSorting.autoInsertDate],
-              onSortingChanged: (value) {
-                widget.onSortingChanged?.call(value);
+            child: SelectDropdown(
+              items: [
+                DropdownMenuItem(
+                  value: _QueuedTaskViewMode.orderByReference,
+                  child: Text(context.tr("order.default")),
+                ),
+                DropdownMenuItem(
+                  value: _QueuedTaskViewMode.orderByEndDate,
+                  child: Text(context.tr("order.by_end_date")),
+                ),
+                DropdownMenuItem(
+                  value: _QueuedTaskViewMode.orderByAutoInsertDate,
+                  child: Text(context.tr("order.by_start_date")),
+                ),
+                DropdownMenuItem(
+                  value: _QueuedTaskViewMode.groupByPriority,
+                  child: Text(context.tr("order.group_by_priority")),
+                ),
+              ],
+              onChanged: (value) {
+                if (value == null) return;
+                widget.onModeChanged?.call(value);
               },
+              value: mode,
             ),
           ),
         ),
         Expanded(
-          child: AnimatedReorderableListView<UserTask>(
-            enableSwap: true,
-            padding: _listPadding,
-            shrinkWrap: true,
-            items: tasks,
-            isSameItem: (a, b) => a.id == b.id,
-            nonDraggableItems: sorting == null ? const [] : tasks,
-            onReorder: (oldIndex, newIndex) async {
-              final task = tasks.removeAt(oldIndex);
-              tasks.insert(newIndex, task);
-
-              await database.reorderTasks(tasks);
-            },
-            itemBuilder: (context, index) => _buildTask(tasks[index]),
-          ),
+          child: mode == _QueuedTaskViewMode.groupByPriority
+              ? _buildGroupedByPriority(database)
+              : _buildNormalList(database: database, mode: mode, tasks: tasks),
         ),
       ],
+    );
+  }
+
+  Widget _buildNormalList({
+    required AppDatabase database,
+    required _QueuedTaskViewMode mode,
+    required List<UserTask> tasks,
+  }) {
+    return AnimatedReorderableListView<UserTask>(
+      enableSwap: true,
+      padding: _listPadding,
+      shrinkWrap: true,
+      items: tasks,
+      isSameItem: (a, b) => a.id == b.id,
+      nonDraggableItems: mode == _QueuedTaskViewMode.orderByReference
+          ? const []
+          : tasks,
+      onReorder: (oldIndex, newIndex) async {
+        final task = tasks.removeAt(oldIndex);
+        tasks.insert(newIndex, task);
+
+        await database.reorderTasks(tasks);
+      },
+      itemBuilder: (context, index) => _buildTask(tasks[index]),
+    );
+  }
+
+  Widget _buildGroupedByPriority(AppDatabase database) {
+    const importantUrgent = TaskPriority(important: true, urgent: true);
+    const importantNotUrgent = TaskPriority(important: true, urgent: false);
+    const notImportantUrgent = TaskPriority(important: false, urgent: true);
+    const notImportantNotUrgent = TaskPriority(important: false, urgent: false);
+
+    return Consumer(
+      builder: (context, ref, child) {
+        final groupedTasks = ref.watch(groupedQueuedTasksPod);
+
+        if (groupedTasks.hasError) {
+          return Center(child: Text(context.tr("general_error")));
+        }
+
+        if (groupedTasks.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final theme = Theme.of(context);
+        final groups = groupedTasks.value!;
+
+        Widget? group(TaskPriority priority, String translationKey) {
+          final tasks = groups[priority];
+          if (tasks == null || tasks.isEmpty) {
+            return null;
+          }
+
+          return SliverMainAxisGroup(
+            key: ValueKey(priority),
+            slivers: [
+              PinnedHeaderSliver(
+                child: Material(
+                  color: theme.colorScheme.surface,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0,
+                      vertical: 8.0,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          context.tr(
+                            translationKey,
+                            args: [tasks.length.toString()],
+                          ),
+                          style: theme.textTheme.titleMedium,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(width: 8),
+                        const Expanded(child: Divider()),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              ReorderableAnimatedListImpl(
+                scrollDirection: Axis.vertical,
+                enableSwap: true,
+                items: tasks,
+                isSameItem: (a, b) => a.id == b.id,
+                itemBuilder: (context, index) => _buildTask(tasks[index]),
+                nonDraggableItems: tasks,
+              ),
+            ],
+          );
+        }
+
+        return CustomScrollView(
+          slivers: [
+            ?group(importantUrgent, "task_priority_group.important_urgent"),
+            ?group(
+              importantNotUrgent,
+              "task_priority_group.important_not_urgent",
+            ),
+            ?group(
+              notImportantUrgent,
+              "task_priority_group.not_important_urgent",
+            ),
+            ?group(
+              notImportantNotUrgent,
+              "task_priority_group.not_important_not_urgent",
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -396,15 +529,26 @@ class __PendingTasksTabState extends State<_PendingTasksTab>
           alignment: Alignment.centerRight,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: _SortingPicker(
-              defaultSorting: TaskSorting.creationDate,
-              onSortingChanged: (TaskSorting? value) {
-                if (value != null) {
-                  widget.onSortingChanged?.call(value);
-                }
+            child: SelectDropdown(
+              items: [
+                DropdownMenuItem(
+                  value: TaskSorting.creationDate,
+                  child: Text(context.tr("order.default")),
+                ),
+                DropdownMenuItem(
+                  value: TaskSorting.endDate,
+                  child: Text(context.tr("order.by_end_date")),
+                ),
+                DropdownMenuItem(
+                  value: TaskSorting.autoInsertDate,
+                  child: Text(context.tr("order.by_start_date")),
+                ),
+              ],
+              onChanged: (value) {
+                if (value == null) return;
+                widget.onSortingChanged?.call(value);
               },
-              sorting: sorting,
-              entries: [TaskSorting.endDate, TaskSorting.autoInsertDate],
+              value: sorting,
             ),
           ),
         ),
@@ -421,47 +565,6 @@ class __PendingTasksTabState extends State<_PendingTasksTab>
           ),
         ),
       ],
-    );
-  }
-}
-
-class _SortingPicker extends StatelessWidget {
-  const _SortingPicker({
-    required this.defaultSorting,
-    required this.entries,
-    required this.sorting,
-    this.onSortingChanged,
-  });
-
-  final TaskSorting? defaultSorting;
-  final List<TaskSorting> entries;
-  final TaskSorting? sorting;
-  final void Function(TaskSorting?)? onSortingChanged;
-
-  String _getSortingLabel(TaskSorting sorting) {
-    return switch (sorting) {
-      TaskSorting.endDate => "order.by_end_date",
-      TaskSorting.autoInsertDate => "order.by_start_date",
-      TaskSorting.creationDate => "order.by_creation_date",
-    };
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SelectDropdown(
-      items: [
-        DropdownMenuItem(
-          value: defaultSorting,
-          child: Text(context.tr("order.default")),
-        ),
-        for (final entry in entries)
-          DropdownMenuItem(
-            value: entry,
-            child: Text(context.tr(_getSortingLabel(entry))),
-          ),
-      ],
-      onChanged: (value) => onSortingChanged?.call(value),
-      value: sorting,
     );
   }
 }

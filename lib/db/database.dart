@@ -3,93 +3,12 @@ import 'dart:async';
 import 'package:drift/drift.dart';
 import 'package:flutter/material.dart' show Color;
 import 'package:round_task/db/database.steps.dart';
+import 'package:round_task/db/types.dart';
 import 'package:rrule/rrule.dart';
 
 part 'database.g.dart';
 
 const _defaultSkipSize = 256;
-
-mixin DatabaseEnum on Enum {
-  int get dbCode;
-}
-
-enum TaskStatus with DatabaseEnum {
-  active(0),
-  pending(1),
-  archived(2);
-
-  @override
-  final int dbCode;
-
-  const TaskStatus(this.dbCode);
-
-  factory TaskStatus.fromDbCode(int code) {
-    return switch (code) {
-      0 => TaskStatus.active,
-      1 => TaskStatus.pending,
-      2 => TaskStatus.archived,
-      _ => TaskStatus.pending,
-    };
-  }
-}
-
-class CodeEnumConverter<T extends DatabaseEnum> extends TypeConverter<T, int> {
-  const CodeEnumConverter(this.fromDb);
-
-  final T Function(int) fromDb;
-
-  @override
-  T fromSql(int code) => fromDb(code);
-
-  @override
-  int toSql(T value) => value.dbCode;
-}
-
-class ColorConverter extends TypeConverter<Color, int> {
-  const ColorConverter();
-
-  @override
-  Color fromSql(int value) => Color(value);
-
-  @override
-  int toSql(Color color) => color.toARGB32();
-}
-
-class RecurrenceRuleConverter extends TypeConverter<RecurrenceRule?, String?> {
-  const RecurrenceRuleConverter();
-
-  @override
-  RecurrenceRule? fromSql(String? fromDb) {
-    if (fromDb == null) return null;
-
-    try {
-      return RecurrenceRule.fromString(fromDb);
-    } catch (e) {
-      return null;
-    }
-  }
-
-  @override
-  String? toSql(RecurrenceRule? value) {
-    return value?.toString();
-  }
-}
-
-/// Stores values as milliseconds since epoch,
-/// retrieving them in the local timezone.
-class DateTimeConverter extends TypeConverter<DateTime, int> {
-  const DateTimeConverter();
-
-  @override
-  DateTime fromSql(int fromDb) {
-    return DateTime.fromMillisecondsSinceEpoch(fromDb);
-  }
-
-  @override
-  int toSql(DateTime value) {
-    return value.millisecondsSinceEpoch;
-  }
-}
 
 @TableIndex(name: "idx_user_tasks_status", columns: {#status})
 @TableIndex(name: "idx_user_tasks_auto_insert_date", columns: {#autoInsertDate})
@@ -129,6 +48,13 @@ class UserTasks extends Table {
   late final recurrence = text()
       .map(const RecurrenceRuleConverter())
       .nullable()();
+
+  late final priority = integer()
+      .map(const TaskPriorityConverter())
+      // this is unlikely to ever change on the dart
+      // side of the code, but I still don't like hardcoding the
+      // constant value
+      .withDefault(const Constant(3))();
 }
 
 @TableIndex(name: "idx_sub_tasks_task_id", columns: {#taskId})
@@ -159,24 +85,6 @@ class TimeMeasurements extends Table {
 }
 
 typedef TitledTimeMeasurement = ({String title, TimeMeasurement measurement});
-
-enum AppBrightness with DatabaseEnum {
-  system(0),
-  light(1),
-  dark(2);
-
-  const AppBrightness(this.dbCode);
-
-  @override
-  final int dbCode;
-
-  factory AppBrightness.fromDbCode(int code) {
-    return values.firstWhere(
-      (e) => e.dbCode == code,
-      orElse: () => AppBrightness.system,
-    );
-  }
-}
 
 @DataClassName("AppSettings")
 class AppSettingsTable extends Table {
@@ -278,7 +186,7 @@ class AppDatabase extends _$AppDatabase {
   );
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration {
@@ -291,6 +199,9 @@ class AppDatabase extends _$AppDatabase {
           await m.createIndex(schema.idxTimeMeasurementsStart);
           await m.createIndex(schema.idxTimeMeasurementsEnd);
           await m.createTable(schema.appSettingsTable);
+        },
+        from2To3: (m, schema) async {
+          await m.addColumn(schema.userTasks, schema.userTasks.priority);
         },
       ),
     );

@@ -9,68 +9,125 @@ class UserTasks extends Table with TableInfo<UserTasks, UserTasksData> {
   final String? _alias;
   UserTasks(this.attachedDatabase, [this._alias]);
   late final GeneratedColumn<int> id = GeneratedColumn<int>(
-      'id', aliasedName, false,
-      hasAutoIncrement: true,
-      type: DriftSqlType.int,
-      requiredDuringInsert: false,
-      defaultConstraints:
-          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
   late final GeneratedColumn<String> title = GeneratedColumn<String>(
-      'title', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
+    'title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
   late final GeneratedColumn<String> description = GeneratedColumn<String>(
-      'description', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
+    'description',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
   late final GeneratedColumn<int> status = GeneratedColumn<int>(
-      'status', aliasedName, false,
-      type: DriftSqlType.int, requiredDuringInsert: true);
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
   late final GeneratedColumn<int> reference = GeneratedColumn<int>(
-      'reference', aliasedName, true,
-      type: DriftSqlType.int, requiredDuringInsert: false);
+    'reference',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   late final GeneratedColumn<double> progress = GeneratedColumn<double>(
-      'progress', aliasedName, true,
-      type: DriftSqlType.double, requiredDuringInsert: false);
+    'progress',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
   late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
-      'created_at', aliasedName, false,
-      type: DriftSqlType.int, requiredDuringInsert: true);
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
   late final GeneratedColumn<int> updatedByUserAt = GeneratedColumn<int>(
-      'updated_by_user_at', aliasedName, false,
-      type: DriftSqlType.int, requiredDuringInsert: true);
+    'updated_by_user_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
   late final GeneratedColumn<int> deletedAt = GeneratedColumn<int>(
-      'deleted_at', aliasedName, true,
-      type: DriftSqlType.int, requiredDuringInsert: false);
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   late final GeneratedColumn<int> startDate = GeneratedColumn<int>(
-      'start_date', aliasedName, true,
-      type: DriftSqlType.int, requiredDuringInsert: false);
+    'start_date',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   late final GeneratedColumn<int> endDate = GeneratedColumn<int>(
-      'end_date', aliasedName, true,
-      type: DriftSqlType.int, requiredDuringInsert: false);
+    'end_date',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   late final GeneratedColumn<int> autoInsertDate = GeneratedColumn<int>(
-      'auto_insert_date', aliasedName, true,
-      type: DriftSqlType.int, requiredDuringInsert: false);
+    'auto_insert_date',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   late final GeneratedColumn<int> activeTimeMeasurementStart =
-      GeneratedColumn<int>('active_time_measurement_start', aliasedName, true,
-          type: DriftSqlType.int, requiredDuringInsert: false);
+      GeneratedColumn<int>(
+        'active_time_measurement_start',
+        aliasedName,
+        true,
+        type: DriftSqlType.int,
+        requiredDuringInsert: false,
+      );
   late final GeneratedColumn<String> recurrence = GeneratedColumn<String>(
-      'recurrence', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
+    'recurrence',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
-        id,
-        title,
-        description,
-        status,
-        reference,
-        progress,
-        createdAt,
-        updatedByUserAt,
-        deletedAt,
-        startDate,
-        endDate,
-        autoInsertDate,
-        activeTimeMeasurementStart,
-        recurrence
-      ];
+    id,
+    title,
+    description,
+    status,
+    reference,
+    progress,
+    createdAt,
+    updatedByUserAt,
+    deletedAt,
+    startDate,
+    endDate,
+    autoInsertDate,
+    activeTimeMeasurementStart,
+    recurrence,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -82,35 +139,62 @@ class UserTasks extends Table with TableInfo<UserTasks, UserTasksData> {
   UserTasksData map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return UserTasksData(
-      id: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
-      title: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}title'])!,
-      description: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}description'])!,
-      status: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}status'])!,
-      reference: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}reference']),
-      progress: attachedDatabase.typeMapping
-          .read(DriftSqlType.double, data['${effectivePrefix}progress']),
-      createdAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}created_at'])!,
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      )!,
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}status'],
+      )!,
+      reference: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}reference'],
+      ),
+      progress: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}progress'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
       updatedByUserAt: attachedDatabase.typeMapping.read(
-          DriftSqlType.int, data['${effectivePrefix}updated_by_user_at'])!,
-      deletedAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}deleted_at']),
-      startDate: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}start_date']),
-      endDate: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}end_date']),
-      autoInsertDate: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}auto_insert_date']),
+        DriftSqlType.int,
+        data['${effectivePrefix}updated_by_user_at'],
+      )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}deleted_at'],
+      ),
+      startDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}start_date'],
+      ),
+      endDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}end_date'],
+      ),
+      autoInsertDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}auto_insert_date'],
+      ),
       activeTimeMeasurementStart: attachedDatabase.typeMapping.read(
-          DriftSqlType.int,
-          data['${effectivePrefix}active_time_measurement_start']),
-      recurrence: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}recurrence']),
+        DriftSqlType.int,
+        data['${effectivePrefix}active_time_measurement_start'],
+      ),
+      recurrence: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}recurrence'],
+      ),
     );
   }
 
@@ -135,21 +219,22 @@ class UserTasksData extends DataClass implements Insertable<UserTasksData> {
   final int? autoInsertDate;
   final int? activeTimeMeasurementStart;
   final String? recurrence;
-  const UserTasksData(
-      {required this.id,
-      required this.title,
-      required this.description,
-      required this.status,
-      this.reference,
-      this.progress,
-      required this.createdAt,
-      required this.updatedByUserAt,
-      this.deletedAt,
-      this.startDate,
-      this.endDate,
-      this.autoInsertDate,
-      this.activeTimeMeasurementStart,
-      this.recurrence});
+  const UserTasksData({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.status,
+    this.reference,
+    this.progress,
+    required this.createdAt,
+    required this.updatedByUserAt,
+    this.deletedAt,
+    this.startDate,
+    this.endDate,
+    this.autoInsertDate,
+    this.activeTimeMeasurementStart,
+    this.recurrence,
+  });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -178,8 +263,9 @@ class UserTasksData extends DataClass implements Insertable<UserTasksData> {
       map['auto_insert_date'] = Variable<int>(autoInsertDate);
     }
     if (!nullToAbsent || activeTimeMeasurementStart != null) {
-      map['active_time_measurement_start'] =
-          Variable<int>(activeTimeMeasurementStart);
+      map['active_time_measurement_start'] = Variable<int>(
+        activeTimeMeasurementStart,
+      );
     }
     if (!nullToAbsent || recurrence != null) {
       map['recurrence'] = Variable<String>(recurrence);
@@ -215,16 +301,18 @@ class UserTasksData extends DataClass implements Insertable<UserTasksData> {
           : Value(autoInsertDate),
       activeTimeMeasurementStart:
           activeTimeMeasurementStart == null && nullToAbsent
-              ? const Value.absent()
-              : Value(activeTimeMeasurementStart),
+          ? const Value.absent()
+          : Value(activeTimeMeasurementStart),
       recurrence: recurrence == null && nullToAbsent
           ? const Value.absent()
           : Value(recurrence),
     );
   }
 
-  factory UserTasksData.fromJson(Map<String, dynamic> json,
-      {ValueSerializer? serializer}) {
+  factory UserTasksData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return UserTasksData(
       id: serializer.fromJson<int>(json['id']),
@@ -239,8 +327,9 @@ class UserTasksData extends DataClass implements Insertable<UserTasksData> {
       startDate: serializer.fromJson<int?>(json['startDate']),
       endDate: serializer.fromJson<int?>(json['endDate']),
       autoInsertDate: serializer.fromJson<int?>(json['autoInsertDate']),
-      activeTimeMeasurementStart:
-          serializer.fromJson<int?>(json['activeTimeMeasurementStart']),
+      activeTimeMeasurementStart: serializer.fromJson<int?>(
+        json['activeTimeMeasurementStart'],
+      ),
       recurrence: serializer.fromJson<String?>(json['recurrence']),
     );
   }
@@ -260,52 +349,55 @@ class UserTasksData extends DataClass implements Insertable<UserTasksData> {
       'startDate': serializer.toJson<int?>(startDate),
       'endDate': serializer.toJson<int?>(endDate),
       'autoInsertDate': serializer.toJson<int?>(autoInsertDate),
-      'activeTimeMeasurementStart':
-          serializer.toJson<int?>(activeTimeMeasurementStart),
+      'activeTimeMeasurementStart': serializer.toJson<int?>(
+        activeTimeMeasurementStart,
+      ),
       'recurrence': serializer.toJson<String?>(recurrence),
     };
   }
 
-  UserTasksData copyWith(
-          {int? id,
-          String? title,
-          String? description,
-          int? status,
-          Value<int?> reference = const Value.absent(),
-          Value<double?> progress = const Value.absent(),
-          int? createdAt,
-          int? updatedByUserAt,
-          Value<int?> deletedAt = const Value.absent(),
-          Value<int?> startDate = const Value.absent(),
-          Value<int?> endDate = const Value.absent(),
-          Value<int?> autoInsertDate = const Value.absent(),
-          Value<int?> activeTimeMeasurementStart = const Value.absent(),
-          Value<String?> recurrence = const Value.absent()}) =>
-      UserTasksData(
-        id: id ?? this.id,
-        title: title ?? this.title,
-        description: description ?? this.description,
-        status: status ?? this.status,
-        reference: reference.present ? reference.value : this.reference,
-        progress: progress.present ? progress.value : this.progress,
-        createdAt: createdAt ?? this.createdAt,
-        updatedByUserAt: updatedByUserAt ?? this.updatedByUserAt,
-        deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
-        startDate: startDate.present ? startDate.value : this.startDate,
-        endDate: endDate.present ? endDate.value : this.endDate,
-        autoInsertDate:
-            autoInsertDate.present ? autoInsertDate.value : this.autoInsertDate,
-        activeTimeMeasurementStart: activeTimeMeasurementStart.present
-            ? activeTimeMeasurementStart.value
-            : this.activeTimeMeasurementStart,
-        recurrence: recurrence.present ? recurrence.value : this.recurrence,
-      );
+  UserTasksData copyWith({
+    int? id,
+    String? title,
+    String? description,
+    int? status,
+    Value<int?> reference = const Value.absent(),
+    Value<double?> progress = const Value.absent(),
+    int? createdAt,
+    int? updatedByUserAt,
+    Value<int?> deletedAt = const Value.absent(),
+    Value<int?> startDate = const Value.absent(),
+    Value<int?> endDate = const Value.absent(),
+    Value<int?> autoInsertDate = const Value.absent(),
+    Value<int?> activeTimeMeasurementStart = const Value.absent(),
+    Value<String?> recurrence = const Value.absent(),
+  }) => UserTasksData(
+    id: id ?? this.id,
+    title: title ?? this.title,
+    description: description ?? this.description,
+    status: status ?? this.status,
+    reference: reference.present ? reference.value : this.reference,
+    progress: progress.present ? progress.value : this.progress,
+    createdAt: createdAt ?? this.createdAt,
+    updatedByUserAt: updatedByUserAt ?? this.updatedByUserAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+    startDate: startDate.present ? startDate.value : this.startDate,
+    endDate: endDate.present ? endDate.value : this.endDate,
+    autoInsertDate: autoInsertDate.present
+        ? autoInsertDate.value
+        : this.autoInsertDate,
+    activeTimeMeasurementStart: activeTimeMeasurementStart.present
+        ? activeTimeMeasurementStart.value
+        : this.activeTimeMeasurementStart,
+    recurrence: recurrence.present ? recurrence.value : this.recurrence,
+  );
   UserTasksData copyWithCompanion(UserTasksCompanion data) {
     return UserTasksData(
       id: data.id.present ? data.id.value : this.id,
       title: data.title.present ? data.title.value : this.title,
-      description:
-          data.description.present ? data.description.value : this.description,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
       status: data.status.present ? data.status.value : this.status,
       reference: data.reference.present ? data.reference.value : this.reference,
       progress: data.progress.present ? data.progress.value : this.progress,
@@ -322,8 +414,9 @@ class UserTasksData extends DataClass implements Insertable<UserTasksData> {
       activeTimeMeasurementStart: data.activeTimeMeasurementStart.present
           ? data.activeTimeMeasurementStart.value
           : this.activeTimeMeasurementStart,
-      recurrence:
-          data.recurrence.present ? data.recurrence.value : this.recurrence,
+      recurrence: data.recurrence.present
+          ? data.recurrence.value
+          : this.recurrence,
     );
   }
 
@@ -350,20 +443,21 @@ class UserTasksData extends DataClass implements Insertable<UserTasksData> {
 
   @override
   int get hashCode => Object.hash(
-      id,
-      title,
-      description,
-      status,
-      reference,
-      progress,
-      createdAt,
-      updatedByUserAt,
-      deletedAt,
-      startDate,
-      endDate,
-      autoInsertDate,
-      activeTimeMeasurementStart,
-      recurrence);
+    id,
+    title,
+    description,
+    status,
+    reference,
+    progress,
+    createdAt,
+    updatedByUserAt,
+    deletedAt,
+    startDate,
+    endDate,
+    autoInsertDate,
+    activeTimeMeasurementStart,
+    recurrence,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -430,11 +524,11 @@ class UserTasksCompanion extends UpdateCompanion<UserTasksData> {
     this.autoInsertDate = const Value.absent(),
     this.activeTimeMeasurementStart = const Value.absent(),
     this.recurrence = const Value.absent(),
-  })  : title = Value(title),
-        description = Value(description),
-        status = Value(status),
-        createdAt = Value(createdAt),
-        updatedByUserAt = Value(updatedByUserAt);
+  }) : title = Value(title),
+       description = Value(description),
+       status = Value(status),
+       createdAt = Value(createdAt),
+       updatedByUserAt = Value(updatedByUserAt);
   static Insertable<UserTasksData> custom({
     Expression<int>? id,
     Expression<String>? title,
@@ -470,21 +564,22 @@ class UserTasksCompanion extends UpdateCompanion<UserTasksData> {
     });
   }
 
-  UserTasksCompanion copyWith(
-      {Value<int>? id,
-      Value<String>? title,
-      Value<String>? description,
-      Value<int>? status,
-      Value<int?>? reference,
-      Value<double?>? progress,
-      Value<int>? createdAt,
-      Value<int>? updatedByUserAt,
-      Value<int?>? deletedAt,
-      Value<int?>? startDate,
-      Value<int?>? endDate,
-      Value<int?>? autoInsertDate,
-      Value<int?>? activeTimeMeasurementStart,
-      Value<String?>? recurrence}) {
+  UserTasksCompanion copyWith({
+    Value<int>? id,
+    Value<String>? title,
+    Value<String>? description,
+    Value<int>? status,
+    Value<int?>? reference,
+    Value<double?>? progress,
+    Value<int>? createdAt,
+    Value<int>? updatedByUserAt,
+    Value<int?>? deletedAt,
+    Value<int?>? startDate,
+    Value<int?>? endDate,
+    Value<int?>? autoInsertDate,
+    Value<int?>? activeTimeMeasurementStart,
+    Value<String?>? recurrence,
+  }) {
     return UserTasksCompanion(
       id: id ?? this.id,
       title: title ?? this.title,
@@ -544,8 +639,9 @@ class UserTasksCompanion extends UpdateCompanion<UserTasksData> {
       map['auto_insert_date'] = Variable<int>(autoInsertDate.value);
     }
     if (activeTimeMeasurementStart.present) {
-      map['active_time_measurement_start'] =
-          Variable<int>(activeTimeMeasurementStart.value);
+      map['active_time_measurement_start'] = Variable<int>(
+        activeTimeMeasurementStart.value,
+      );
     }
     if (recurrence.present) {
       map['recurrence'] = Variable<String>(recurrence.value);
@@ -581,30 +677,50 @@ class SubTasks extends Table with TableInfo<SubTasks, SubTasksData> {
   final String? _alias;
   SubTasks(this.attachedDatabase, [this._alias]);
   late final GeneratedColumn<int> id = GeneratedColumn<int>(
-      'id', aliasedName, false,
-      hasAutoIncrement: true,
-      type: DriftSqlType.int,
-      requiredDuringInsert: false,
-      defaultConstraints:
-          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
   late final GeneratedColumn<int> taskId = GeneratedColumn<int>(
-      'task_id', aliasedName, false,
-      type: DriftSqlType.int,
-      requiredDuringInsert: true,
-      defaultConstraints: GeneratedColumn.constraintIsAlways(
-          'REFERENCES user_tasks (id) ON DELETE CASCADE'));
+    'task_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES user_tasks (id) ON DELETE CASCADE',
+    ),
+  );
   late final GeneratedColumn<String> title = GeneratedColumn<String>(
-      'title', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
+    'title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
   late final GeneratedColumn<bool> done = GeneratedColumn<bool>(
-      'done', aliasedName, false,
-      type: DriftSqlType.bool,
-      requiredDuringInsert: true,
-      defaultConstraints:
-          GeneratedColumn.constraintIsAlways('CHECK ("done" IN (0, 1))'));
+    'done',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("done" IN (0, 1))',
+    ),
+  );
   late final GeneratedColumn<int> reference = GeneratedColumn<int>(
-      'reference', aliasedName, false,
-      type: DriftSqlType.int, requiredDuringInsert: true);
+    'reference',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
   @override
   List<GeneratedColumn> get $columns => [id, taskId, title, done, reference];
   @override
@@ -618,16 +734,26 @@ class SubTasks extends Table with TableInfo<SubTasks, SubTasksData> {
   SubTasksData map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return SubTasksData(
-      id: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
-      taskId: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}task_id'])!,
-      title: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}title'])!,
-      done: attachedDatabase.typeMapping
-          .read(DriftSqlType.bool, data['${effectivePrefix}done'])!,
-      reference: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}reference'])!,
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      taskId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}task_id'],
+      )!,
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      done: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}done'],
+      )!,
+      reference: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}reference'],
+      )!,
     );
   }
 
@@ -643,12 +769,13 @@ class SubTasksData extends DataClass implements Insertable<SubTasksData> {
   final String title;
   final bool done;
   final int reference;
-  const SubTasksData(
-      {required this.id,
-      required this.taskId,
-      required this.title,
-      required this.done,
-      required this.reference});
+  const SubTasksData({
+    required this.id,
+    required this.taskId,
+    required this.title,
+    required this.done,
+    required this.reference,
+  });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -670,8 +797,10 @@ class SubTasksData extends DataClass implements Insertable<SubTasksData> {
     );
   }
 
-  factory SubTasksData.fromJson(Map<String, dynamic> json,
-      {ValueSerializer? serializer}) {
+  factory SubTasksData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return SubTasksData(
       id: serializer.fromJson<int>(json['id']),
@@ -693,15 +822,19 @@ class SubTasksData extends DataClass implements Insertable<SubTasksData> {
     };
   }
 
-  SubTasksData copyWith(
-          {int? id, int? taskId, String? title, bool? done, int? reference}) =>
-      SubTasksData(
-        id: id ?? this.id,
-        taskId: taskId ?? this.taskId,
-        title: title ?? this.title,
-        done: done ?? this.done,
-        reference: reference ?? this.reference,
-      );
+  SubTasksData copyWith({
+    int? id,
+    int? taskId,
+    String? title,
+    bool? done,
+    int? reference,
+  }) => SubTasksData(
+    id: id ?? this.id,
+    taskId: taskId ?? this.taskId,
+    title: title ?? this.title,
+    done: done ?? this.done,
+    reference: reference ?? this.reference,
+  );
   SubTasksData copyWithCompanion(SubTasksCompanion data) {
     return SubTasksData(
       id: data.id.present ? data.id.value : this.id,
@@ -756,10 +889,10 @@ class SubTasksCompanion extends UpdateCompanion<SubTasksData> {
     required String title,
     required bool done,
     required int reference,
-  })  : taskId = Value(taskId),
-        title = Value(title),
-        done = Value(done),
-        reference = Value(reference);
+  }) : taskId = Value(taskId),
+       title = Value(title),
+       done = Value(done),
+       reference = Value(reference);
   static Insertable<SubTasksData> custom({
     Expression<int>? id,
     Expression<int>? taskId,
@@ -776,12 +909,13 @@ class SubTasksCompanion extends UpdateCompanion<SubTasksData> {
     });
   }
 
-  SubTasksCompanion copyWith(
-      {Value<int>? id,
-      Value<int>? taskId,
-      Value<String>? title,
-      Value<bool>? done,
-      Value<int>? reference}) {
+  SubTasksCompanion copyWith({
+    Value<int>? id,
+    Value<int>? taskId,
+    Value<String>? title,
+    Value<bool>? done,
+    Value<int>? reference,
+  }) {
     return SubTasksCompanion(
       id: id ?? this.id,
       taskId: taskId ?? this.taskId,
@@ -832,24 +966,40 @@ class TimeMeasurements extends Table
   final String? _alias;
   TimeMeasurements(this.attachedDatabase, [this._alias]);
   late final GeneratedColumn<int> id = GeneratedColumn<int>(
-      'id', aliasedName, false,
-      hasAutoIncrement: true,
-      type: DriftSqlType.int,
-      requiredDuringInsert: false,
-      defaultConstraints:
-          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
   late final GeneratedColumn<int> taskId = GeneratedColumn<int>(
-      'task_id', aliasedName, false,
-      type: DriftSqlType.int,
-      requiredDuringInsert: true,
-      defaultConstraints: GeneratedColumn.constraintIsAlways(
-          'REFERENCES user_tasks (id) ON DELETE CASCADE'));
+    'task_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES user_tasks (id) ON DELETE CASCADE',
+    ),
+  );
   late final GeneratedColumn<int> start = GeneratedColumn<int>(
-      'start', aliasedName, false,
-      type: DriftSqlType.int, requiredDuringInsert: true);
+    'start',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
   late final GeneratedColumn<int> end = GeneratedColumn<int>(
-      'end', aliasedName, false,
-      type: DriftSqlType.int, requiredDuringInsert: true);
+    'end',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
   @override
   List<GeneratedColumn> get $columns => [id, taskId, start, end];
   @override
@@ -863,14 +1013,22 @@ class TimeMeasurements extends Table
   TimeMeasurementsData map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return TimeMeasurementsData(
-      id: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
-      taskId: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}task_id'])!,
-      start: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}start'])!,
-      end: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}end'])!,
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      taskId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}task_id'],
+      )!,
+      start: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}start'],
+      )!,
+      end: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}end'],
+      )!,
     );
   }
 
@@ -886,11 +1044,12 @@ class TimeMeasurementsData extends DataClass
   final int taskId;
   final int start;
   final int end;
-  const TimeMeasurementsData(
-      {required this.id,
-      required this.taskId,
-      required this.start,
-      required this.end});
+  const TimeMeasurementsData({
+    required this.id,
+    required this.taskId,
+    required this.start,
+    required this.end,
+  });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -910,8 +1069,10 @@ class TimeMeasurementsData extends DataClass
     );
   }
 
-  factory TimeMeasurementsData.fromJson(Map<String, dynamic> json,
-      {ValueSerializer? serializer}) {
+  factory TimeMeasurementsData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return TimeMeasurementsData(
       id: serializer.fromJson<int>(json['id']),
@@ -986,9 +1147,9 @@ class TimeMeasurementsCompanion extends UpdateCompanion<TimeMeasurementsData> {
     required int taskId,
     required int start,
     required int end,
-  })  : taskId = Value(taskId),
-        start = Value(start),
-        end = Value(end);
+  }) : taskId = Value(taskId),
+       start = Value(start),
+       end = Value(end);
   static Insertable<TimeMeasurementsData> custom({
     Expression<int>? id,
     Expression<int>? taskId,
@@ -1003,11 +1164,12 @@ class TimeMeasurementsCompanion extends UpdateCompanion<TimeMeasurementsData> {
     });
   }
 
-  TimeMeasurementsCompanion copyWith(
-      {Value<int>? id,
-      Value<int>? taskId,
-      Value<int>? start,
-      Value<int>? end}) {
+  TimeMeasurementsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? taskId,
+    Value<int>? start,
+    Value<int>? end,
+  }) {
     return TimeMeasurementsCompanion(
       id: id ?? this.id,
       taskId: taskId ?? this.taskId,
@@ -1051,36 +1213,45 @@ class DatabaseAtV1 extends GeneratedDatabase {
   late final UserTasks userTasks = UserTasks(this);
   late final SubTasks subTasks = SubTasks(this);
   late final TimeMeasurements timeMeasurements = TimeMeasurements(this);
-  late final Index idxUserTasksStatus = Index('idx_user_tasks_status',
-      'CREATE INDEX idx_user_tasks_status ON user_tasks (status)');
+  late final Index idxUserTasksStatus = Index(
+    'idx_user_tasks_status',
+    'CREATE INDEX idx_user_tasks_status ON user_tasks (status)',
+  );
   late final Index idxUserTasksAutoInsertDate = Index(
-      'idx_user_tasks_auto_insert_date',
-      'CREATE INDEX idx_user_tasks_auto_insert_date ON user_tasks (auto_insert_date)');
-  late final Index idxUserTasksDeletedAt = Index('idx_user_tasks_deleted_at',
-      'CREATE INDEX idx_user_tasks_deleted_at ON user_tasks (deleted_at)');
+    'idx_user_tasks_auto_insert_date',
+    'CREATE INDEX idx_user_tasks_auto_insert_date ON user_tasks (auto_insert_date)',
+  );
+  late final Index idxUserTasksDeletedAt = Index(
+    'idx_user_tasks_deleted_at',
+    'CREATE INDEX idx_user_tasks_deleted_at ON user_tasks (deleted_at)',
+  );
   late final Index idxUserTasksActiveTimeMeasurementStart = Index(
-      'idx_user_tasks_active_time_measurement_start',
-      'CREATE INDEX idx_user_tasks_active_time_measurement_start ON user_tasks (active_time_measurement_start)');
-  late final Index idxSubTasksTaskId = Index('idx_sub_tasks_task_id',
-      'CREATE INDEX idx_sub_tasks_task_id ON sub_tasks (task_id)');
+    'idx_user_tasks_active_time_measurement_start',
+    'CREATE INDEX idx_user_tasks_active_time_measurement_start ON user_tasks (active_time_measurement_start)',
+  );
+  late final Index idxSubTasksTaskId = Index(
+    'idx_sub_tasks_task_id',
+    'CREATE INDEX idx_sub_tasks_task_id ON sub_tasks (task_id)',
+  );
   late final Index idxTimeMeasurementsTaskId = Index(
-      'idx_time_measurements_task_id',
-      'CREATE INDEX idx_time_measurements_task_id ON time_measurements (task_id)');
+    'idx_time_measurements_task_id',
+    'CREATE INDEX idx_time_measurements_task_id ON time_measurements (task_id)',
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities => [
-        userTasks,
-        subTasks,
-        timeMeasurements,
-        idxUserTasksStatus,
-        idxUserTasksAutoInsertDate,
-        idxUserTasksDeletedAt,
-        idxUserTasksActiveTimeMeasurementStart,
-        idxSubTasksTaskId,
-        idxTimeMeasurementsTaskId
-      ];
+    userTasks,
+    subTasks,
+    timeMeasurements,
+    idxUserTasksStatus,
+    idxUserTasksAutoInsertDate,
+    idxUserTasksDeletedAt,
+    idxUserTasksActiveTimeMeasurementStart,
+    idxSubTasksTaskId,
+    idxTimeMeasurementsTaskId,
+  ];
   @override
   int get schemaVersion => 1;
   @override

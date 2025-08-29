@@ -27,6 +27,13 @@ order:
   default: Padrão
   by_end_date: Data de término
   by_start_date: Data de início
+  group_by_priority: Prioridade
+
+task_priority_group:
+  important_urgent: Importante e urgente ({})
+  important_not_urgent: Importante, mas não urgente ({})
+  not_important_urgent: Urgente, mas não importante ({})
+  not_important_not_urgent: Nem importante nem urgente ({})
 
 create_task: Criar tarefa
 edit_task: Editar tarefa
@@ -55,6 +62,13 @@ task_restored: Tarefa restaurada
 delete_task_permanently_confirmation:
   title: Excluir tarefa permanentemente
   content: Tem certeza de que deseja excluir esta tarefa permanentemente? Esta ação é irreversível.
+task_priority:
+  important: Importante
+  important_tooltip: 'Tarefas importantes são aquelas que contribuem para seus objetivos de longo prazo, valores e missão. Elas não estão necessariamente associadas a prazos imediatos, mas são cruciais para o seu sucesso e bem-estar geral.'
+  urgent: Urgente
+  urgent_tooltip: 'Tarefas urgentes exigem atenção imediata. Elas estão frequentemente associadas a prazos ou crises iminentes e podem não contribuir significativamente para seus objetivos de longo prazo.'
+  help_url: https://pt.wikipedia.org/wiki/Matriz_de_Eisenhower
+  help_tooltip: 'Saiba mais sobre a Matriz de Eisenhower'
 
 
 select_date: Selecionar data

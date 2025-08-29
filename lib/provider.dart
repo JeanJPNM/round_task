@@ -35,6 +35,12 @@ final queuedTasksPod = Provider.family.autoDispose((ref, TaskSorting? sorting) {
   return tasks;
 });
 
+final groupedQueuedTasksPod = Provider.autoDispose((ref) {
+  final tasks = ref.watch(_innerQueuedTasksPod);
+
+  return tasks.whenData((tasks) => tasks.groupListsBy((task) => task.priority));
+});
+
 final _innerPendingTasksPod = StreamProvider((ref) {
   final database = ref.watch(databasePod);
 

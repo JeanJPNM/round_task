@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:relative_time/relative_time.dart';
 import 'package:round_task/custom_colors.dart';
-import 'package:round_task/db/database.dart';
+import 'package:round_task/db/db.dart';
 import 'package:round_task/formatting.dart';
 import 'package:round_task/screens/task_view.dart';
 import 'package:round_task/widgets/animated_progress_bar.dart';

@@ -1,4 +1,5 @@
 // dart format width=80
+import 'package:drift/src/runtime/query_builder/query_builder.dart' as i2;
 // GENERATED CODE, DO NOT EDIT BY HAND.
 // ignore_for_file: type=lint
 import 'package:drift/drift.dart';
@@ -93,6 +94,13 @@ class UserTasks extends Table with TableInfo<UserTasks, UserTasksData> {
     'auto_insert_date',
     aliasedName,
     true,
+    generatedAs: GeneratedAs(
+      i2.coalesce([
+        startDate,
+        endDate - i2.Constant(const Duration(days: 1).inMilliseconds),
+      ]),
+      true,
+    ),
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
@@ -111,6 +119,14 @@ class UserTasks extends Table with TableInfo<UserTasks, UserTasksData> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  late final GeneratedColumn<int> priority = GeneratedColumn<int>(
+    'priority',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const CustomExpression('3'),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -127,6 +143,7 @@ class UserTasks extends Table with TableInfo<UserTasks, UserTasksData> {
     autoInsertDate,
     activeTimeMeasurementStart,
     recurrence,
+    priority,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -195,6 +212,10 @@ class UserTasks extends Table with TableInfo<UserTasks, UserTasksData> {
         DriftSqlType.string,
         data['${effectivePrefix}recurrence'],
       ),
+      priority: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}priority'],
+      )!,
     );
   }
 
@@ -219,6 +240,7 @@ class UserTasksData extends DataClass implements Insertable<UserTasksData> {
   final int? autoInsertDate;
   final int? activeTimeMeasurementStart;
   final String? recurrence;
+  final int priority;
   const UserTasksData({
     required this.id,
     required this.title,
@@ -234,6 +256,7 @@ class UserTasksData extends DataClass implements Insertable<UserTasksData> {
     this.autoInsertDate,
     this.activeTimeMeasurementStart,
     this.recurrence,
+    required this.priority,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -259,9 +282,6 @@ class UserTasksData extends DataClass implements Insertable<UserTasksData> {
     if (!nullToAbsent || endDate != null) {
       map['end_date'] = Variable<int>(endDate);
     }
-    if (!nullToAbsent || autoInsertDate != null) {
-      map['auto_insert_date'] = Variable<int>(autoInsertDate);
-    }
     if (!nullToAbsent || activeTimeMeasurementStart != null) {
       map['active_time_measurement_start'] = Variable<int>(
         activeTimeMeasurementStart,
@@ -270,6 +290,7 @@ class UserTasksData extends DataClass implements Insertable<UserTasksData> {
     if (!nullToAbsent || recurrence != null) {
       map['recurrence'] = Variable<String>(recurrence);
     }
+    map['priority'] = Variable<int>(priority);
     return map;
   }
 
@@ -296,9 +317,6 @@ class UserTasksData extends DataClass implements Insertable<UserTasksData> {
       endDate: endDate == null && nullToAbsent
           ? const Value.absent()
           : Value(endDate),
-      autoInsertDate: autoInsertDate == null && nullToAbsent
-          ? const Value.absent()
-          : Value(autoInsertDate),
       activeTimeMeasurementStart:
           activeTimeMeasurementStart == null && nullToAbsent
           ? const Value.absent()
@@ -306,6 +324,7 @@ class UserTasksData extends DataClass implements Insertable<UserTasksData> {
       recurrence: recurrence == null && nullToAbsent
           ? const Value.absent()
           : Value(recurrence),
+      priority: Value(priority),
     );
   }
 
@@ -331,6 +350,7 @@ class UserTasksData extends DataClass implements Insertable<UserTasksData> {
         json['activeTimeMeasurementStart'],
       ),
       recurrence: serializer.fromJson<String?>(json['recurrence']),
+      priority: serializer.fromJson<int>(json['priority']),
     );
   }
   @override
@@ -353,6 +373,7 @@ class UserTasksData extends DataClass implements Insertable<UserTasksData> {
         activeTimeMeasurementStart,
       ),
       'recurrence': serializer.toJson<String?>(recurrence),
+      'priority': serializer.toJson<int>(priority),
     };
   }
 
@@ -371,6 +392,7 @@ class UserTasksData extends DataClass implements Insertable<UserTasksData> {
     Value<int?> autoInsertDate = const Value.absent(),
     Value<int?> activeTimeMeasurementStart = const Value.absent(),
     Value<String?> recurrence = const Value.absent(),
+    int? priority,
   }) => UserTasksData(
     id: id ?? this.id,
     title: title ?? this.title,
@@ -390,36 +412,8 @@ class UserTasksData extends DataClass implements Insertable<UserTasksData> {
         ? activeTimeMeasurementStart.value
         : this.activeTimeMeasurementStart,
     recurrence: recurrence.present ? recurrence.value : this.recurrence,
+    priority: priority ?? this.priority,
   );
-  UserTasksData copyWithCompanion(UserTasksCompanion data) {
-    return UserTasksData(
-      id: data.id.present ? data.id.value : this.id,
-      title: data.title.present ? data.title.value : this.title,
-      description: data.description.present
-          ? data.description.value
-          : this.description,
-      status: data.status.present ? data.status.value : this.status,
-      reference: data.reference.present ? data.reference.value : this.reference,
-      progress: data.progress.present ? data.progress.value : this.progress,
-      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
-      updatedByUserAt: data.updatedByUserAt.present
-          ? data.updatedByUserAt.value
-          : this.updatedByUserAt,
-      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
-      startDate: data.startDate.present ? data.startDate.value : this.startDate,
-      endDate: data.endDate.present ? data.endDate.value : this.endDate,
-      autoInsertDate: data.autoInsertDate.present
-          ? data.autoInsertDate.value
-          : this.autoInsertDate,
-      activeTimeMeasurementStart: data.activeTimeMeasurementStart.present
-          ? data.activeTimeMeasurementStart.value
-          : this.activeTimeMeasurementStart,
-      recurrence: data.recurrence.present
-          ? data.recurrence.value
-          : this.recurrence,
-    );
-  }
-
   @override
   String toString() {
     return (StringBuffer('UserTasksData(')
@@ -436,7 +430,8 @@ class UserTasksData extends DataClass implements Insertable<UserTasksData> {
           ..write('endDate: $endDate, ')
           ..write('autoInsertDate: $autoInsertDate, ')
           ..write('activeTimeMeasurementStart: $activeTimeMeasurementStart, ')
-          ..write('recurrence: $recurrence')
+          ..write('recurrence: $recurrence, ')
+          ..write('priority: $priority')
           ..write(')'))
         .toString();
   }
@@ -457,6 +452,7 @@ class UserTasksData extends DataClass implements Insertable<UserTasksData> {
     autoInsertDate,
     activeTimeMeasurementStart,
     recurrence,
+    priority,
   );
   @override
   bool operator ==(Object other) =>
@@ -475,7 +471,8 @@ class UserTasksData extends DataClass implements Insertable<UserTasksData> {
           other.endDate == this.endDate &&
           other.autoInsertDate == this.autoInsertDate &&
           other.activeTimeMeasurementStart == this.activeTimeMeasurementStart &&
-          other.recurrence == this.recurrence);
+          other.recurrence == this.recurrence &&
+          other.priority == this.priority);
 }
 
 class UserTasksCompanion extends UpdateCompanion<UserTasksData> {
@@ -490,9 +487,9 @@ class UserTasksCompanion extends UpdateCompanion<UserTasksData> {
   final Value<int?> deletedAt;
   final Value<int?> startDate;
   final Value<int?> endDate;
-  final Value<int?> autoInsertDate;
   final Value<int?> activeTimeMeasurementStart;
   final Value<String?> recurrence;
+  final Value<int> priority;
   const UserTasksCompanion({
     this.id = const Value.absent(),
     this.title = const Value.absent(),
@@ -505,9 +502,9 @@ class UserTasksCompanion extends UpdateCompanion<UserTasksData> {
     this.deletedAt = const Value.absent(),
     this.startDate = const Value.absent(),
     this.endDate = const Value.absent(),
-    this.autoInsertDate = const Value.absent(),
     this.activeTimeMeasurementStart = const Value.absent(),
     this.recurrence = const Value.absent(),
+    this.priority = const Value.absent(),
   });
   UserTasksCompanion.insert({
     this.id = const Value.absent(),
@@ -521,9 +518,9 @@ class UserTasksCompanion extends UpdateCompanion<UserTasksData> {
     this.deletedAt = const Value.absent(),
     this.startDate = const Value.absent(),
     this.endDate = const Value.absent(),
-    this.autoInsertDate = const Value.absent(),
     this.activeTimeMeasurementStart = const Value.absent(),
     this.recurrence = const Value.absent(),
+    this.priority = const Value.absent(),
   }) : title = Value(title),
        description = Value(description),
        status = Value(status),
@@ -541,9 +538,9 @@ class UserTasksCompanion extends UpdateCompanion<UserTasksData> {
     Expression<int>? deletedAt,
     Expression<int>? startDate,
     Expression<int>? endDate,
-    Expression<int>? autoInsertDate,
     Expression<int>? activeTimeMeasurementStart,
     Expression<String>? recurrence,
+    Expression<int>? priority,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -557,10 +554,10 @@ class UserTasksCompanion extends UpdateCompanion<UserTasksData> {
       if (deletedAt != null) 'deleted_at': deletedAt,
       if (startDate != null) 'start_date': startDate,
       if (endDate != null) 'end_date': endDate,
-      if (autoInsertDate != null) 'auto_insert_date': autoInsertDate,
       if (activeTimeMeasurementStart != null)
         'active_time_measurement_start': activeTimeMeasurementStart,
       if (recurrence != null) 'recurrence': recurrence,
+      if (priority != null) 'priority': priority,
     });
   }
 
@@ -576,9 +573,9 @@ class UserTasksCompanion extends UpdateCompanion<UserTasksData> {
     Value<int?>? deletedAt,
     Value<int?>? startDate,
     Value<int?>? endDate,
-    Value<int?>? autoInsertDate,
     Value<int?>? activeTimeMeasurementStart,
     Value<String?>? recurrence,
+    Value<int>? priority,
   }) {
     return UserTasksCompanion(
       id: id ?? this.id,
@@ -592,10 +589,10 @@ class UserTasksCompanion extends UpdateCompanion<UserTasksData> {
       deletedAt: deletedAt ?? this.deletedAt,
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
-      autoInsertDate: autoInsertDate ?? this.autoInsertDate,
       activeTimeMeasurementStart:
           activeTimeMeasurementStart ?? this.activeTimeMeasurementStart,
       recurrence: recurrence ?? this.recurrence,
+      priority: priority ?? this.priority,
     );
   }
 
@@ -635,9 +632,6 @@ class UserTasksCompanion extends UpdateCompanion<UserTasksData> {
     if (endDate.present) {
       map['end_date'] = Variable<int>(endDate.value);
     }
-    if (autoInsertDate.present) {
-      map['auto_insert_date'] = Variable<int>(autoInsertDate.value);
-    }
     if (activeTimeMeasurementStart.present) {
       map['active_time_measurement_start'] = Variable<int>(
         activeTimeMeasurementStart.value,
@@ -645,6 +639,9 @@ class UserTasksCompanion extends UpdateCompanion<UserTasksData> {
     }
     if (recurrence.present) {
       map['recurrence'] = Variable<String>(recurrence.value);
+    }
+    if (priority.present) {
+      map['priority'] = Variable<int>(priority.value);
     }
     return map;
   }
@@ -663,9 +660,9 @@ class UserTasksCompanion extends UpdateCompanion<UserTasksData> {
           ..write('deletedAt: $deletedAt, ')
           ..write('startDate: $startDate, ')
           ..write('endDate: $endDate, ')
-          ..write('autoInsertDate: $autoInsertDate, ')
           ..write('activeTimeMeasurementStart: $activeTimeMeasurementStart, ')
-          ..write('recurrence: $recurrence')
+          ..write('recurrence: $recurrence, ')
+          ..write('priority: $priority')
           ..write(')'))
         .toString();
   }
@@ -1429,8 +1426,8 @@ class AppSettingsTableCompanion extends UpdateCompanion<AppSettingsTableData> {
   }
 }
 
-class DatabaseAtV2 extends GeneratedDatabase {
-  DatabaseAtV2(QueryExecutor e) : super(e);
+class DatabaseAtV3 extends GeneratedDatabase {
+  DatabaseAtV3(QueryExecutor e) : super(e);
   late final UserTasks userTasks = UserTasks(this);
   late final SubTasks subTasks = SubTasks(this);
   late final TimeMeasurements timeMeasurements = TimeMeasurements(this);
@@ -1486,7 +1483,7 @@ class DatabaseAtV2 extends GeneratedDatabase {
     idxTimeMeasurementsEnd,
   ];
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
   @override
   DriftDatabaseOptions get options =>
       const DriftDatabaseOptions(storeDateTimeAsText: true);

@@ -17,6 +17,7 @@ import 'package:round_task/widgets/recurrence_picker.dart';
 import 'package:round_task/widgets/second_tick_provider.dart';
 import 'package:round_task/widgets/sliver_material_reorderable_list.dart';
 import 'package:rrule/rrule.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class TaskViewParams {
   TaskViewParams(
@@ -112,6 +113,9 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
   final autoInserDateController = ValueNotifier<DateTime?>(null);
 
   final positionController = ValueNotifier<QueueInsertionPosition?>(null);
+  final priorityController = ValueNotifier<TaskPriority>(
+    const TaskPriority(important: false, urgent: false),
+  );
   bool lockTaskInQueue = false;
 
   late ScaffoldMessengerState parentScaffoldMessenger;
@@ -132,6 +136,7 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
       endDateController.value = task.endDate;
       autoInserDateController.value = task.autoInsertDate;
       recurrenceRule = task.recurrence;
+      priorityController.value = task.priority;
     }
 
     _subTasksController.setSubTasks(widget.subTasksValue.valueOrNull ?? []);
@@ -231,6 +236,7 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
       createdAt: task?.createdAt ?? now,
       updatedByUserAt: now,
       reference: Value.absentIfNull(task?.reference),
+      priority: Value(priorityController.value),
       deletedAt: restore
           ? const Value(null)
           : Value.absentIfNull(task?.deletedAt),
@@ -546,6 +552,8 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
                         );
                       },
                     ),
+                    const SizedBox(height: 16),
+                    _TaskPriorityPicker(controller: priorityController),
                     if (!isCreatingTask && task != null) ...[
                       const SizedBox(height: 16),
                       IntrinsicHeight(
@@ -1254,6 +1262,56 @@ class _TimeMeasurementButtonState extends State<_TimeMeasurementButton> {
           ),
         },
       ),
+    );
+  }
+}
+
+class _TaskPriorityPicker extends StatefulWidget {
+  const _TaskPriorityPicker({required this.controller});
+
+  final ValueNotifier<TaskPriority> controller;
+
+  @override
+  State<_TaskPriorityPicker> createState() => _TaskPriorityPickerState();
+}
+
+class _TaskPriorityPickerState extends State<_TaskPriorityPicker> {
+  @override
+  Widget build(BuildContext context) {
+    final controller = widget.controller;
+    return ValueListenableBuilder(
+      valueListenable: controller,
+      builder: (context, priority, child) {
+        return Wrap(
+          children: [
+            ChoiceChip(
+              label: Text(context.tr("task_priority.important")),
+              tooltip: context.tr("task_priority.important_tooltip"),
+              selected: priority.important,
+              onSelected: (value) {
+                controller.value = priority.copyWith(important: value);
+              },
+            ),
+            const SizedBox(width: 8),
+            ChoiceChip(
+              label: Text(context.tr("task_priority.urgent")),
+              tooltip: context.tr("task_priority.urgent_tooltip"),
+              selected: priority.urgent,
+              onSelected: (value) {
+                controller.value = priority.copyWith(urgent: value);
+              },
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              onPressed: () {
+                launchUrl(Uri.parse(context.tr("task_priority.help_url")));
+              },
+              tooltip: context.tr("task_priority.help_tooltip"),
+              icon: const Icon(Icons.help_outline),
+            ),
+          ],
+        );
+      },
     );
   }
 }

@@ -8,7 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:relative_time/relative_time.dart';
 import 'package:round_task/custom_colors.dart';
-import 'package:round_task/db/database.dart';
+import 'package:round_task/db/db.dart';
 import 'package:round_task/provider.dart';
 import 'package:round_task/screens/app_settings.dart';
 import 'package:round_task/screens/calendar_view.dart';

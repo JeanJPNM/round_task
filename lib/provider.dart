@@ -205,26 +205,33 @@ class DatabaseNotifier extends Notifier<db.AppDatabase> {
 
   Future<void> importData(String path) async {
     await state.close();
+    List<FutureOr<void> Function()> cleanups = [];
 
     try {
       final importedDb = sqlite3.open(path);
+      cleanups.add(importedDb.dispose);
+
       final tempDir = await getTemporaryDirectory();
       final tempDbPath = join(tempDir.path, "temp_round_task.sqlite");
       final tempDbFile = File(tempDbPath);
+      cleanups.add(() async {
+        if (await tempDbFile.exists()) {
+          await tempDbFile.delete();
+        }
+      });
 
       if (await tempDbFile.exists()) {
         await tempDbFile.delete();
       }
 
-      try {
-        importedDb.execute("VACUUM INTO ?", [tempDbPath]);
-      } finally {
-        importedDb.dispose();
-      }
-
+      importedDb.execute("VACUUM INTO ?", [tempDbPath]);
       await tempDbFile.copy(databasePath);
-      await tempDbFile.delete();
     } finally {
+      for (final cleanup in cleanups.reversed) {
+        try {
+          await cleanup();
+        } catch (_) {}
+      }
       state = db.AppDatabase(
         NativeDatabase.createInBackground(File(databasePath)),
       );

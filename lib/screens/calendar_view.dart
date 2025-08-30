@@ -225,7 +225,30 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
           viewConfiguration: viewConfiguration,
           components: CalendarComponents<_EventData>(
             multiDayComponents: MultiDayComponents(
-              bodyComponents: const MultiDayBodyComponents(),
+              bodyComponents: MultiDayBodyComponents(
+                daySeparator: (style) {
+                  return DaySeparator(
+                    style: DaySeparatorStyle(
+                      color: theme.colorScheme.outlineVariant,
+                      bottomIndent: style?.bottomIndent,
+                      topIndent: style?.topIndent,
+                      width: style?.width,
+                    ),
+                  );
+                },
+                hourLines: (heightPerMinute, timeOfDayRange, style) {
+                  return HourLines(
+                    heightPerMinute: heightPerMinute,
+                    timeOfDayRange: timeOfDayRange,
+                    style: HourLinesStyle(
+                      color: theme.colorScheme.outlineVariant,
+                      endIndent: style?.endIndent,
+                      indent: style?.indent,
+                      thickness: style?.thickness,
+                    ),
+                  );
+                },
+              ),
               headerComponents: MultiDayHeaderComponents(
                 weekNumberBuilder: (visibleDateTimeRange, style) =>
                     const SizedBox.shrink(),

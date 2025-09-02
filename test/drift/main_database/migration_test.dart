@@ -4,6 +4,8 @@ import 'package:drift/drift.dart';
 import 'package:drift_dev/api/migrations_native.dart';
 import 'package:round_task/db/database.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sqlite3/sqlite3.dart';
+import '../../test_helpers.dart';
 import 'generated/schema.dart';
 
 import 'generated/schema_v1.dart' as v1;
@@ -14,6 +16,7 @@ void main() {
   late SchemaVerifier verifier;
 
   setUpAll(() {
+    sqlite3.ensureExtensionLoaded(loadBetterTrigramForTest());
     verifier = SchemaVerifier(GeneratedHelper());
   });
 
@@ -69,12 +72,18 @@ void main() {
         batch.insertAll(oldDb.timeMeasurements, oldTimeMeasurementsData);
       },
       validateItems: (newDb) async {
-        expect(expectedNewUserTasksData,
-            await newDb.select(newDb.userTasks).get());
         expect(
-            expectedNewSubTasksData, await newDb.select(newDb.subTasks).get());
-        expect(expectedNewTimeMeasurementsData,
-            await newDb.select(newDb.timeMeasurements).get());
+          expectedNewUserTasksData,
+          await newDb.select(newDb.userTasks).get(),
+        );
+        expect(
+          expectedNewSubTasksData,
+          await newDb.select(newDb.subTasks).get(),
+        );
+        expect(
+          expectedNewTimeMeasurementsData,
+          await newDb.select(newDb.timeMeasurements).get(),
+        );
       },
     );
   });

@@ -4,98 +4,12 @@ import 'package:drift/drift.dart';
 import 'package:flutter/material.dart' show Color;
 import 'package:round_task/db/database.steps.dart';
 import 'package:round_task/db/types.dart';
+import 'package:round_task/db/tables.dart';
 import 'package:rrule/rrule.dart';
 
 part 'database.g.dart';
 
 const _defaultSkipSize = 256;
-
-@TableIndex(name: "idx_user_tasks_status", columns: {#status})
-@TableIndex(name: "idx_user_tasks_auto_insert_date", columns: {#autoInsertDate})
-@TableIndex(name: "idx_user_tasks_deleted_at", columns: {#deletedAt})
-@TableIndex(
-  name: "idx_user_tasks_active_time_measurement_start",
-  columns: {#activeTimeMeasurementStart},
-)
-class UserTasks extends Table {
-  late final id = integer().autoIncrement()();
-  late final title = text()();
-  late final description = text()();
-  late final status = integer().map(
-    const CodeEnumConverter(TaskStatus.fromDbCode),
-  )();
-  late final reference = integer().nullable()();
-  late final progress = real().nullable()();
-  late final createdAt = integer().map(const DateTimeConverter())();
-  late final updatedByUserAt = integer().map(const DateTimeConverter())();
-  late final deletedAt = integer().map(const DateTimeConverter()).nullable()();
-  late final startDate = integer().map(const DateTimeConverter()).nullable()();
-  late final endDate = integer().map(const DateTimeConverter()).nullable()();
-  late final autoInsertDate = integer()
-      .map(const DateTimeConverter())
-      .nullable()
-      .generatedAs(
-        coalesce([
-          startDate,
-          endDate - Constant(const Duration(days: 1).inMilliseconds),
-        ]),
-        stored: true,
-      )();
-  late final activeTimeMeasurementStart = integer()
-      .map(const DateTimeConverter())
-      .nullable()();
-
-  late final recurrence = text()
-      .map(const RecurrenceRuleConverter())
-      .nullable()();
-
-  late final priority = integer()
-      .map(const TaskPriorityConverter())
-      // this is unlikely to ever change on the dart
-      // side of the code, but I still don't like hardcoding the
-      // constant value
-      .withDefault(const Constant(3))();
-}
-
-@TableIndex(name: "idx_sub_tasks_task_id", columns: {#taskId})
-class SubTasks extends Table {
-  late final id = integer().autoIncrement()();
-  late final taskId = integer().references(
-    UserTasks,
-    #id,
-    onDelete: KeyAction.cascade,
-  )();
-  late final title = text()();
-  late final done = boolean()();
-  late final reference = integer()();
-}
-
-@TableIndex(name: "idx_time_measurements_task_id", columns: {#taskId})
-@TableIndex(name: "idx_time_measurements_start", columns: {#start})
-@TableIndex(name: "idx_time_measurements_end", columns: {#end})
-class TimeMeasurements extends Table {
-  late final id = integer().autoIncrement()();
-  late final taskId = integer().references(
-    UserTasks,
-    #id,
-    onDelete: KeyAction.cascade,
-  )();
-  late final start = integer().map(const DateTimeConverter())();
-  late final end = integer().map(const DateTimeConverter())();
-}
-
-typedef TitledTimeMeasurement = ({String title, TimeMeasurement measurement});
-
-@DataClassName("AppSettings")
-class AppSettingsTable extends Table {
-  late final id = integer().autoIncrement()();
-
-  late final brightness = integer().map(
-    const CodeEnumConverter(AppBrightness.fromDbCode),
-  )();
-
-  late final seedColor = integer().map(const ColorConverter()).nullable()();
-}
 
 enum QueueInsertionPosition { start, end, preferred }
 
@@ -168,8 +82,11 @@ class RemoveTimeMeasurement extends TaskEditAction {
   final TimeMeasurement measurement;
 }
 
+typedef TitledTimeMeasurement = ({String title, TimeMeasurement measurement});
+
 @DriftDatabase(
   tables: [UserTasks, SubTasks, TimeMeasurements, AppSettingsTable],
+  include: {"text_search.drift"},
 )
 class AppDatabase extends _$AppDatabase {
   // After generating code, this class needs to define a `schemaVersion` getter
@@ -186,7 +103,7 @@ class AppDatabase extends _$AppDatabase {
   );
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration {
@@ -203,6 +120,16 @@ class AppDatabase extends _$AppDatabase {
         from2To3: (m, schema) async {
           await m.addColumn(schema.userTasks, schema.userTasks.priority);
           await m.alterTable(TableMigration(schema.userTasks));
+        },
+        from3To4: (m, schema) async {
+          await m.createTable(taskFts);
+          await m.createTrigger(taskFtsOnTaskInsert);
+          await m.createTrigger(taskFtsOnTaskUpdate);
+          await m.createTrigger(taskFtsOnTaskDelete);
+
+          await customStatement(
+            "INSERT INTO task_fts(task_fts) VALUES('rebuild')",
+          );
         },
       ),
     );
@@ -544,23 +471,28 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
-  // TODO: just filter it on the dart side
   MultiSelectable<UserTask> searchTasks(TaskStatus status, String searchText) {
-    final pattern = '%$searchText%';
-    final query = _selectTasks()
-      ..where((t) => t.status.equalsValue(status))
-      ..where((t) => t.title.like(pattern) | t.description.like(pattern));
+    OrderingTerm orderingTerm(UserTasks t) => switch (status) {
+      TaskStatus.active => OrderingTerm.asc(t.reference),
+      TaskStatus.pending => OrderingTerm.asc(t.createdAt),
+      TaskStatus.archived => OrderingTerm.desc(t.updatedByUserAt),
+    };
 
-    switch (status) {
-      case TaskStatus.active:
-        query.orderBy([(t) => OrderingTerm.asc(t.reference)]);
-      case TaskStatus.pending:
-        query.orderBy([(t) => OrderingTerm.asc(t.createdAt)]);
-      case TaskStatus.archived:
-        query.orderBy([(t) => OrderingTerm.desc(t.updatedByUserAt)]);
+    final trimmed = searchText.trim();
+
+    if (trimmed.isEmpty) {
+      return _selectTasks()
+        ..where((t) => t.status.equalsValue(status))
+        ..orderBy([orderingTerm]);
     }
 
-    return query;
+    // escape possible fts5 syntax
+    final escaped = trimmed
+        .split(RegExp(r'\s+'))
+        .map((token) => '"${token.replaceAll('"', '""')}"')
+        .join(' ');
+
+    return fullTextTaskSearch(escaped, status, (_, t) => orderingTerm(t));
   }
 
   Future<UserTask> _putTaskInQueue(

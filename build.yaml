@@ -8,3 +8,8 @@ targets:
           store_date_time_values_as_text: true
           databases:
             main_database: lib/db/database.dart
+          sql:
+            dialect: sqlite
+            options:
+              modules:
+                - fts5

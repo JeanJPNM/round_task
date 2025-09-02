@@ -3,16 +3,23 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:drift/native.dart';
 import 'package:round_task/db/db.dart';
 import 'package:rrule/rrule.dart';
+import 'package:sqlite3/sqlite3.dart';
 import 'test_helpers.dart';
 
 void main() {
   late AppDatabase db;
 
+  setUpAll(() {
+    sqlite3.ensureExtensionLoaded(loadBetterTrigramForTest());
+  });
+
   setUp(() async {
-    db = AppDatabase(drift.DatabaseConnection(
-      NativeDatabase.memory(),
-      closeStreamsSynchronously: true,
-    ));
+    db = AppDatabase(
+      drift.DatabaseConnection(
+        NativeDatabase.memory(sqlite3: () => sqlite3),
+        closeStreamsSynchronously: true,
+      ),
+    );
     await db.init();
   });
 
@@ -20,43 +27,45 @@ void main() {
     await db.close();
   });
 
-  test("getSubTasks should order the subTasks by their reference property",
-      () async {
-    final task = UserTasksCompanion.insert(
-      title: 'Test Task',
-      description: 'Test Description',
-      status: TaskStatus.active,
-      createdAt: DateTime.now(),
-      updatedByUserAt: DateTime.now(),
-    );
-    final insertedTask = await db.writeTask(task, [
-      PutSubTasks([
-        SubTasksCompanion.insert(
-          taskId: -1,
-          title: 'Sub Task 2',
-          done: true,
-          reference: 2,
-        ),
-        SubTasksCompanion.insert(
-          taskId: -1,
-          title: 'Sub Task 1',
-          done: false,
-          reference: 1,
-        ),
-        SubTasksCompanion.insert(
-          taskId: -1,
-          title: "Sub Task 3",
-          done: false,
-          reference: 3,
-        ),
-      ])
-    ]);
+  test(
+    "getSubTasks should order the subTasks by their reference property",
+    () async {
+      final task = UserTasksCompanion.insert(
+        title: 'Test Task',
+        description: 'Test Description',
+        status: TaskStatus.active,
+        createdAt: DateTime.now(),
+        updatedByUserAt: DateTime.now(),
+      );
+      final insertedTask = await db.writeTask(task, [
+        PutSubTasks([
+          SubTasksCompanion.insert(
+            taskId: -1,
+            title: 'Sub Task 2',
+            done: true,
+            reference: 2,
+          ),
+          SubTasksCompanion.insert(
+            taskId: -1,
+            title: 'Sub Task 1',
+            done: false,
+            reference: 1,
+          ),
+          SubTasksCompanion.insert(
+            taskId: -1,
+            title: "Sub Task 3",
+            done: false,
+            reference: 3,
+          ),
+        ]),
+      ]);
 
-    final taskId = insertedTask.id;
-    final subTasks = await db.getSubTasks(taskId).get();
+      final taskId = insertedTask.id;
+      final subTasks = await db.getSubTasks(taskId).get();
 
-    expect([for (final subTask in subTasks) subTask.reference], [1, 2, 3]);
-  });
+      expect([for (final subTask in subTasks) subTask.reference], [1, 2, 3]);
+    },
+  );
 
   test('undoSoftDeleteTask should restore a soft-deleted task', () async {
     // 1. Create and soft-delete a task
@@ -71,62 +80,61 @@ void main() {
     await db.writeTask(insertedTask, [SoftDeleteTask(DateTime.now())]);
 
     // 2. Verify the task is soft-deleted
-    final deletedTask = await (db.select(db.userTasks)
-          ..where((t) => t.id.equals(insertedTask.id)))
-        .getSingle();
+    final deletedTask = await (db.select(
+      db.userTasks,
+    )..where((t) => t.id.equals(insertedTask.id))).getSingle();
     expect(deletedTask.deletedAt, isNotNull);
 
     // 3. Undo the soft-delete
     await db.writeTask(deletedTask, [const UndoSoftDeleteTask()]);
 
     // 4. Verify the task is restored
-    final restoredTask = await (db.select(db.userTasks)
-          ..where((t) => t.id.equals(insertedTask.id)))
-        .getSingle();
+    final restoredTask = await (db.select(
+      db.userTasks,
+    )..where((t) => t.id.equals(insertedTask.id))).getSingle();
 
     expect(restoredTask, equals(insertedTask));
   });
 
-  test('UndoStopTimeMeasurement should restore the active time measurement',
-      () async {
-    // 1. Create a task and start a time measurement
-    final task = UserTasksCompanion.insert(
-      title: 'Test Task',
-      description: 'Test Description',
-      status: TaskStatus.active,
-      createdAt: DateTime.now(),
-      updatedByUserAt: DateTime.now(),
-    );
-    final insertedTask = await db.writeTask(task);
-    final taskId = insertedTask.id;
+  test(
+    'UndoStopTimeMeasurement should restore the active time measurement',
+    () async {
+      // 1. Create a task and start a time measurement
+      final task = UserTasksCompanion.insert(
+        title: 'Test Task',
+        description: 'Test Description',
+        status: TaskStatus.active,
+        createdAt: DateTime.now(),
+        updatedByUserAt: DateTime.now(),
+      );
+      final insertedTask = await db.writeTask(task);
+      final taskId = insertedTask.id;
 
-    final startTime = DateTime.now();
-    final startedTask = await db.writeTask(
-      insertedTask,
-      [StartTimeMeasurement(startTime)],
-    );
+      final startTime = DateTime.now();
+      final startedTask = await db.writeTask(insertedTask, [
+        StartTimeMeasurement(startTime),
+      ]);
 
-    // 2. Stop the time measurement
-    final stopTime = startTime.add(const Duration(minutes: 1));
-    final stoppedTask = await db.writeTask(
-      startedTask,
-      [StopTimeMeasurement(stopTime)],
-    );
+      // 2. Stop the time measurement
+      final stopTime = startTime.add(const Duration(minutes: 1));
+      final stoppedTask = await db.writeTask(startedTask, [
+        StopTimeMeasurement(stopTime),
+      ]);
 
-    // 3. Verify the time measurement is stopped
-    expect(stoppedTask.activeTimeMeasurementStart, isNull);
-    expect(await _getMeasurementCount(db, taskId), equals(1));
+      // 3. Verify the time measurement is stopped
+      expect(stoppedTask.activeTimeMeasurementStart, isNull);
+      expect(await _getMeasurementCount(db, taskId), equals(1));
 
-    // 4. Undo the stop time measurement
-    final restoredTask = await db.writeTask(
-      insertedTask,
-      [UndoStopTimeMeasurement(startTime)],
-    );
+      // 4. Undo the stop time measurement
+      final restoredTask = await db.writeTask(insertedTask, [
+        UndoStopTimeMeasurement(startTime),
+      ]);
 
-    // 5. Verify the time measurement is restored
-    expect(restoredTask.activeTimeMeasurementStart, equalsDate(startTime));
-    expect(await _getMeasurementCount(db, taskId), equals(0));
-  });
+      // 5. Verify the time measurement is restored
+      expect(restoredTask.activeTimeMeasurementStart, equalsDate(startTime));
+      expect(await _getMeasurementCount(db, taskId), equals(0));
+    },
+  );
 
   test("PutSubTasks assigns the correct taskId to subTasks", () async {
     final task = UserTasksCompanion.insert(
@@ -156,7 +164,7 @@ void main() {
           done: false,
           reference: 2,
         ),
-      ])
+      ]),
     ]);
 
     final taskId = insertedTask.id;
@@ -187,31 +195,33 @@ void main() {
     ]);
   });
 
-  test("PutTimeMeasurement assigns the correct taskId to timeMeasurements",
-      () async {
-    final task = UserTasksCompanion.insert(
-      title: 'Test Task',
-      description: 'Test Description',
-      status: TaskStatus.active,
-      createdAt: DateTime.now(),
-      updatedByUserAt: DateTime.now(),
-    );
+  test(
+    "PutTimeMeasurement assigns the correct taskId to timeMeasurements",
+    () async {
+      final task = UserTasksCompanion.insert(
+        title: 'Test Task',
+        description: 'Test Description',
+        status: TaskStatus.active,
+        createdAt: DateTime.now(),
+        updatedByUserAt: DateTime.now(),
+      );
 
-    final insertedTask = await db.writeTask(task, [
-      PutTimeMeasurement(
-        TimeMeasurementsCompanion.insert(
-          taskId: 200,
-          start: DateTime.now(),
-          end: DateTime.now().add(const Duration(minutes: 30)),
+      final insertedTask = await db.writeTask(task, [
+        PutTimeMeasurement(
+          TimeMeasurementsCompanion.insert(
+            taskId: 200,
+            start: DateTime.now(),
+            end: DateTime.now().add(const Duration(minutes: 30)),
+          ),
         ),
-      ),
-    ]);
+      ]);
 
-    final taskId = insertedTask.id;
-    final timeMeasurements = await db.getTaskTimeMeasurements(taskId).get();
+      final taskId = insertedTask.id;
+      final timeMeasurements = await db.getTaskTimeMeasurements(taskId).get();
 
-    expect(timeMeasurements.first.taskId, equals(taskId));
-  });
+      expect(timeMeasurements.first.taskId, equals(taskId));
+    },
+  );
   test("RestoreSubTasks should restore the original subTasks", () async {
     // 1. Create a task with sub-tasks
     final task = UserTasksCompanion.insert(
@@ -236,7 +246,7 @@ void main() {
           done: false,
           reference: 1,
         ),
-      ])
+      ]),
     ]);
     final taskId = insertedTask.id;
     final subTasks = await db.getSubTasks(taskId).get();
@@ -256,8 +266,8 @@ void main() {
           title: const Value('Sub Task 2'),
           reference: const Value(-1),
           done: const Value(true),
-        )
-      ])
+        ),
+      ]),
     ]);
 
     final newSubTasks = await db.getSubTasks(taskId).get();
@@ -287,88 +297,96 @@ void main() {
     expect(restoredSubTasks, subTasks);
   });
 
-  test("deleting a task also deletes the subTasks and timeMeasurements",
-      () async {
-    final task = UserTasksCompanion.insert(
-      title: 'Test Task',
-      description: 'Test Description',
-      status: TaskStatus.active,
-      createdAt: DateTime.now(),
-      updatedByUserAt: DateTime.now(),
-    );
+  test(
+    "deleting a task also deletes the subTasks and timeMeasurements",
+    () async {
+      final task = UserTasksCompanion.insert(
+        title: 'Test Task',
+        description: 'Test Description',
+        status: TaskStatus.active,
+        createdAt: DateTime.now(),
+        updatedByUserAt: DateTime.now(),
+      );
 
-    final insertedTask = await db.writeTask(task, [
-      PutSubTasks([
-        SubTasksCompanion.insert(
-          taskId: -1,
-          title: 'Sub Task 1',
-          done: false,
-          reference: 0,
+      final insertedTask = await db.writeTask(task, [
+        PutSubTasks([
+          SubTasksCompanion.insert(
+            taskId: -1,
+            title: 'Sub Task 1',
+            done: false,
+            reference: 0,
+          ),
+          SubTasksCompanion.insert(
+            taskId: -1,
+            title: 'Sub Task 2',
+            done: true,
+            reference: 1,
+          ),
+        ]),
+        PutTimeMeasurement(
+          TimeMeasurementsCompanion.insert(
+            taskId: -1,
+            start: DateTime.now(),
+            end: DateTime.now().add(const Duration(minutes: 30)),
+          ),
         ),
-        SubTasksCompanion.insert(
-          taskId: -1,
-          title: 'Sub Task 2',
-          done: true,
-          reference: 1,
-        ),
-      ]),
-      PutTimeMeasurement(
-        TimeMeasurementsCompanion.insert(
-          taskId: -1,
-          start: DateTime.now(),
-          end: DateTime.now().add(const Duration(minutes: 30)),
-        ),
-      ),
-      StartTimeMeasurement(DateTime.now()),
-    ]);
+        StartTimeMeasurement(DateTime.now()),
+      ]);
 
-    final taskId = insertedTask.id;
-    final subTasks = await db.getSubTasks(taskId).get();
-    final timeMeasurements = await db.getTaskTimeMeasurements(taskId).get();
+      final taskId = insertedTask.id;
+      final subTasks = await db.getSubTasks(taskId).get();
+      final timeMeasurements = await db.getTaskTimeMeasurements(taskId).get();
 
-    expect(subTasks, hasLength(2));
-    expect(timeMeasurements, hasLength(1));
+      expect(subTasks, hasLength(2));
+      expect(timeMeasurements, hasLength(1));
 
-    // Delete the task
-    await db.deleteTask(insertedTask);
-    final deletedTask = await db.getTaskById(taskId).getSingleOrNull();
-    final deletedSubTasks = await db.getSubTasks(taskId).get();
-    final deletedTimeMeasurements =
-        await db.getTaskTimeMeasurements(taskId).get();
+      // Delete the task
+      await db.deleteTask(insertedTask);
+      final deletedTask = await db.getTaskById(taskId).getSingleOrNull();
+      final deletedSubTasks = await db.getSubTasks(taskId).get();
+      final deletedTimeMeasurements = await db
+          .getTaskTimeMeasurements(taskId)
+          .get();
 
-    expect(deletedTask, isNull);
-    expect(deletedSubTasks, isEmpty);
-    expect(deletedTimeMeasurements, isEmpty);
-  });
+      expect(deletedTask, isNull);
+      expect(deletedSubTasks, isEmpty);
+      expect(deletedTimeMeasurements, isEmpty);
+    },
+  );
 
   test(
-      "writing a task with null fields should set them to null, not treat them as missing",
-      () async {
-    final originalTask = await db.writeTask(UserTasksCompanion.insert(
-      title: 'Test Task',
-      description: 'Test Description',
-      startDate: Value(DateTime(2025, 1, 1)),
-      endDate: Value(DateTime(2025, 12, 31)),
-      recurrence: Value(RecurrenceRule(
-        frequency: Frequency.daily,
-        interval: 1,
-      )),
-      status: TaskStatus.active,
-      createdAt: DateTime.now(),
-      updatedByUserAt: DateTime.now(),
-    ));
+    "writing a task with null fields should set them to null, not treat them as missing",
+    () async {
+      final originalTask = await db.writeTask(
+        UserTasksCompanion.insert(
+          title: 'Test Task',
+          description: 'Test Description',
+          startDate: Value(DateTime(2025, 1, 1)),
+          endDate: Value(DateTime(2025, 12, 31)),
+          recurrence: Value(
+            RecurrenceRule(frequency: Frequency.daily, interval: 1),
+          ),
+          status: TaskStatus.active,
+          createdAt: DateTime.now(),
+          updatedByUserAt: DateTime.now(),
+        ),
+      );
 
-    await db.writeTask(originalTask.copyWith(
-      recurrence: const Value(null),
-      endDate: const Value(null),
-    ));
+      await db.writeTask(
+        originalTask.copyWith(
+          recurrence: const Value(null),
+          endDate: const Value(null),
+        ),
+      );
 
-    final fetchedTask =
-        (await db.getTaskById(originalTask.id).getSingleOrNull())!;
+      final fetchedTask = (await db
+          .getTaskById(originalTask.id)
+          .getSingleOrNull())!;
 
-    expect(fetchedTask.recurrence, isNull);
-    expect(fetchedTask.endDate, isNull);
-  });
+      expect(fetchedTask.recurrence, isNull);
+      expect(fetchedTask.endDate, isNull);
+    },
+  );
 
   test("getAllTimeMeasurements should ignore soft-deleted tasks", () async {
     // 1. Create a task and add a time measurement

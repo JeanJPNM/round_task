@@ -10,6 +10,7 @@ import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:round_task/db/db.dart' as db;
 import 'package:sqlite3/sqlite3.dart';
+import 'package:sqlite_better_trigram/sqlite_better_trigram.dart';
 
 final databasePod = NotifierProvider<DatabaseNotifier, db.AppDatabase>(
   DatabaseNotifier.new,
@@ -180,9 +181,7 @@ class DatabaseNotifier extends Notifier<db.AppDatabase> {
           : await getApplicationSupportDirectory();
 
       databasePath = join(dir.path, "round_task.sqlite");
-      final file = File(databasePath);
-
-      return NativeDatabase.createInBackground(file);
+      return _makeNativeDatabase();
     });
 
     final database = db.AppDatabase(executor);
@@ -191,6 +190,15 @@ class DatabaseNotifier extends Notifier<db.AppDatabase> {
     database.init();
 
     return database;
+  }
+
+  QueryExecutor _makeNativeDatabase() {
+    sqlite3.ensureExtensionLoaded(BetterTrigram.load());
+
+    return NativeDatabase.createInBackground(
+      File(databasePath),
+      sqlite3: () => sqlite3,
+    );
   }
 
   Future<void> exportData(String path) async {
@@ -232,9 +240,7 @@ class DatabaseNotifier extends Notifier<db.AppDatabase> {
           await cleanup();
         } catch (_) {}
       }
-      state = db.AppDatabase(
-        NativeDatabase.createInBackground(File(databasePath)),
-      );
+      state = db.AppDatabase(_makeNativeDatabase());
       await state.init();
     }
   }

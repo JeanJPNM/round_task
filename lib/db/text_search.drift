@@ -1,0 +1,32 @@
+import 'tables.dart';
+
+CREATE VIRTUAL TABLE task_fts USING fts5(
+  title,
+  description,
+  content='user_tasks',
+  content_rowid='id',
+  tokenize='better_trigram remove_diacritics 1'
+);
+
+CREATE TRIGGER task_fts_on_task_insert AFTER INSERT ON user_tasks BEGIN
+  INSERT INTO task_fts(rowid, title, description)
+    VALUES (new.id, new.title, new.description);
+END;
+
+CREATE TRIGGER task_fts_on_task_delete AFTER DELETE ON user_tasks BEGIN
+  INSERT INTO task_fts(task_fts, rowid, title, description)
+    VALUES ('delete', old.id, old.title, old.description);
+END;
+
+CREATE TRIGGER task_fts_on_task_update AFTER UPDATE ON user_tasks BEGIN
+  INSERT INTO task_fts(task_fts, rowid, title, description)
+    VALUES ('delete', old.id, old.title, old.description);
+  INSERT INTO task_fts(rowid, title, description)
+    VALUES (new.id, new.title, new.description);
+END;
+
+fullTextTaskSearch: SELECT task.* FROM task_fts fts JOIN user_tasks task
+  WHERE fts.rowid = task.id and task_fts = ? and task.status = ?
+  ORDER BY rank, $term;
+
+populateTaskFts: INSERT INTO task_fts(task_fts) VALUES('rebuild');

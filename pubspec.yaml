@@ -54,6 +54,9 @@ dependencies:
   drift: ^2.26.1
   drift_flutter: ^0.2.4
   sqlite3: ^2.7.6
+  sqlite3_flutter_libs: ^0.5.22
+  sqlite_better_trigram:
+    path: ./packages/sqlite_better_trigram
   downloadsfolder: ^1.2.0
   dropdown_button2: ^2.3.9
   flex_color_picker: ^3.7.1

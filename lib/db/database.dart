@@ -202,6 +202,7 @@ class AppDatabase extends _$AppDatabase {
         },
         from2To3: (m, schema) async {
           await m.addColumn(schema.userTasks, schema.userTasks.priority);
+          await m.alterTable(TableMigration(schema.userTasks));
         },
       ),
     );

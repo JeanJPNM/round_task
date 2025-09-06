@@ -10,7 +10,7 @@ import 'package:round_task/widgets/app_drawer.dart';
 import 'package:round_task/widgets/select_dropdown.dart';
 import 'package:round_task/widgets/task_card.dart';
 
-const _listPadding = EdgeInsets.only(bottom: 100, top: 40);
+const _selectPadding = EdgeInsets.only(left: 16, right: 16, top: 10);
 
 enum _QueuedTaskViewMode {
   orderByEndDate,
@@ -27,8 +27,7 @@ class TaskQueueScreen extends ConsumerStatefulWidget {
 }
 
 class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
-    with SingleTickerProviderStateMixin {
-  final _bucket = PageStorageBucket();
+    with TickerProviderStateMixin {
   late final TabController _tabController;
   final _currentIndex = ValueNotifier(0);
   final _searchFocusNode = FocusNode();
@@ -82,16 +81,9 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
     );
   }
 
-  Widget _buildTask(UserTask task) => SizedBox(
-    key: ValueKey(task.id),
-    width: double.infinity,
-    child: TaskCard(task: task),
-  );
-
   @override
   Widget build(BuildContext context) {
     final database = ref.watch(databasePod);
-
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -146,83 +138,29 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
               ),
             ),
             Expanded(
-              child: PageStorage(
-                bucket: _bucket,
-                child: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    Consumer(
-                      builder: (context, ref, child) {
-                        final queuedTasks = ref.watch(
-                          queuedTasksPod(_queuedTasksSorting),
-                        );
-                        return queuedTasks.when(
-                          loading: () =>
-                              const Center(child: CircularProgressIndicator()),
-                          error: (error, stackTrace) =>
-                              Center(child: Text(context.tr("general_error"))),
-                          data: (tasks) => _QueuedTasksTab(
-                            mode: _queuedTasksViewMode,
-                            tasks: tasks,
-                            database: database,
-                            onModeChanged: (sorting) {
-                              setState(() {
-                                _queuedTasksViewMode = sorting;
-                              });
-                            },
-                          ),
-                        );
-                      },
-                    ),
-                    Consumer(
-                      builder: (context, ref, child) {
-                        final pendingTasks = ref.watch(
-                          pendingTasksPod(_pendingTasksSorting),
-                        );
-
-                        return pendingTasks.when(
-                          loading: () =>
-                              const Center(child: CircularProgressIndicator()),
-                          error: (error, stackTrace) =>
-                              Center(child: Text(context.tr("general_error"))),
-                          data: (tasks) => _PendingTasksTab(
-                            sorting: _pendingTasksSorting,
-                            tasks: tasks,
-                            onSortingChanged: (sorting) {
-                              setState(() {
-                                _pendingTasksSorting = sorting;
-                              });
-                            },
-                          ),
-                        );
-                      },
-                    ),
-                    Consumer(
-                      builder: (context, ref, child) {
-                        final archivedTasks = ref.watch(archivedTasksPod);
-
-                        return archivedTasks.when(
-                          loading: () =>
-                              const Center(child: CircularProgressIndicator()),
-                          error: (error, stackTrace) =>
-                              Center(child: Text(context.tr("general_error"))),
-                          data: (tasks) => AnimatedReorderableListView(
-                            key: const PageStorageKey("archivedTasks"),
-                            padding: _listPadding,
-                            shrinkWrap: true,
-                            items: tasks,
-                            isSameItem: (a, b) => a.id == b.id,
-                            onReorder: (oldIndex, newIndex) {},
-                            nonDraggableItems: tasks,
-                            enableSwap: true,
-                            itemBuilder: (context, index) =>
-                                _buildTask(tasks[index]),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _QueuedTasksTab(
+                    mode: _queuedTasksViewMode,
+                    database: database,
+                    sorting: _queuedTasksSorting,
+                    onModeChanged: (mode) {
+                      setState(() {
+                        _queuedTasksViewMode = mode;
+                      });
+                    },
+                  ),
+                  _PendingTasksTab(
+                    sorting: _pendingTasksSorting,
+                    onSortingChanged: (sorting) {
+                      setState(() {
+                        _pendingTasksSorting = sorting;
+                      });
+                    },
+                  ),
+                  const _ArchivedTasksTab(),
+                ],
               ),
             ),
           ],
@@ -310,24 +248,24 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
   }
 }
 
-class _QueuedTasksTab extends StatefulWidget {
+class _QueuedTasksTab extends ConsumerStatefulWidget {
   const _QueuedTasksTab({
     required this.mode,
-    required this.tasks,
     required this.database,
-    this.onModeChanged,
+    required this.sorting,
+    required this.onModeChanged,
   });
 
+  final TaskSorting? sorting;
   final _QueuedTaskViewMode mode;
   final AppDatabase database;
-  final List<UserTask> tasks;
-  final void Function(_QueuedTaskViewMode)? onModeChanged;
+  final void Function(_QueuedTaskViewMode) onModeChanged;
 
   @override
-  State<_QueuedTasksTab> createState() => _QueuedTasksTabState();
+  ConsumerState<_QueuedTasksTab> createState() => __QueuedTasksTabState();
 }
 
-class _QueuedTasksTabState extends State<_QueuedTasksTab>
+class __QueuedTasksTabState extends ConsumerState<_QueuedTasksTab>
     with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
@@ -335,49 +273,79 @@ class _QueuedTasksTabState extends State<_QueuedTasksTab>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final mode = widget.mode;
-    final tasks = widget.tasks;
-    final database = widget.database;
+    const storageKey = PageStorageKey("queued_tasks");
 
-    return Column(
-      children: [
-        const SizedBox(height: 10),
-        Align(
-          alignment: Alignment.centerRight,
+    final mode = widget.mode;
+    final database = widget.database;
+    final tasksValue = ref.watch(queuedTasksPod(widget.sorting));
+
+    if (tasksValue.isLoading) {
+      return const _TabScrollView(
+        storageKey: storageKey,
+        slivers: [
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: Center(child: CircularProgressIndicator()),
+          ),
+        ],
+      );
+    }
+
+    if (tasksValue.hasError) {
+      return _TabScrollView(
+        storageKey: storageKey,
+        slivers: [
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: Center(child: Text(context.tr("general_error"))),
+          ),
+        ],
+      );
+    }
+
+    final tasks = tasksValue.value!;
+
+    return _TabScrollView(
+      storageKey: storageKey,
+      header: SliverFloatingHeader(
+        child: Material(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: SelectDropdown(
-              items: [
-                DropdownMenuItem(
-                  value: _QueuedTaskViewMode.orderByReference,
-                  child: Text(context.tr("order.default")),
-                ),
-                DropdownMenuItem(
-                  value: _QueuedTaskViewMode.orderByEndDate,
-                  child: Text(context.tr("order.by_end_date")),
-                ),
-                DropdownMenuItem(
-                  value: _QueuedTaskViewMode.orderByAutoInsertDate,
-                  child: Text(context.tr("order.by_start_date")),
-                ),
-                DropdownMenuItem(
-                  value: _QueuedTaskViewMode.groupByPriority,
-                  child: Text(context.tr("order.group_by_priority")),
-                ),
-              ],
-              onChanged: (value) {
-                if (value == null) return;
-                widget.onModeChanged?.call(value);
-              },
-              value: mode,
+            padding: _selectPadding,
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: SelectDropdown(
+                items: [
+                  DropdownMenuItem(
+                    value: _QueuedTaskViewMode.orderByReference,
+                    child: Text(context.tr("order.default")),
+                  ),
+                  DropdownMenuItem(
+                    value: _QueuedTaskViewMode.orderByEndDate,
+                    child: Text(context.tr("order.by_end_date")),
+                  ),
+                  DropdownMenuItem(
+                    value: _QueuedTaskViewMode.orderByAutoInsertDate,
+                    child: Text(context.tr("order.by_start_date")),
+                  ),
+                  DropdownMenuItem(
+                    value: _QueuedTaskViewMode.groupByPriority,
+                    child: Text(context.tr("order.group_by_priority")),
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value == null) return;
+                  widget.onModeChanged.call(value);
+                },
+                value: mode,
+              ),
             ),
           ),
         ),
-        Expanded(
-          child: mode == _QueuedTaskViewMode.groupByPriority
-              ? _buildGroupedByPriority(database)
-              : _buildNormalList(database: database, mode: mode, tasks: tasks),
-        ),
+      ),
+      slivers: [
+        mode == _QueuedTaskViewMode.groupByPriority
+            ? _buildGroupedByPriority(database)
+            : _buildNormalList(database: database, mode: mode, tasks: tasks),
       ],
     );
   }
@@ -387,10 +355,9 @@ class _QueuedTasksTabState extends State<_QueuedTasksTab>
     required _QueuedTaskViewMode mode,
     required List<UserTask> tasks,
   }) {
-    return AnimatedReorderableListView<UserTask>(
+    return ReorderableAnimatedListImpl<UserTask>(
+      scrollDirection: Axis.vertical,
       enableSwap: true,
-      padding: _listPadding,
-      shrinkWrap: true,
       items: tasks,
       isSameItem: (a, b) => a.id == b.id,
       nonDraggableItems: mode == _QueuedTaskViewMode.orderByReference
@@ -475,7 +442,7 @@ class _QueuedTasksTabState extends State<_QueuedTasksTab>
           );
         }
 
-        return CustomScrollView(
+        return SliverMainAxisGroup(
           slivers: [
             ?group(importantUrgent, "task_priority_group.important_urgent"),
             ?group(
@@ -497,21 +464,107 @@ class _QueuedTasksTabState extends State<_QueuedTasksTab>
   }
 }
 
-class _PendingTasksTab extends StatefulWidget {
-  const _PendingTasksTab({
-    required this.sorting,
-    required this.tasks,
-    this.onSortingChanged,
-  });
+class _PendingTasksTab extends ConsumerStatefulWidget {
+  const _PendingTasksTab({required this.sorting, this.onSortingChanged});
 
   final TaskSorting sorting;
-  final List<UserTask> tasks;
   final void Function(TaskSorting)? onSortingChanged;
   @override
-  State<_PendingTasksTab> createState() => __PendingTasksTabState();
+  ConsumerState<_PendingTasksTab> createState() => __PendingTasksTabState();
 }
 
-class __PendingTasksTabState extends State<_PendingTasksTab>
+class __PendingTasksTabState extends ConsumerState<_PendingTasksTab>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+
+    const storageKey = PageStorageKey("pending_tasks");
+    final sorting = widget.sorting;
+    final tasksValue = ref.watch(pendingTasksPod(sorting));
+
+    if (tasksValue.isLoading) {
+      return const _TabScrollView(
+        storageKey: storageKey,
+        slivers: [
+          SliverFillRemaining(
+            child: Center(child: CircularProgressIndicator()),
+          ),
+        ],
+      );
+    }
+
+    if (tasksValue.hasError) {
+      return _TabScrollView(
+        storageKey: storageKey,
+        slivers: [
+          SliverFillRemaining(
+            child: Center(child: Text(context.tr("general_error"))),
+          ),
+        ],
+      );
+    }
+
+    final tasks = tasksValue.value!;
+
+    return _TabScrollView(
+      storageKey: storageKey,
+      header: SliverFloatingHeader(
+        child: Material(
+          child: Padding(
+            padding: _selectPadding,
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: SelectDropdown(
+                items: [
+                  DropdownMenuItem(
+                    value: TaskSorting.creationDate,
+                    child: Text(context.tr("order.default")),
+                  ),
+                  DropdownMenuItem(
+                    value: TaskSorting.endDate,
+                    child: Text(context.tr("order.by_end_date")),
+                  ),
+                  DropdownMenuItem(
+                    value: TaskSorting.autoInsertDate,
+                    child: Text(context.tr("order.by_start_date")),
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value == null) return;
+                  widget.onSortingChanged?.call(value);
+                },
+                value: sorting,
+              ),
+            ),
+          ),
+        ),
+      ),
+      slivers: [
+        ReorderableAnimatedListImpl(
+          scrollDirection: Axis.vertical,
+          items: tasks,
+          isSameItem: (a, b) => a.id == b.id,
+          onReorder: (oldIndex, newIndex) {},
+          nonDraggableItems: tasks,
+          enableSwap: true,
+          itemBuilder: (context, index) => _buildTask(tasks[index]),
+        ),
+      ],
+    );
+  }
+}
+
+class _ArchivedTasksTab extends ConsumerStatefulWidget {
+  const _ArchivedTasksTab();
+
+  @override
+  ConsumerState<_ArchivedTasksTab> createState() => __ArchivedTasksTabState();
+}
+
+class __ArchivedTasksTabState extends ConsumerState<_ArchivedTasksTab>
     with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
@@ -519,43 +572,21 @@ class __PendingTasksTabState extends State<_PendingTasksTab>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final sorting = widget.sorting;
-    final tasks = widget.tasks;
 
-    return Column(
-      children: [
-        const SizedBox(height: 10),
-        Align(
-          alignment: Alignment.centerRight,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: SelectDropdown(
-              items: [
-                DropdownMenuItem(
-                  value: TaskSorting.creationDate,
-                  child: Text(context.tr("order.default")),
-                ),
-                DropdownMenuItem(
-                  value: TaskSorting.endDate,
-                  child: Text(context.tr("order.by_end_date")),
-                ),
-                DropdownMenuItem(
-                  value: TaskSorting.autoInsertDate,
-                  child: Text(context.tr("order.by_start_date")),
-                ),
-              ],
-              onChanged: (value) {
-                if (value == null) return;
-                widget.onSortingChanged?.call(value);
-              },
-              value: sorting,
-            ),
+    final archivedTasks = ref.watch(archivedTasksPod);
+
+    return _TabScrollView(
+      storageKey: const PageStorageKey("archived_tasks"),
+      slivers: [
+        archivedTasks.when(
+          loading: () => const SliverFillRemaining(
+            child: Center(child: CircularProgressIndicator()),
           ),
-        ),
-        Expanded(
-          child: AnimatedReorderableListView(
-            padding: _listPadding,
-            shrinkWrap: true,
+          error: (error, stackTrace) => SliverFillRemaining(
+            child: Center(child: Text(context.tr("general_error"))),
+          ),
+          data: (tasks) => ReorderableAnimatedListImpl(
+            scrollDirection: Axis.vertical,
             items: tasks,
             isSameItem: (a, b) => a.id == b.id,
             onReorder: (oldIndex, newIndex) {},
@@ -633,3 +664,28 @@ Widget _buildTask(UserTask task) => SizedBox(
   width: double.infinity,
   child: TaskCard(task: task),
 );
+
+class _TabScrollView extends StatelessWidget {
+  const _TabScrollView({
+    required this.storageKey,
+    this.header,
+    required this.slivers,
+  });
+
+  final PageStorageKey<String> storageKey;
+  final Widget? header;
+  final List<Widget> slivers;
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomScrollView(
+      key: storageKey,
+      slivers: [
+        ?header,
+        const SliverToBoxAdapter(child: SizedBox(height: 40)),
+        ...slivers,
+        const SliverToBoxAdapter(child: SizedBox(height: 100)),
+      ],
+    );
+  }
+}

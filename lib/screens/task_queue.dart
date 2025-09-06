@@ -81,169 +81,226 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
     );
   }
 
+  void _onFabPressed() {
+    context.push(
+      "/task",
+      extra: TaskViewParams(
+        null,
+        addToQueue: _searchStatus == TaskStatus.active,
+        autofocusTitle: true,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final database = ref.watch(databasePod);
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: SizedBox(
-                width: double.infinity,
-                child: SearchAnchor(
-                  searchController: _searchController,
-                  isFullScreen: true,
-                  viewBuilder: (suggestions) {
-                    return SafeArea(
-                      top: false,
-                      bottom: false,
-                      child: _TaskSearchView(
-                        searchController: _searchController,
-                        statusFilter: _searchStatus,
-                      ),
-                    );
-                  },
-                  builder: (context, controller) {
-                    return SearchBar(
-                      controller: controller,
-                      focusNode: _searchFocusNode,
-                      hintText: context.tr("search"),
-                      leading: const AppDrawerButton(),
-                      onTapOutside: (event) {
-                        _unfocusSearchBar();
-                      },
-                      onTap: () {
-                        _unfocusSearchBar();
-                        controller.openView();
-                      },
-                      onChanged: (value) {
-                        _unfocusSearchBar();
-                        controller.openView();
-                      },
-                    );
-                  },
-                  suggestionsBuilder: (context, controller) => const [],
-                  viewLeading: BackButton(
-                    style: const ButtonStyle(
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      _unfocusSearchBar();
-                    },
-                  ),
-                ),
+
+    final searchBar = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+      child: SizedBox(
+        width: double.infinity,
+        child: SearchAnchor(
+          searchController: _searchController,
+          isFullScreen: true,
+          viewBuilder: (suggestions) {
+            return SafeArea(
+              top: false,
+              bottom: false,
+              child: _TaskSearchView(
+                searchController: _searchController,
+                statusFilter: _searchStatus,
               ),
+            );
+          },
+          builder: (context, controller) {
+            return SearchBar(
+              elevation: const WidgetStatePropertyAll(0),
+              controller: controller,
+              focusNode: _searchFocusNode,
+              hintText: context.tr("search"),
+              leading: const AppDrawerButton(),
+              onTapOutside: (event) {
+                _unfocusSearchBar();
+              },
+              onTap: () {
+                _unfocusSearchBar();
+                controller.openView();
+              },
+              onChanged: (value) {
+                _unfocusSearchBar();
+                controller.openView();
+              },
+            );
+          },
+          suggestionsBuilder: (context, controller) => const [],
+          viewLeading: BackButton(
+            style: const ButtonStyle(
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _QueuedTasksTab(
-                    mode: _queuedTasksViewMode,
-                    database: database,
-                    sorting: _queuedTasksSorting,
-                    onModeChanged: (mode) {
-                      setState(() {
-                        _queuedTasksViewMode = mode;
-                      });
-                    },
-                  ),
-                  _PendingTasksTab(
-                    sorting: _pendingTasksSorting,
-                    onSortingChanged: (sorting) {
-                      setState(() {
-                        _pendingTasksSorting = sorting;
-                      });
-                    },
-                  ),
-                  const _ArchivedTasksTab(),
-                ],
-              ),
-            ),
-          ],
+            onPressed: () {
+              Navigator.of(context).pop();
+              _unfocusSearchBar();
+            },
+          ),
         ),
       ),
-      bottomNavigationBar: ValueListenableBuilder(
-        valueListenable: _currentIndex,
-        builder: (context, selectedIndex, child) {
-          return NavigationBar(
-            selectedIndex: selectedIndex,
-            onDestinationSelected: (value) {
-              _tabController.index = value;
-            },
-            destinations: [
-              Consumer(
-                builder: (context, ref, child) {
-                  final queuedTasks = ref.watch(
-                    queuedTasksPod(_queuedTasksSorting),
-                  );
+    );
 
-                  final label = switch (queuedTasks) {
-                    AsyncData(value: List(isNotEmpty: true, :final length)) =>
-                      context.tr("queued.amount", args: [length.toString()]),
-                    _ => context.tr("queued.none"),
-                  };
+    final tabViewContent = TabBarView(
+      controller: _tabController,
+      children: [
+        _QueuedTasksTab(
+          mode: _queuedTasksViewMode,
+          database: database,
+          sorting: _queuedTasksSorting,
+          onModeChanged: (mode) {
+            setState(() {
+              _queuedTasksViewMode = mode;
+            });
+          },
+        ),
+        _PendingTasksTab(
+          sorting: _pendingTasksSorting,
+          onSortingChanged: (sorting) {
+            setState(() {
+              _pendingTasksSorting = sorting;
+            });
+          },
+        ),
+        const _ArchivedTasksTab(),
+      ],
+    );
 
-                  return NavigationDestination(
-                    icon: const Icon(Icons.low_priority),
-                    label: label,
-                  );
-                },
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWideScreen = constraints.maxWidth > constraints.maxHeight;
+
+        late final navigationRail = ValueListenableBuilder(
+          valueListenable: _currentIndex,
+          builder: (context, selectedIndex, child) {
+            return NavigationRail(
+              selectedIndex: selectedIndex,
+              onDestinationSelected: (value) {
+                _tabController.index = value;
+              },
+              labelType: NavigationRailLabelType.all,
+              scrollable: true,
+              destinations: [
+                NavigationRailDestination(
+                  icon: _TaskCountBadge(
+                    pod: queuedTasksPod(_queuedTasksSorting),
+                    child: const Icon(Icons.low_priority),
+                  ),
+                  label: Text(context.tr("queued.none")),
+                ),
+                NavigationRailDestination(
+                  icon: _TaskCountBadge(
+                    pod: pendingTasksPod(_pendingTasksSorting),
+                    child: const Icon(Icons.pending_actions),
+                  ),
+                  label: Text(context.tr("pending.none")),
+                ),
+                NavigationRailDestination(
+                  icon: _TaskCountBadge(
+                    pod: archivedTasksPod,
+                    child: const Icon(Icons.archive),
+                  ),
+                  label: Text(context.tr("archived.none")),
+                ),
+              ],
+              trailing: FloatingActionButton(
+                onPressed: _onFabPressed,
+                child: const Icon(Icons.add),
               ),
-              Consumer(
-                builder: (context, ref, child) {
-                  final pendingTasks = ref.watch(
-                    pendingTasksPod(_pendingTasksSorting),
-                  );
+            );
+          },
+        );
 
-                  final label = switch (pendingTasks) {
-                    AsyncData(value: List(isNotEmpty: true, :final length)) =>
-                      context.tr("pending.amount", args: [length.toString()]),
-                    _ => context.tr("pending.none"),
-                  };
+        late final navigationBar = ValueListenableBuilder(
+          valueListenable: _currentIndex,
+          builder: (context, selectedIndex, child) {
+            return NavigationBar(
+              selectedIndex: selectedIndex,
+              onDestinationSelected: (value) {
+                _tabController.index = value;
+              },
+              destinations: [
+                NavigationDestination(
+                  icon: _TaskCountBadge(
+                    pod: queuedTasksPod(_queuedTasksSorting),
+                    child: const Icon(Icons.low_priority),
+                  ),
+                  label: context.tr("queued.none"),
+                ),
+                NavigationDestination(
+                  icon: _TaskCountBadge(
+                    pod: pendingTasksPod(_pendingTasksSorting),
+                    child: const Icon(Icons.pending_actions),
+                  ),
+                  label: context.tr("pending.none"),
+                ),
+                NavigationDestination(
+                  icon: _TaskCountBadge(
+                    pod: archivedTasksPod,
+                    child: const Icon(Icons.archive),
+                  ),
+                  label: context.tr("archived.none"),
+                ),
+              ],
+            );
+          },
+        );
 
-                  return NavigationDestination(
-                    icon: const Icon(Icons.pending_actions),
-                    label: label,
-                  );
-                },
-              ),
-              Consumer(
-                builder: (context, ref, child) {
-                  final archivedTasks = ref.watch(archivedTasksPod);
-
-                  final label = switch (archivedTasks) {
-                    AsyncData(value: List(isNotEmpty: true, :final length)) =>
-                      context.tr("archived.amount", args: [length.toString()]),
-                    _ => context.tr("archived.none"),
-                  };
-
-                  return NavigationDestination(
-                    icon: const Icon(Icons.archive),
-                    label: label,
-                  );
-                },
-              ),
-            ],
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          context.push(
-            "/task",
-            extra: TaskViewParams(
-              null,
-              addToQueue: _searchStatus == TaskStatus.active,
-              autofocusTitle: true,
+        return Scaffold(
+          body: SafeArea(
+            child: Column(
+              children: [
+                searchBar,
+                Expanded(
+                  child: isWideScreen
+                      ? Row(
+                          children: [
+                            navigationRail,
+                            const VerticalDivider(),
+                            Expanded(child: tabViewContent),
+                          ],
+                        )
+                      : tabViewContent,
+                ),
+              ],
             ),
-          );
-        },
-        child: const Icon(Icons.add),
-      ),
+          ),
+          bottomNavigationBar: isWideScreen ? null : navigationBar,
+          floatingActionButton: isWideScreen
+              ? null
+              : FloatingActionButton(
+                  onPressed: _onFabPressed,
+                  child: const Icon(Icons.add),
+                ),
+        );
+      },
+    );
+  }
+}
+
+class _TaskCountBadge extends ConsumerWidget {
+  const _TaskCountBadge({required this.pod, required this.child});
+  final ProviderListenable<AsyncValue<List<UserTask>>> pod;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tasks = ref.watch(pod);
+    final theme = Theme.of(context);
+    final count = tasks.valueOrNull?.length ?? 0;
+
+    return Badge(
+      backgroundColor: theme.colorScheme.primary,
+      textColor: theme.colorScheme.onPrimary,
+      isLabelVisible: count > 0,
+      label: Text(count.toString()),
+      child: child,
     );
   }
 }

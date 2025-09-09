@@ -77,6 +77,40 @@ class _TaskTimeMeasurementsState extends ConsumerState<TaskTimeMeasurements> {
     );
   }
 
+  Widget _buildActiveMeasurementItem(AppDatabase database, DateTime start) {
+    return _TimeMeasurementItem(
+      start: start,
+      end: null,
+      onChange: (result) async {
+        if (result case _MeasurementEdited(:final start)) {
+          await _updateActiveMeasurement(database, start);
+        }
+      },
+    );
+  }
+
+  Widget _buildMeasurementItem(
+    AppDatabase database,
+    TimeMeasurement measurement,
+  ) {
+    return _TimeMeasurementItem(
+      start: measurement.start,
+      end: measurement.end,
+      onChange: (result) async {
+        switch (result) {
+          case _MeasurementDeleted():
+            await _removeMeasurement(database, measurement);
+            return;
+          case _MeasurementEdited(start: final start, end: final end):
+            await _putMeasurement(
+              database,
+              measurement.copyWith(start: start, end: end),
+            );
+        }
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     _task = ref.watch(taskByIdPod(_task.id)).valueOrNull ?? _task;
@@ -105,47 +139,37 @@ class _TaskTimeMeasurementsState extends ConsumerState<TaskTimeMeasurements> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(child: Text('Error: $error')),
         data: (measurements) {
-          final itemCount = measurements.length;
           final activeStart = _task.activeTimeMeasurementStart;
-          final totalCount = activeStart != null ? itemCount + 1 : itemCount;
 
-          return ListView.builder(
+          return CustomScrollView(
             reverse: true,
-            padding: MediaQuery.paddingOf(context),
-            itemCount: totalCount,
-            itemBuilder: (context, index) {
-              if (index == 0 && activeStart != null) {
-                return _TimeMeasurementItem(
-                  start: activeStart,
-                  end: null,
-                  onChange: (result) async {
-                    if (result case _MeasurementEdited(:final start)) {
-                      await _updateActiveMeasurement(database, start);
-                    }
-                  },
-                );
-              }
-
-              if (activeStart != null) index--;
-
-              final measurement = measurements[index];
-              return _TimeMeasurementItem(
-                start: measurement.start,
-                end: measurement.end,
-                onChange: (result) async {
-                  switch (result) {
-                    case _MeasurementDeleted():
-                      await _removeMeasurement(database, measurement);
-                      return;
-                    case _MeasurementEdited(start: final start, end: final end):
-                      await _putMeasurement(
-                        database,
-                        measurement.copyWith(start: start, end: end),
-                      );
-                  }
-                },
-              );
-            },
+            slivers: [
+              SliverPadding(
+                padding: MediaQuery.paddingOf(context),
+                sliver: SliverMainAxisGroup(
+                  slivers: [
+                    if (activeStart != null)
+                      SliverToBoxAdapter(
+                        child: _buildActiveMeasurementItem(
+                          database,
+                          activeStart,
+                        ),
+                      ),
+                    SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        childCount: measurements.length,
+                        (context, index) {
+                          return _buildMeasurementItem(
+                            database,
+                            measurements[index],
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           );
         },
       ),

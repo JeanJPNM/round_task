@@ -401,7 +401,7 @@ class __QueuedTasksTabState extends ConsumerState<_QueuedTasksTab>
       ),
       slivers: [
         mode == _QueuedTaskViewMode.groupByPriority
-            ? _buildGroupedByPriority(database)
+            ? _buildGroupedByPriority(database, tasks)
             : _buildNormalList(database: database, mode: mode, tasks: tasks),
       ],
     );
@@ -417,6 +417,7 @@ class __QueuedTasksTabState extends ConsumerState<_QueuedTasksTab>
       enableSwap: true,
       items: tasks,
       isSameItem: (a, b) => a.id == b.id,
+      buildDefaultDragHandles: true,
       nonDraggableItems: mode == _QueuedTaskViewMode.orderByReference
           ? const []
           : tasks,
@@ -430,7 +431,10 @@ class __QueuedTasksTabState extends ConsumerState<_QueuedTasksTab>
     );
   }
 
-  Widget _buildGroupedByPriority(AppDatabase database) {
+  Widget _buildGroupedByPriority(
+    AppDatabase database,
+    List<UserTask> queuedTasks,
+  ) {
     const importantUrgent = TaskPriority(important: true, urgent: true);
     const importantNotUrgent = TaskPriority(important: true, urgent: false);
     const notImportantUrgent = TaskPriority(important: false, urgent: true);
@@ -489,11 +493,32 @@ class __QueuedTasksTabState extends ConsumerState<_QueuedTasksTab>
               ),
               ReorderableAnimatedListImpl(
                 scrollDirection: Axis.vertical,
-                enableSwap: true,
                 items: tasks,
                 isSameItem: (a, b) => a.id == b.id,
+                enableSwap: true,
+                buildDefaultDragHandles: true,
                 itemBuilder: (context, index) => _buildTask(tasks[index]),
-                nonDraggableItems: tasks,
+                nonDraggableItems: const <UserTask>[],
+                onReorder: (oldIndex, newIndex) async {
+                  // TODO: implement proper optimistic updates, this is getting out of hand
+                  final task = tasks[oldIndex];
+                  tasks.removeAt(oldIndex);
+                  tasks.insert(newIndex, task);
+
+                  queuedTasks.remove(task);
+                  if (newIndex == 0) {
+                    queuedTasks.insert(0, task);
+                  } else if (newIndex == tasks.length - 1) {
+                    queuedTasks.add(task);
+                  } else {
+                    final predecessor = tasks[newIndex - 1];
+                    queuedTasks.insert(newIndex, task);
+                    final index = queuedTasks.indexOf(predecessor);
+                    queuedTasks.insert(index + 1, task);
+                  }
+
+                  await database.reorderTasks(queuedTasks);
+                },
               ),
             ],
           );
@@ -649,6 +674,7 @@ class __ArchivedTasksTabState extends ConsumerState<_ArchivedTasksTab>
             onReorder: (oldIndex, newIndex) {},
             nonDraggableItems: tasks,
             enableSwap: true,
+            buildDefaultDragHandles: true,
             itemBuilder: (context, index) => _buildTask(tasks[index]),
           ),
         ),

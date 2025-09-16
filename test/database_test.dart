@@ -414,6 +414,29 @@ void main() {
     final measurements = await db.getAllTimeMeasurements().get();
     expect(measurements, isEmpty);
   });
+
+  test("searchTasks should ignore soft-deleted tasks", () async {
+    // 1. Create a task and add a time measurement
+    final task = UserTasksCompanion.insert(
+      title: 'Test Task',
+      description: 'Test Description',
+      status: TaskStatus.active,
+      createdAt: DateTime.now(),
+      updatedByUserAt: DateTime.now(),
+    );
+    final insertedTask = await db.writeTask(task);
+
+    // 2. Soft-delete the task
+    await db.writeTask(insertedTask, [SoftDeleteTask(DateTime.now())]);
+
+    // 3. Verify the time measurement is not returned in getAllTimeMeasurements
+    final searchedTasks = await db.searchTasks(TaskStatus.active, "test").get();
+    // fts5 doesn't handle empty strings, so searchTasks uses another query in that case
+    final emptySearchTasks = await db.searchTasks(TaskStatus.active, "").get();
+
+    expect(searchedTasks, isEmpty);
+    expect(emptySearchTasks, isEmpty);
+  });
 }
 
 Future<int> _getMeasurementCount(AppDatabase db, int taskId) async {

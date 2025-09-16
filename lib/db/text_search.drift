@@ -26,7 +26,7 @@ CREATE TRIGGER task_fts_on_task_update AFTER UPDATE ON user_tasks BEGIN
 END;
 
 fullTextTaskSearch: SELECT task.* FROM task_fts fts JOIN user_tasks task
-  WHERE fts.rowid = task.id and task_fts = ? and task.status = ?
+  WHERE fts.rowid = task.id AND task_fts = ? AND task.status = ? AND task.deleted_at IS NULL
   ORDER BY rank, $term;
 
 populateTaskFts: INSERT INTO task_fts(task_fts) VALUES('rebuild');

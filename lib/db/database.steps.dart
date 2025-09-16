@@ -699,7 +699,7 @@ i0.MigrationStepWithVersion migrationSteps({
         await from3To4(migrator, schema);
         return 4;
       default:
-        throw ArgumentError.value('Unknow  migration from $currentVersion');
+        throw ArgumentError.value('Unknown migration from $currentVersion');
     }
   };
 }

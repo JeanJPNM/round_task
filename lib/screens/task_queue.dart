@@ -3,6 +3,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:riverpod/misc.dart';
 import 'package:round_task/db/db.dart';
 import 'package:round_task/provider.dart';
 import 'package:round_task/screens/task_view.dart';
@@ -293,7 +294,7 @@ class _TaskCountBadge extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final tasks = ref.watch(pod);
     final theme = Theme.of(context);
-    final count = tasks.valueOrNull?.length ?? 0;
+    final count = tasks.value?.length ?? 0;
 
     return Badge(
       backgroundColor: theme.colorScheme.primary,
@@ -716,7 +717,7 @@ class _TaskSearchViewState extends State<_TaskSearchView> {
               return Center(child: Text(context.tr("general_error")));
             }
 
-            final tasks = data.valueOrNull ?? _previousResults;
+            final tasks = data.value ?? _previousResults;
             _previousResults = tasks;
 
             return Stack(

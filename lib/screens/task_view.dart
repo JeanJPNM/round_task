@@ -46,7 +46,7 @@ class TaskViewScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final (task, subTasks) = switch (params.task) {
       final task? => (
-        ref.watch(taskByIdPod(task.id)).valueOrNull ?? task,
+        ref.watch(taskByIdPod(task.id)).value ?? task,
         ref.watch(taskSubTasksPod(task.id)),
       ),
       _ => (null, const AsyncData(<SubTask>[])),
@@ -139,7 +139,7 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
       priorityController.value = task.priority;
     }
 
-    _subTasksController.setSubTasks(widget.subTasksValue.valueOrNull ?? []);
+    _subTasksController.setSubTasks(widget.subTasksValue.value ?? []);
     positionController.value =
         task?.status == TaskStatus.active || widget.addToQueue
         ? QueueInsertionPosition.preferred
@@ -278,7 +278,7 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
     );
 
     final preservedTask = widget.task;
-    final preservedSubTasks = widget.subTasksValue.valueOrNull;
+    final preservedSubTasks = widget.subTasksValue.value;
 
     await db.writeTask(taskCompanion, [
       PutSubTasks(put),

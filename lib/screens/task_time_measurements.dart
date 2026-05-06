@@ -113,7 +113,7 @@ class _TaskTimeMeasurementsState extends ConsumerState<TaskTimeMeasurements> {
 
   @override
   Widget build(BuildContext context) {
-    _task = ref.watch(taskByIdPod(_task.id)).valueOrNull ?? _task;
+    _task = ref.watch(taskByIdPod(_task.id)).value ?? _task;
     final measurements = ref.watch(taskTimeMeasurementsPod(_task.id));
     final measurementSum = ref.watch(
       taskTimeMeasurementsPod(_task.id).select(
@@ -215,7 +215,7 @@ class _TotalDurationBanner extends StatelessWidget
 
   @override
   Widget build(BuildContext context) {
-    final sum = measurementSum.valueOrNull;
+    final sum = measurementSum.value;
     if (sum == null) return const SizedBox.shrink();
 
     final Duration total;

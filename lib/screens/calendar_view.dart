@@ -26,29 +26,32 @@ const _calendarTileBorderWidth = 2.0;
 
 enum _ViewMode { singleDay, threeDays, week, schedule }
 
-class _EventData {
+class _TaskEvent extends CalendarEvent {
+  _TaskEvent({
+    required super.dateTimeRange,
+    required this.title,
+    required this.taskId,
+    this.measurement,
+  }) : super(interaction: EventInteraction.fromCanModify(false));
+
   final String title;
   final int taskId;
   final TimeMeasurement? measurement;
-
-  _EventData({required this.title, required this.taskId, this.measurement});
 }
 
 final eventsControllerPod =
-    NotifierProvider.autoDispose<
-      _EventsControllerNotifier,
-      EventsController<_EventData>
-    >(_EventsControllerNotifier.new);
+    NotifierProvider.autoDispose<_EventsControllerNotifier, EventsController>(
+      _EventsControllerNotifier.new,
+    );
 
-class _EventsControllerNotifier
-    extends AutoDisposeNotifier<EventsController<_EventData>> {
-  List<int> _loadedIds = [];
+class _EventsControllerNotifier extends Notifier<EventsController> {
+  List<String> _loadedIds = [];
 
-  int? _activeEventId;
+  String? _activeEventId;
 
   @override
-  EventsController<_EventData> build() {
-    final controller = DefaultEventsController<_EventData>();
+  EventsController build() {
+    final controller = DefaultEventsController();
     ref.onDispose(controller.dispose);
     final timer = Timer.periodic(
       const Duration(seconds: 10),
@@ -56,8 +59,8 @@ class _EventsControllerNotifier
     );
     ref.onDispose(timer.cancel);
     ref.listen(fireImmediately: true, allTimeMeasurementsPod, (previous, next) {
-      final prev = previous?.valueOrNull ?? [];
-      final nex = next.valueOrNull ?? [];
+      final prev = previous?.value ?? [];
+      final nex = next.value ?? [];
       if (prev.isEmpty && nex.isEmpty) return;
 
       for (final id in _loadedIds) {
@@ -66,17 +69,14 @@ class _EventsControllerNotifier
 
       _loadedIds = controller.addEvents([
         for (final (:measurement, :title) in nex)
-          CalendarEvent(
-            canModify: false,
+          _TaskEvent(
             dateTimeRange: DateTimeRange(
               start: measurement.start,
               end: measurement.end,
             ),
-            data: _EventData(
-              title: title,
-              measurement: measurement,
-              taskId: measurement.taskId,
-            ),
+            title: title,
+            taskId: measurement.taskId,
+            measurement: measurement,
           ),
       ]);
     });
@@ -85,7 +85,7 @@ class _EventsControllerNotifier
       previous,
       next,
     ) {
-      final task = next.valueOrNull;
+      final task = next.value;
       if (_activeEventId case final id?) {
         controller.removeById(id);
       }
@@ -93,10 +93,10 @@ class _EventsControllerNotifier
 
       final start = task.activeTimeMeasurementStart!;
       _activeEventId = controller.addEvent(
-        CalendarEvent(
-          data: _EventData(title: task.title, taskId: task.id),
+        _TaskEvent(
+          title: task.title,
+          taskId: task.id,
           dateTimeRange: DateTimeRange(start: start, end: DateTime.now()),
-          canModify: false,
         ),
       );
     });
@@ -111,20 +111,18 @@ class _EventsControllerNotifier
       return;
     }
 
-    final event = controller.byId(id);
-    if (event == null) {
-      _activeEventId = null;
-      return;
-    }
-
-    controller.updateEvent(
-      event: event,
-      updatedEvent: CalendarEvent(
-        data: event.data,
+    final event = controller.byId(id) as _TaskEvent?;
+    if (event case _TaskEvent event) {
+      final updatedEvent = _TaskEvent(
+        title: event.title,
+        taskId: event.taskId,
+        measurement: event.measurement,
         dateTimeRange: DateTimeRange(start: event.start, end: DateTime.now()),
-        canModify: false,
-      ),
-    );
+      );
+      controller.updateEvent(event: event, updatedEvent: updatedEvent);
+    } else {
+      _activeEventId = null;
+    }
   }
 }
 
@@ -140,8 +138,8 @@ TextStyle? _cardTextStyle(ThemeData theme) => theme.textTheme.labelSmall;
 class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
   final _calendarBodyKey = GlobalKey();
   _ViewMode _viewMode = _ViewMode.singleDay;
-  final eventsController = DefaultEventsController<_EventData>();
-  final calendarController = CalendarController<_EventData>();
+  final eventsController = DefaultEventsController();
+  final calendarController = CalendarController();
 
   @override
   void initState() {
@@ -219,11 +217,11 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
       ),
       body: _CalendarZoomDetector(
         controller: calendarController,
-        child: CalendarView<_EventData>(
+        child: CalendarView(
           eventsController: eventsController,
           calendarController: calendarController,
           viewConfiguration: viewConfiguration,
-          components: CalendarComponents<_EventData>(
+          components: CalendarComponents(
             multiDayComponents: MultiDayComponents(
               bodyComponents: MultiDayBodyComponents(
                 daySeparator: (style) {
@@ -236,18 +234,20 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
                     ),
                   );
                 },
-                hourLines: (heightPerMinute, timeOfDayRange, style) {
-                  return HourLines(
-                    heightPerMinute: heightPerMinute,
-                    timeOfDayRange: timeOfDayRange,
-                    style: HourLinesStyle(
-                      color: theme.colorScheme.outlineVariant,
-                      endIndent: style?.endIndent,
-                      indent: style?.indent,
-                      thickness: style?.thickness,
-                    ),
-                  );
-                },
+                hourLines:
+                    (heightPerMinute, timeOfDayRange, style, timelineStyle) {
+                      return HourLines(
+                        heightPerMinute: heightPerMinute,
+                        timeOfDayRange: timeOfDayRange,
+                        style: HourLinesStyle(
+                          color: theme.colorScheme.outlineVariant,
+                          endIndent: style?.endIndent,
+                          indent: style?.indent,
+                          thickness: style?.thickness,
+                        ),
+                        timelineStyle: timelineStyle,
+                      );
+                    },
               ),
               headerComponents: MultiDayHeaderComponents(
                 weekNumberBuilder: (visibleDateTimeRange, style) =>
@@ -267,7 +267,7 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
                   }),
                   getBodyHeight: _getCalendarBodyHeight,
                 ),
-                CalendarHeader<_EventData>(
+                CalendarHeader(
                   multiDayTileComponents: _multidayTileComponents(
                     context: context,
                     body: false,
@@ -278,7 +278,7 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
             ),
           ),
           body: SafeArea(
-            child: CalendarBody<_EventData>(
+            child: CalendarBody(
               key: _calendarBodyKey,
               multiDayTileComponents: _multidayTileComponents(
                 context: context,
@@ -292,11 +292,6 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
                 showMultiDayEvents: true,
                 minimumTileHeight: _getMinimumTileHeight(context, theme),
                 horizontalPadding: EdgeInsets.zero,
-                calendarInteraction: CalendarInteraction(
-                  allowEventCreation: false,
-                  allowRescheduling: false,
-                  allowResizing: false,
-                ),
               ),
             ),
           ),
@@ -306,7 +301,7 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
   }
 }
 
-TileComponents<_EventData> _multidayTileComponents({
+TileComponents _multidayTileComponents({
   required BuildContext context,
   required ThemeData theme,
   bool body = true,
@@ -317,8 +312,8 @@ TileComponents<_EventData> _multidayTileComponents({
   return TileComponents(
     tileBuilder: (event, tileRange) {
       if (!body) return const SizedBox.shrink();
-      final data = event.data!;
-      final isActive = data.measurement == null;
+      final _ = event as _TaskEvent;
+      final isActive = event.measurement == null;
       final colorScheme = theme.colorScheme;
       final (cardColor, onCardColor) = switch (isActive) {
         true => (colorScheme.primary, colorScheme.onPrimary),
@@ -353,7 +348,7 @@ TileComponents<_EventData> _multidayTileComponents({
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: Text(
-                  data.title,
+                  event.title,
                   style: _cardTextStyle(theme)?.copyWith(color: onCardColor),
                 ),
               ),
@@ -366,7 +361,7 @@ TileComponents<_EventData> _multidayTileComponents({
   );
 }
 
-ScheduleTileComponents<_EventData> _scheduleTileComponents({
+ScheduleTileComponents _scheduleTileComponents({
   required BuildContext context,
   required ThemeData theme,
 }) {
@@ -374,8 +369,8 @@ ScheduleTileComponents<_EventData> _scheduleTileComponents({
 
   return ScheduleTileComponents(
     tileBuilder: (event, tileRange) {
-      final data = event.data!;
-      final isActive = data.measurement == null;
+      final _ = event as _TaskEvent;
+      final isActive = event.measurement == null;
       final colorScheme = theme.colorScheme;
       final (cardColor, onCardColor) = switch (isActive) {
         true => (colorScheme.primary, colorScheme.onPrimary),
@@ -397,7 +392,7 @@ ScheduleTileComponents<_EventData> _scheduleTileComponents({
             builder: (context) => _DetailsSheet(event: event),
           );
         },
-        title: Text(data.title),
+        title: Text(event.title),
         subtitle: Text(
           context.tr(
             "calendar_view.event_schedule_tile_subtitle",
@@ -429,7 +424,7 @@ class _CalendarViewScreenControls extends StatefulWidget {
     required this.getBodyHeight,
   });
 
-  final CalendarController<_EventData> controller;
+  final CalendarController controller;
   final _ViewMode viewMode;
   final ValueChanged<_ViewMode> onViewModeChanged;
   final double Function() getBodyHeight;
@@ -441,10 +436,7 @@ class _CalendarViewScreenControls extends StatefulWidget {
 
 class __CalendarViewScreenControlsState
     extends State<_CalendarViewScreenControls> {
-  void _applyZoom(
-    MultiDayViewController<_EventData> viewController,
-    double factor,
-  ) {
+  void _applyZoom(MultiDayViewController viewController, double factor) {
     final heightPerMinute = viewController.heightPerMinute;
     final scrollController = viewController.scrollController;
     final height = heightPerMinute.value;
@@ -473,7 +465,7 @@ class __CalendarViewScreenControlsState
     final now = DateTime.now();
     final date = await showDatePicker(
       context: context,
-      initialDate: widget.controller.visibleDateTimeRange.value.start,
+      initialDate: widget.controller.visibleDateTimeRange.value?.start,
       firstDate: DateTime(now.year),
       lastDate: DateTime(now.year + 1),
     );
@@ -525,6 +517,7 @@ class __CalendarViewScreenControlsState
           ValueListenableBuilder(
             valueListenable: controller.visibleDateTimeRange,
             builder: (context, range, child) {
+              if (range == null) return const SizedBox.shrink();
               final start = range.start;
               final year = start.year;
               final month = start.monthNameLocalized(locale.toLanguageTag());
@@ -568,7 +561,7 @@ class __CalendarViewScreenControlsState
                   label: const Icon(Icons.zoom_in),
                   onPressed: () {
                     final viewController = controller.viewController;
-                    if (viewController is MultiDayViewController<_EventData>) {
+                    if (viewController is MultiDayViewController) {
                       _applyZoom(viewController, 2);
                     }
                   },
@@ -577,7 +570,7 @@ class __CalendarViewScreenControlsState
                   label: const Icon(Icons.zoom_out),
                   onPressed: () {
                     final viewController = controller.viewController;
-                    if (viewController is MultiDayViewController<_EventData>) {
+                    if (viewController is MultiDayViewController) {
                       _applyZoom(viewController, 0.5);
                     }
                   },
@@ -593,7 +586,7 @@ class __CalendarViewScreenControlsState
 
 class _CalendarZoomDetector extends StatefulWidget {
   final Widget child;
-  final CalendarController<_EventData> controller;
+  final CalendarController controller;
   const _CalendarZoomDetector({required this.child, required this.controller});
 
   @override
@@ -619,9 +612,9 @@ class AllowMultipleGestureRecognizer extends ScaleGestureRecognizer {
 class _CalendarZoomDetectorState extends State<_CalendarZoomDetector> {
   final _scrollSensitivity = 0.1;
 
-  MultiDayViewController<_EventData>? get viewController {
+  MultiDayViewController? get viewController {
     return switch (widget.controller.viewController) {
-      MultiDayViewController<_EventData> controller => controller,
+      MultiDayViewController controller => controller,
       _ => null,
     };
   }
@@ -759,12 +752,12 @@ class _CalendarZoomDetectorState extends State<_CalendarZoomDetector> {
 class _DetailsSheet extends StatelessWidget {
   const _DetailsSheet({required this.event});
 
-  final CalendarEvent<_EventData> event;
+  final CalendarEvent event;
 
   @override
   Widget build(BuildContext context) {
-    final data = event.data!;
-    final measurement = data.measurement;
+    final event = this.event as _TaskEvent;
+    final measurement = event.measurement;
     final locale = Localizations.localeOf(context);
     final theme = Theme.of(context);
 
@@ -786,13 +779,16 @@ class _DetailsSheet extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Expanded(
-                child: Text(data.title, style: theme.textTheme.headlineSmall),
+                child: Text(event.title, style: theme.textTheme.headlineSmall),
               ),
               const SizedBox(width: 8),
               IconButton(
                 onPressed: () {
                   context.pop();
-                  context.push("/task", extra: LazyTaskViewParams(data.taskId));
+                  context.push(
+                    "/task",
+                    extra: LazyTaskViewParams(event.taskId),
+                  );
                 },
                 icon: Icon(
                   Icons.launch,

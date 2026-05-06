@@ -81,7 +81,7 @@ class TimeTrackingBannerShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final currentlyTrackedTask = ref.watch(currentlyTrackedTaskPod).valueOrNull;
+    final currentlyTrackedTask = ref.watch(currentlyTrackedTaskPod).value;
     final hideBanner =
         currentlyTrackedTask == null || isDisabled(currentlyTrackedTask.id);
 

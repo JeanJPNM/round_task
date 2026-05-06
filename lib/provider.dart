@@ -217,7 +217,7 @@ class DatabaseNotifier extends Notifier<db.AppDatabase> {
 
     try {
       final importedDb = sqlite3.open(path);
-      cleanups.add(importedDb.dispose);
+      cleanups.add(importedDb.close);
 
       final tempDir = await getTemporaryDirectory();
       final tempDbPath = join(tempDir.path, "temp_round_task.sqlite");

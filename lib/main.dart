@@ -102,10 +102,10 @@ class MyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final seedColor = ref.watch(
-      appSettingsPod.select((settings) => settings.valueOrNull?.seedColor),
+      appSettingsPod.select((settings) => settings.value?.seedColor),
     );
     final appBrightness = ref.watch(
-      appSettingsPod.select((settings) => settings.valueOrNull?.brightness),
+      appSettingsPod.select((settings) => settings.value?.brightness),
     );
     return DynamicColorBuilder(
       builder: (lightDynamic, darkDynamic) {

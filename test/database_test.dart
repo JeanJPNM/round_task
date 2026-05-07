@@ -4,13 +4,14 @@ import 'package:drift/native.dart';
 import 'package:round_task/db/db.dart';
 import 'package:rrule/rrule.dart';
 import 'package:sqlite3/sqlite3.dart';
+import 'package:sqlite_better_trigram/sqlite_better_trigram.dart';
 import 'test_helpers.dart';
 
 void main() {
   late AppDatabase db;
 
   setUpAll(() {
-    sqlite3.ensureExtensionLoaded(loadBetterTrigramForTest());
+    sqlite3.ensureExtensionLoaded(BetterTrigram.load());
   });
 
   setUp(() async {

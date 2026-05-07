@@ -5,6 +5,7 @@ import 'package:drift_dev/api/migrations_native.dart';
 import 'package:round_task/db/database.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqlite3/sqlite3.dart';
+import 'package:sqlite_better_trigram/sqlite_better_trigram.dart';
 import '../../test_helpers.dart';
 import 'generated/schema.dart';
 
@@ -16,7 +17,7 @@ void main() {
   late SchemaVerifier verifier;
 
   setUpAll(() {
-    sqlite3.ensureExtensionLoaded(loadBetterTrigramForTest());
+    sqlite3.ensureExtensionLoaded(BetterTrigram.load());
     verifier = SchemaVerifier(GeneratedHelper());
   });
 

@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.jeanjpnm.round_task"
+    namespace = "dev.jeanjpnm.round_task"
     compileSdk = flutter.compileSdkVersion
     // ndkVersion = flutter.ndkVersion
     ndkVersion = "27.0.12077973"

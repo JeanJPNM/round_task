@@ -1,4 +1,4 @@
-package com.jeanjpnm.round_task
+package dev.jeanjpnm.round_task
 
 import io.flutter.embedding.android.FlutterActivity
 

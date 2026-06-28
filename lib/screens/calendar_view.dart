@@ -31,12 +31,13 @@ class _TaskEvent extends CalendarEvent {
     required super.dateTimeRange,
     required this.title,
     required this.taskId,
-    this.measurement,
+    required this.measurement,
   }) : super(interaction: EventInteraction.fromCanModify(false));
 
   final String title;
   final int taskId;
-  final TimeMeasurement? measurement;
+  final TimeMeasurement measurement;
+  bool get isActive => measurement.id == -1;
 }
 
 final eventsControllerPod =
@@ -97,6 +98,12 @@ class _EventsControllerNotifier extends Notifier<EventsController> {
           title: task.title,
           taskId: task.id,
           dateTimeRange: DateTimeRange(start: start, end: DateTime.now()),
+          measurement: TimeMeasurement(
+            id: -1,
+            taskId: task.id,
+            start: start,
+            end: DateTime.now(),
+          ),
         ),
       );
     });
@@ -313,7 +320,7 @@ TileComponents _multidayTileComponents({
     tileBuilder: (event, tileRange) {
       if (!body) return const SizedBox.shrink();
       final _ = event as _TaskEvent;
-      final isActive = event.measurement == null;
+      final isActive = event.isActive;
       final colorScheme = theme.colorScheme;
       final (cardColor, onCardColor) = switch (isActive) {
         true => (colorScheme.primary, colorScheme.onPrimary),
@@ -370,7 +377,7 @@ ScheduleTileComponents _scheduleTileComponents({
   return ScheduleTileComponents(
     tileBuilder: (event, tileRange) {
       final _ = event as _TaskEvent;
-      final isActive = event.measurement == null;
+      final isActive = event.isActive;
       final colorScheme = theme.colorScheme;
       final (cardColor, onCardColor) = switch (isActive) {
         true => (colorScheme.primary, colorScheme.onPrimary),
@@ -761,12 +768,12 @@ class _DetailsSheet extends StatelessWidget {
     final locale = Localizations.localeOf(context);
     final theme = Theme.of(context);
 
-    if (measurement == null) {
+    if (event.isActive) {
       SecondTickProvider.of(context);
     }
 
-    final start = event.start;
-    final end = measurement?.end ?? DateTime.now();
+    final start = event.start.toLocal();
+    final end = event.isActive ? DateTime.now() : measurement.end;
     final duration = end.difference(start);
 
     return BottomSheetSafeArea(

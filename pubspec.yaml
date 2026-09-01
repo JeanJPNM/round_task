@@ -56,7 +56,7 @@ dependencies:
   sqlite3: ^3.3.1
   sqlite_better_trigram:
     path: ./packages/sqlite_better_trigram
-  downloadsfolder: ^1.2.0
+  downloadsfolder: ^2.0.0-pre.2
   flex_color_picker: ^4.0.0
   kalender: ^0.29.0
   url_launcher: ^6.3.2

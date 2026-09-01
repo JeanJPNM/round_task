@@ -2,7 +2,7 @@ import 'package:downloadsfolder/downloadsfolder.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:round_task/db/db.dart';
 import 'package:round_task/provider.dart';
@@ -63,14 +63,10 @@ class _AppSettingsState extends ConsumerState<SettingsScreen> {
     DatabaseNotifier dbNotifier,
     BuildContext context,
   ) async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.any,
-      allowMultiple: false,
-    );
+    final file = await FilePicker.pickFile(type: FileType.any);
 
-    if (result == null) return;
+    if (file == null) return;
 
-    final file = result.files.single;
     final success = await _tryAction(() async {
       // Attempt to import the database
       return await dbNotifier.importData(file.path!);
@@ -137,18 +133,18 @@ class _AppSettingsState extends ConsumerState<SettingsScreen> {
                 title: Text(context.tr("theme_mode.name")),
                 trailing: SelectDropdown(
                   value: settings.brightness,
-                  items: [
-                    DropdownMenuItem(
+                  entries: [
+                    DropdownMenuEntry(
                       value: AppBrightness.system,
-                      child: Text(context.tr("theme_mode.system")),
+                      label: context.tr('theme_mode.system'),
                     ),
-                    DropdownMenuItem(
+                    DropdownMenuEntry(
                       value: AppBrightness.light,
-                      child: Text(context.tr("theme_mode.light")),
+                      label: context.tr("theme_mode.light"),
                     ),
-                    DropdownMenuItem(
+                    DropdownMenuEntry(
                       value: AppBrightness.dark,
-                      child: Text(context.tr("theme_mode.dark")),
+                      label: context.tr("theme_mode.dark"),
                     ),
                   ],
                   onChanged: (value) {

@@ -1,6 +1,6 @@
 import 'package:animated_reorderable_list/animated_reorderable_list.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod/misc.dart';
@@ -372,22 +372,22 @@ class __QueuedTasksTabState extends ConsumerState<_QueuedTasksTab>
             child: Align(
               alignment: Alignment.centerRight,
               child: SelectDropdown(
-                items: [
-                  DropdownMenuItem(
+                entries: [
+                  DropdownMenuEntry(
                     value: _QueuedTaskViewMode.orderByReference,
-                    child: Text(context.tr("order.default")),
+                    label: context.tr("order.default"),
                   ),
-                  DropdownMenuItem(
+                  DropdownMenuEntry(
                     value: _QueuedTaskViewMode.orderByEndDate,
-                    child: Text(context.tr("order.by_end_date")),
+                    label: context.tr("order.by_end_date"),
                   ),
-                  DropdownMenuItem(
+                  DropdownMenuEntry(
                     value: _QueuedTaskViewMode.orderByAutoInsertDate,
-                    child: Text(context.tr("order.by_start_date")),
+                    label: context.tr("order.by_start_date"),
                   ),
-                  DropdownMenuItem(
+                  DropdownMenuEntry(
                     value: _QueuedTaskViewMode.groupByPriority,
-                    child: Text(context.tr("order.group_by_priority")),
+                    label: context.tr("order.group_by_priority"),
                   ),
                 ],
                 onChanged: (value) {
@@ -601,18 +601,18 @@ class __PendingTasksTabState extends ConsumerState<_PendingTasksTab>
             child: Align(
               alignment: Alignment.centerRight,
               child: SelectDropdown(
-                items: [
-                  DropdownMenuItem(
+                entries: [
+                  DropdownMenuEntry(
                     value: TaskSorting.creationDate,
-                    child: Text(context.tr("order.default")),
+                    label: context.tr("order.default"),
                   ),
-                  DropdownMenuItem(
+                  DropdownMenuEntry(
                     value: TaskSorting.endDate,
-                    child: Text(context.tr("order.by_end_date")),
+                    label: context.tr("order.by_end_date"),
                   ),
-                  DropdownMenuItem(
+                  DropdownMenuEntry(
                     value: TaskSorting.autoInsertDate,
-                    child: Text(context.tr("order.by_start_date")),
+                    label: context.tr("order.by_start_date"),
                   ),
                 ],
                 onChanged: (value) {

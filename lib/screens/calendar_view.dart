@@ -5,7 +5,8 @@ import 'dart:math' as math;
 import 'package:duration/duration.dart';
 import 'package:easy_localization/easy_localization.dart' hide TextDirection;
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' show DateTimeRange, TimeOfDay;
+import 'package:material_ui/material_ui.dart' hide DateTimeRange, TimeOfDay;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -38,6 +39,16 @@ class _TaskEvent extends CalendarEvent {
   final int taskId;
   final TimeMeasurement measurement;
   bool get isActive => measurement.id == -1;
+
+  @override
+  CalendarEvent copyWithData({required DateTimeRange dateTimeRange}) {
+    return _TaskEvent(
+      dateTimeRange: dateTimeRange,
+      title: title,
+      taskId: taskId,
+      measurement: measurement,
+    );
+  }
 }
 
 final eventsControllerPod =
@@ -224,81 +235,65 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
       ),
       body: _CalendarZoomDetector(
         controller: calendarController,
-        child: CalendarView(
-          eventsController: eventsController,
-          calendarController: calendarController,
-          viewConfiguration: viewConfiguration,
-          components: CalendarComponents(
-            multiDayComponents: MultiDayComponents(
-              bodyComponents: MultiDayBodyComponents(
-                daySeparator: (style) {
-                  return DaySeparator(
-                    style: DaySeparatorStyle(
-                      color: theme.colorScheme.outlineVariant,
-                      bottomIndent: style?.bottomIndent,
-                      topIndent: style?.topIndent,
-                      width: style?.width,
-                    ),
-                  );
-                },
-                hourLines:
-                    (heightPerMinute, timeOfDayRange, style, timelineStyle) {
-                      return HourLines(
-                        heightPerMinute: heightPerMinute,
-                        timeOfDayRange: timeOfDayRange,
-                        style: HourLinesStyle(
-                          color: theme.colorScheme.outlineVariant,
-                          endIndent: style?.endIndent,
-                          indent: style?.indent,
-                          thickness: style?.thickness,
-                        ),
-                        timelineStyle: timelineStyle,
-                      );
-                    },
-              ),
-              headerComponents: MultiDayHeaderComponents(
-                weekNumberBuilder: (visibleDateTimeRange, style) =>
-                    const SizedBox.shrink(),
-              ),
+        child: KalenderTheme(
+          data: KalenderThemeData(
+            daySeparatorStyle: DaySeparatorStyle(
+              color: theme.colorScheme.outlineVariant,
+            ),
+            hourLinesStyle: HourLinesStyle(
+              color: theme.colorScheme.outlineVariant,
             ),
           ),
-          header: Material(
-            color: theme.colorScheme.surface,
-            child: Column(
-              children: [
-                _CalendarViewScreenControls(
-                  controller: calendarController,
-                  viewMode: _viewMode,
-                  onViewModeChanged: (value) => setState(() {
-                    _viewMode = value;
-                  }),
-                  getBodyHeight: _getCalendarBodyHeight,
+          child: KalenderView(
+            eventsController: eventsController,
+            calendarController: calendarController,
+            viewConfiguration: viewConfiguration,
+            components: CalendarComponents(
+              multiDayComponents: MultiDayComponents(
+                headerComponents: MultiDayHeaderComponents(
+                  weekNumberBuilder: (visibleDateTimeRange, style) =>
+                      const SizedBox.shrink(),
                 ),
-                CalendarHeader(
-                  multiDayTileComponents: _multidayTileComponents(
-                    context: context,
-                    body: false,
-                    theme: theme,
+              ),
+            ),
+            header: Material(
+              color: theme.colorScheme.surface,
+              child: Column(
+                children: [
+                  _CalendarViewScreenControls(
+                    controller: calendarController,
+                    viewMode: _viewMode,
+                    onViewModeChanged: (value) => setState(() {
+                      _viewMode = value;
+                    }),
+                    getBodyHeight: _getCalendarBodyHeight,
                   ),
-                ),
-              ],
+                  CalendarHeader(
+                    multiDayTileComponents: _multidayTileComponents(
+                      context: context,
+                      body: false,
+                      theme: theme,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          body: SafeArea(
-            child: CalendarBody(
-              key: _calendarBodyKey,
-              multiDayTileComponents: _multidayTileComponents(
-                context: context,
-                theme: theme,
-              ),
-              scheduleTileComponents: _scheduleTileComponents(
-                context: context,
-                theme: theme,
-              ),
-              multiDayBodyConfiguration: MultiDayBodyConfiguration(
-                showMultiDayEvents: true,
-                minimumTileHeight: _getMinimumTileHeight(context, theme),
-                horizontalPadding: EdgeInsets.zero,
+            body: SafeArea(
+              child: CalendarBody(
+                key: _calendarBodyKey,
+                multiDayTileComponents: _multidayTileComponents(
+                  context: context,
+                  theme: theme,
+                ),
+                scheduleTileComponents: _scheduleTileComponents(
+                  context: context,
+                  theme: theme,
+                ),
+                multiDayBodyConfiguration: MultiDayBodyConfiguration(
+                  showMultiDayEvents: true,
+                  minimumTileHeight: _getMinimumTileHeight(context, theme),
+                  horizontalPadding: EdgeInsets.zero,
+                ),
               ),
             ),
           ),
@@ -317,7 +312,7 @@ TileComponents _multidayTileComponents({
   const innerRadius = outerRadius - _calendarTileBorderWidth;
 
   return TileComponents(
-    tileBuilder: (event, tileRange) {
+    tileBuilder: (context, event, tileRange) {
       if (!body) return const SizedBox.shrink();
       final _ = event as _TaskEvent;
       final isActive = event.isActive;
@@ -375,7 +370,7 @@ ScheduleTileComponents _scheduleTileComponents({
   final radius = BorderRadius.circular(8);
 
   return ScheduleTileComponents(
-    tileBuilder: (event, tileRange) {
+    tileBuilder: (context, event, tileRange) {
       final _ = event as _TaskEvent;
       final isActive = event.isActive;
       final colorScheme = theme.colorScheme;
@@ -527,7 +522,7 @@ class __CalendarViewScreenControlsState
               if (range == null) return const SizedBox.shrink();
               final start = range.start;
               final year = start.year;
-              final month = start.monthNameLocalized(locale.toLanguageTag());
+              final month = start.monthNameLocalized(locale);
 
               return ActionChip(
                 onPressed: _changeCurrentDate,

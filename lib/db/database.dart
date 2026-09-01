@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:drift/drift.dart';
-import 'package:flutter/material.dart' show Color;
+import 'package:material_ui/material_ui.dart' show Color;
 import 'package:round_task/db/database.steps.dart';
 import 'package:round_task/db/types.dart';
 import 'package:round_task/db/tables.dart';

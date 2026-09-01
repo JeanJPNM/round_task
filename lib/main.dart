@@ -1,11 +1,11 @@
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:easy_localization_loader/easy_localization_loader.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:relative_time/relative_time.dart';
 import 'package:round_task/custom_colors.dart';
 import 'package:round_task/db/db.dart';
@@ -157,11 +157,16 @@ class MyApp extends ConsumerWidget {
             pageTransitionsTheme: pageTransitionsTheme,
             extensions: [darkCustomColors],
           ),
-          localizationsDelegates: context.localizationDelegates.followedBy([
+          localizationsDelegates: [
+            ...GlobalMaterialLocalizations.delegates,
+            ...context.localizationDelegates,
             RelativeTimeLocalizations.delegate,
-          ]),
+          ],
           supportedLocales: context.supportedLocales,
           locale: context.locale,
+          builder: (context, child) {
+            return MaterialUiCompatibilityBridge(child: child!);
+          },
         );
       },
     );

@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:animated_reorderable_list/animated_reorderable_list.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:material_ui/material_ui.dart';
@@ -369,33 +371,48 @@ class __QueuedTasksTabState extends ConsumerState<_QueuedTasksTab>
         child: Material(
           child: Padding(
             padding: _selectPadding,
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: DropdownMenuButton(
-                dropdownMenuEntries: [
-                  DropdownMenuEntry(
-                    value: _QueuedTaskViewMode.orderByReference,
-                    label: context.tr("order.default"),
-                  ),
-                  DropdownMenuEntry(
-                    value: _QueuedTaskViewMode.orderByEndDate,
-                    label: context.tr("order.by_end_date"),
-                  ),
-                  DropdownMenuEntry(
-                    value: _QueuedTaskViewMode.orderByAutoInsertDate,
-                    label: context.tr("order.by_start_date"),
-                  ),
-                  DropdownMenuEntry(
-                    value: _QueuedTaskViewMode.groupByPriority,
-                    label: context.tr("order.group_by_priority"),
-                  ),
-                ],
-                onSelected: (value) {
-                  if (value == null) return;
-                  widget.onModeChanged.call(value);
-                },
-                initialSelection: mode,
-              ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.casino),
+                  onPressed: tasks.isNotEmpty
+                      ? () {
+                          final random = Random();
+                          final index = random.nextInt(tasks.length);
+                          final task = tasks[index];
+
+                          context.push("/task", extra: TaskViewParams(task));
+                        }
+                      : null,
+                ),
+                DropdownMenuButton(
+                  dropdownMenuEntries: [
+                    DropdownMenuEntry(
+                      value: _QueuedTaskViewMode.orderByReference,
+                      label: context.tr("order.default"),
+                    ),
+                    DropdownMenuEntry(
+                      value: _QueuedTaskViewMode.orderByEndDate,
+                      label: context.tr("order.by_end_date"),
+                    ),
+                    DropdownMenuEntry(
+                      value: _QueuedTaskViewMode.orderByAutoInsertDate,
+                      label: context.tr("order.by_start_date"),
+                    ),
+                    DropdownMenuEntry(
+                      value: _QueuedTaskViewMode.groupByPriority,
+                      label: context.tr("order.group_by_priority"),
+                    ),
+                  ],
+                  onSelected: (value) {
+                    if (value == null) return;
+                    widget.onModeChanged.call(value);
+                  },
+                  initialSelection: mode,
+                ),
+              ],
             ),
           ),
         ),
@@ -598,29 +615,44 @@ class __PendingTasksTabState extends ConsumerState<_PendingTasksTab>
         child: Material(
           child: Padding(
             padding: _selectPadding,
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: DropdownMenuButton(
-                dropdownMenuEntries: [
-                  DropdownMenuEntry(
-                    value: TaskSorting.creationDate,
-                    label: context.tr("order.default"),
-                  ),
-                  DropdownMenuEntry(
-                    value: TaskSorting.endDate,
-                    label: context.tr("order.by_end_date"),
-                  ),
-                  DropdownMenuEntry(
-                    value: TaskSorting.autoInsertDate,
-                    label: context.tr("order.by_start_date"),
-                  ),
-                ],
-                onSelected: (value) {
-                  if (value == null) return;
-                  widget.onSortingChanged?.call(value);
-                },
-                initialSelection: sorting,
-              ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.casino),
+                  onPressed: tasks.isNotEmpty
+                      ? () {
+                          final random = Random();
+                          final index = random.nextInt(tasks.length);
+                          final task = tasks[index];
+
+                          context.push("/task", extra: TaskViewParams(task));
+                        }
+                      : null,
+                ),
+                DropdownMenuButton(
+                  dropdownMenuEntries: [
+                    DropdownMenuEntry(
+                      value: TaskSorting.creationDate,
+                      label: context.tr("order.default"),
+                    ),
+                    DropdownMenuEntry(
+                      value: TaskSorting.endDate,
+                      label: context.tr("order.by_end_date"),
+                    ),
+                    DropdownMenuEntry(
+                      value: TaskSorting.autoInsertDate,
+                      label: context.tr("order.by_start_date"),
+                    ),
+                  ],
+                  onSelected: (value) {
+                    if (value == null) return;
+                    widget.onSortingChanged?.call(value);
+                  },
+                  initialSelection: sorting,
+                ),
+              ],
             ),
           ),
         ),

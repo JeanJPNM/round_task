@@ -8,7 +8,7 @@ import 'package:round_task/db/db.dart';
 import 'package:round_task/provider.dart';
 import 'package:round_task/widgets/app_drawer.dart';
 import 'package:round_task/widgets/bottom_sheet_safe_area.dart';
-import 'package:round_task/widgets/select_dropdown.dart';
+import 'package:round_task/widgets/dropdown_menu_button.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -131,9 +131,9 @@ class _AppSettingsState extends ConsumerState<SettingsScreen> {
               ListTile(
                 leading: const Icon(Icons.dark_mode),
                 title: Text(context.tr("theme_mode.name")),
-                trailing: SelectDropdown(
-                  value: settings.brightness,
-                  entries: [
+                trailing: DropdownMenuButton(
+                  initialSelection: settings.brightness,
+                  dropdownMenuEntries: [
                     DropdownMenuEntry(
                       value: AppBrightness.system,
                       label: context.tr('theme_mode.system'),
@@ -147,7 +147,7 @@ class _AppSettingsState extends ConsumerState<SettingsScreen> {
                       label: context.tr("theme_mode.dark"),
                     ),
                   ],
-                  onChanged: (value) {
+                  onSelected: (value) {
                     if (value == null) return;
 
                     database.saveAppSettings(

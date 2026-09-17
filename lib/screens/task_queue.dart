@@ -8,7 +8,7 @@ import 'package:round_task/db/db.dart';
 import 'package:round_task/provider.dart';
 import 'package:round_task/screens/task_view.dart';
 import 'package:round_task/widgets/app_drawer.dart';
-import 'package:round_task/widgets/select_dropdown.dart';
+import 'package:round_task/widgets/dropdown_menu_button.dart';
 import 'package:round_task/widgets/task_card.dart';
 
 const _selectPadding = EdgeInsets.only(left: 16, right: 16, top: 10);
@@ -371,8 +371,8 @@ class __QueuedTasksTabState extends ConsumerState<_QueuedTasksTab>
             padding: _selectPadding,
             child: Align(
               alignment: Alignment.centerRight,
-              child: SelectDropdown(
-                entries: [
+              child: DropdownMenuButton(
+                dropdownMenuEntries: [
                   DropdownMenuEntry(
                     value: _QueuedTaskViewMode.orderByReference,
                     label: context.tr("order.default"),
@@ -390,11 +390,11 @@ class __QueuedTasksTabState extends ConsumerState<_QueuedTasksTab>
                     label: context.tr("order.group_by_priority"),
                   ),
                 ],
-                onChanged: (value) {
+                onSelected: (value) {
                   if (value == null) return;
                   widget.onModeChanged.call(value);
                 },
-                value: mode,
+                initialSelection: mode,
               ),
             ),
           ),
@@ -600,8 +600,8 @@ class __PendingTasksTabState extends ConsumerState<_PendingTasksTab>
             padding: _selectPadding,
             child: Align(
               alignment: Alignment.centerRight,
-              child: SelectDropdown(
-                entries: [
+              child: DropdownMenuButton(
+                dropdownMenuEntries: [
                   DropdownMenuEntry(
                     value: TaskSorting.creationDate,
                     label: context.tr("order.default"),
@@ -615,11 +615,11 @@ class __PendingTasksTabState extends ConsumerState<_PendingTasksTab>
                     label: context.tr("order.by_start_date"),
                   ),
                 ],
-                onChanged: (value) {
+                onSelected: (value) {
                   if (value == null) return;
                   widget.onSortingChanged?.call(value);
                 },
-                value: sorting,
+                initialSelection: sorting,
               ),
             ),
           ),

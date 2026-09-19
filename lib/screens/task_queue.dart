@@ -329,6 +329,7 @@ class __QueuedTasksTabState extends ConsumerState<_QueuedTasksTab>
     with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
+  final _random = Random();
 
   @override
   Widget build(BuildContext context) {
@@ -379,8 +380,7 @@ class __QueuedTasksTabState extends ConsumerState<_QueuedTasksTab>
                   icon: const Icon(Icons.casino),
                   onPressed: tasks.isNotEmpty
                       ? () {
-                          final random = Random();
-                          final index = random.nextInt(tasks.length);
+                          final index = _random.nextInt(tasks.length);
                           final task = tasks[index];
 
                           context.push("/task", extra: TaskViewParams(task));
@@ -577,6 +577,9 @@ class __PendingTasksTabState extends ConsumerState<_PendingTasksTab>
     with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
+
+  final _random = Random();
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -623,8 +626,7 @@ class __PendingTasksTabState extends ConsumerState<_PendingTasksTab>
                   icon: const Icon(Icons.casino),
                   onPressed: tasks.isNotEmpty
                       ? () {
-                          final random = Random();
-                          final index = random.nextInt(tasks.length);
+                          final index = _random.nextInt(tasks.length);
                           final task = tasks[index];
 
                           context.push("/task", extra: TaskViewParams(task));

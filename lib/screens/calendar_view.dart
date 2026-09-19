@@ -5,7 +5,6 @@ import 'dart:math' as math;
 import 'package:duration/duration.dart';
 import 'package:easy_localization/easy_localization.dart' hide TextDirection;
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart' show DateTimeRange, TimeOfDay;
 import 'package:material_ui/material_ui.dart' hide DateTimeRange, TimeOfDay;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -27,9 +26,10 @@ const _calendarTileBorderWidth = 2.0;
 
 enum _ViewMode { singleDay, threeDays, week, schedule }
 
-class _TaskEvent extends CalendarEvent {
+class _TaskEvent extends KalenderEvent {
   _TaskEvent({
-    required super.dateTimeRange,
+    required super.start,
+    required super.end,
     required this.title,
     required this.taskId,
     required this.measurement,
@@ -41,9 +41,10 @@ class _TaskEvent extends CalendarEvent {
   bool get isActive => measurement.id == -1;
 
   @override
-  CalendarEvent copyWithData({required DateTimeRange dateTimeRange}) {
+  KalenderEvent copyWithData({required DateTime start, required DateTime end}) {
     return _TaskEvent(
-      dateTimeRange: dateTimeRange,
+      start: start,
+      end: end,
       title: title,
       taskId: taskId,
       measurement: measurement,
@@ -82,10 +83,8 @@ class _EventsControllerNotifier extends Notifier<EventsController> {
       _loadedIds = controller.addEvents([
         for (final (:measurement, :title) in nex)
           _TaskEvent(
-            dateTimeRange: DateTimeRange(
-              start: measurement.start,
-              end: measurement.end,
-            ),
+            start: measurement.start,
+            end: measurement.end,
             title: title,
             taskId: measurement.taskId,
             measurement: measurement,
@@ -108,7 +107,8 @@ class _EventsControllerNotifier extends Notifier<EventsController> {
         _TaskEvent(
           title: task.title,
           taskId: task.id,
-          dateTimeRange: DateTimeRange(start: start, end: DateTime.now()),
+          start: start,
+          end: DateTime.now(),
           measurement: TimeMeasurement(
             id: -1,
             taskId: task.id,
@@ -135,7 +135,8 @@ class _EventsControllerNotifier extends Notifier<EventsController> {
         title: event.title,
         taskId: event.taskId,
         measurement: event.measurement,
-        dateTimeRange: DateTimeRange(start: event.start, end: DateTime.now()),
+        start: event.start,
+        end: DateTime.now(),
       );
       controller.updateEvent(event: event, updatedEvent: updatedEvent);
     } else {
@@ -157,7 +158,7 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
   final _calendarBodyKey = GlobalKey();
   _ViewMode _viewMode = _ViewMode.singleDay;
   final eventsController = DefaultEventsController();
-  final calendarController = CalendarController();
+  final calendarController = KalenderController();
 
   @override
   void initState() {
@@ -213,18 +214,18 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
       _ViewMode.singleDay => MultiDayViewConfiguration.singleDay(
         initialHeightPerMinute: 2,
         firstDayOfWeek: DateTime.sunday,
-        initialTimeOfDay: TimeOfDay.now(),
+        initialTimeOfDay: KalenderTime.now(),
       ),
       _ViewMode.threeDays => MultiDayViewConfiguration.custom(
         numberOfDays: 3,
         firstDayOfWeek: DateTime.sunday,
         initialHeightPerMinute: 2,
-        initialTimeOfDay: TimeOfDay.now(),
+        initialTimeOfDay: KalenderTime.now(),
       ),
       _ViewMode.week => MultiDayViewConfiguration.week(
         initialHeightPerMinute: 2,
         firstDayOfWeek: DateTime.sunday,
-        initialTimeOfDay: TimeOfDay.now(),
+        initialTimeOfDay: KalenderTime.now(),
       ),
       _ViewMode.schedule => ScheduleViewConfiguration.continuous(),
     };
@@ -246,9 +247,9 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
           ),
           child: KalenderView(
             eventsController: eventsController,
-            calendarController: calendarController,
+            kalenderController: calendarController,
             viewConfiguration: viewConfiguration,
-            components: CalendarComponents(
+            components: KalenderComponents(
               multiDayComponents: MultiDayComponents(
                 headerComponents: MultiDayHeaderComponents(
                   weekNumberBuilder: (visibleDateTimeRange, style) =>
@@ -268,7 +269,7 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
                     }),
                     getBodyHeight: _getCalendarBodyHeight,
                   ),
-                  CalendarHeader(
+                  KalenderHeader(
                     multiDayTileComponents: _multidayTileComponents(
                       context: context,
                       body: false,
@@ -279,7 +280,7 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
               ),
             ),
             body: SafeArea(
-              child: CalendarBody(
+              child: KalenderBody(
                 key: _calendarBodyKey,
                 multiDayTileComponents: _multidayTileComponents(
                   context: context,
@@ -426,7 +427,7 @@ class _CalendarViewScreenControls extends StatefulWidget {
     required this.getBodyHeight,
   });
 
-  final CalendarController controller;
+  final KalenderController controller;
   final _ViewMode viewMode;
   final ValueChanged<_ViewMode> onViewModeChanged;
   final double Function() getBodyHeight;
@@ -588,7 +589,7 @@ class __CalendarViewScreenControlsState
 
 class _CalendarZoomDetector extends StatefulWidget {
   final Widget child;
-  final CalendarController controller;
+  final KalenderController controller;
   const _CalendarZoomDetector({required this.child, required this.controller});
 
   @override
@@ -754,7 +755,7 @@ class _CalendarZoomDetectorState extends State<_CalendarZoomDetector> {
 class _DetailsSheet extends StatelessWidget {
   const _DetailsSheet({required this.event});
 
-  final CalendarEvent event;
+  final KalenderEvent event;
 
   @override
   Widget build(BuildContext context) {

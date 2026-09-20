@@ -141,35 +141,27 @@ class _TaskTimeMeasurementsState extends ConsumerState<TaskTimeMeasurements> {
         data: (measurements) {
           final activeStart = _task.activeTimeMeasurementStart;
 
-          return CustomScrollView(
-            reverse: true,
-            slivers: [
-              SliverPadding(
-                padding: MediaQuery.paddingOf(context),
-                sliver: SliverMainAxisGroup(
-                  slivers: [
-                    if (activeStart != null)
-                      SliverToBoxAdapter(
-                        child: _buildActiveMeasurementItem(
-                          database,
-                          activeStart,
-                        ),
-                      ),
-                    SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        childCount: measurements.length,
-                        (context, index) {
-                          return _buildMeasurementItem(
-                            database,
-                            measurements[index],
-                          );
-                        },
-                      ),
-                    ),
-                  ],
+          return SafeArea(
+            child: CustomScrollView(
+              reverse: true,
+              slivers: [
+                if (activeStart != null)
+                  SliverToBoxAdapter(
+                    child: _buildActiveMeasurementItem(database, activeStart),
+                  ),
+                SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    childCount: measurements.length,
+                    (context, index) {
+                      return _buildMeasurementItem(
+                        database,
+                        measurements[index],
+                      );
+                    },
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           );
         },
       ),

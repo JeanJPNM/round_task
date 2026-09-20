@@ -64,25 +64,27 @@ class TrashBinScreen extends ConsumerWidget {
           if (tasks.isEmpty) {
             return Center(child: Text(context.tr("trash_bin.empty")));
           }
-          return CustomScrollView(
-            slivers: [
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Text(
-                    context.tr("trash_bin.info"),
-                    style: Theme.of(context).textTheme.bodyLarge,
+          return SafeArea(
+            child: CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(
+                      context.tr("trash_bin.info"),
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
                   ),
                 ),
-              ),
-              SliverList.builder(
-                itemCount: tasks.length,
-                itemBuilder: (context, index) {
-                  final task = tasks[index];
-                  return TaskCard(task: task);
-                },
-              ),
-            ].map((sliver) => SliverSafeArea(sliver: sliver)).toList(),
+                SliverList.builder(
+                  itemCount: tasks.length,
+                  itemBuilder: (context, index) {
+                    final task = tasks[index];
+                    return TaskCard(task: task);
+                  },
+                ),
+              ],
+            ),
           );
         },
       ),

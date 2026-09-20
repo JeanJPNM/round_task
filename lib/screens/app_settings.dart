@@ -110,64 +110,66 @@ class _AppSettingsState extends ConsumerState<SettingsScreen> {
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         data: (settings) {
-          return ListView(
-            children: [
-              _SectionHeader(title: Text(context.tr("appearance"))),
-              ListTile(
-                leading: const Icon(Icons.palette),
-                title: Text(context.tr("accent_color")),
-                onTap: () async {
-                  final color = await showColorPickerBottomSheet(
-                    context,
-                    initialColor: settings.seedColor ?? Colors.deepPurple,
-                    useSystemColor: settings.seedColor == null,
-                  );
-                  if (color == null) return;
-                  await database.saveAppSettings(
-                    AppSettingsTableCompanion(seedColor: color),
-                  );
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.dark_mode),
-                title: Text(context.tr("theme_mode.name")),
-                trailing: DropdownMenuButton(
-                  initialSelection: settings.brightness,
-                  dropdownMenuEntries: [
-                    DropdownMenuEntry(
-                      value: AppBrightness.system,
-                      label: context.tr('theme_mode.system'),
-                    ),
-                    DropdownMenuEntry(
-                      value: AppBrightness.light,
-                      label: context.tr("theme_mode.light"),
-                    ),
-                    DropdownMenuEntry(
-                      value: AppBrightness.dark,
-                      label: context.tr("theme_mode.dark"),
-                    ),
-                  ],
-                  onSelected: (value) {
-                    if (value == null) return;
-
-                    database.saveAppSettings(
-                      AppSettingsTableCompanion(brightness: Value(value)),
+          return SafeArea(
+            child: ListView(
+              children: [
+                _SectionHeader(title: Text(context.tr("appearance"))),
+                ListTile(
+                  leading: const Icon(Icons.palette),
+                  title: Text(context.tr("accent_color")),
+                  onTap: () async {
+                    final color = await showColorPickerBottomSheet(
+                      context,
+                      initialColor: settings.seedColor ?? Colors.deepPurple,
+                      useSystemColor: settings.seedColor == null,
+                    );
+                    if (color == null) return;
+                    await database.saveAppSettings(
+                      AppSettingsTableCompanion(seedColor: color),
                     );
                   },
                 ),
-              ),
-              _SectionHeader(title: Text(context.tr("backup_and_restore"))),
-              ListTile(
-                onTap: () => _exportData(dbNotifier, context),
-                leading: const Icon(Icons.upload),
-                title: Text(context.tr("export_database")),
-              ),
-              ListTile(
-                onTap: () => _importData(dbNotifier, context),
-                leading: const Icon(Icons.download),
-                title: Text(context.tr("import_database")),
-              ),
-            ],
+                ListTile(
+                  leading: const Icon(Icons.dark_mode),
+                  title: Text(context.tr("theme_mode.name")),
+                  trailing: DropdownMenuButton(
+                    initialSelection: settings.brightness,
+                    dropdownMenuEntries: [
+                      DropdownMenuEntry(
+                        value: AppBrightness.system,
+                        label: context.tr('theme_mode.system'),
+                      ),
+                      DropdownMenuEntry(
+                        value: AppBrightness.light,
+                        label: context.tr("theme_mode.light"),
+                      ),
+                      DropdownMenuEntry(
+                        value: AppBrightness.dark,
+                        label: context.tr("theme_mode.dark"),
+                      ),
+                    ],
+                    onSelected: (value) {
+                      if (value == null) return;
+
+                      database.saveAppSettings(
+                        AppSettingsTableCompanion(brightness: Value(value)),
+                      );
+                    },
+                  ),
+                ),
+                _SectionHeader(title: Text(context.tr("backup_and_restore"))),
+                ListTile(
+                  onTap: () => _exportData(dbNotifier, context),
+                  leading: const Icon(Icons.upload),
+                  title: Text(context.tr("export_database")),
+                ),
+                ListTile(
+                  onTap: () => _importData(dbNotifier, context),
+                  leading: const Icon(Icons.download),
+                  title: Text(context.tr("import_database")),
+                ),
+              ],
+            ),
           );
         },
       ),

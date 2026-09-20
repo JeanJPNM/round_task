@@ -181,13 +181,17 @@ class _OverlayAnnotations extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final orientation = MediaQuery.orientationOf(context);
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        systemNavigationBarColor: theme.colorScheme.surfaceContainer,
+        systemNavigationBarColor: Colors.transparent,
         statusBarBrightness: theme.brightness.opposite,
         statusBarIconBrightness: theme.brightness.opposite,
         systemNavigationBarIconBrightness: theme.brightness.opposite,
+        systemStatusBarContrastEnforced: false,
+        systemNavigationBarContrastEnforced: orientation == .landscape,
       ),
       child: child,
     );

@@ -98,6 +98,7 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
   @override
   Widget build(BuildContext context) {
     final database = ref.watch(databasePod);
+    final isWideScreen = MediaQuery.orientationOf(context) == .landscape;
 
     final searchBar = Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8.0),
@@ -175,114 +176,108 @@ class _TaskQueueScreenState extends ConsumerState<TaskQueueScreen>
       ],
     );
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isWideScreen = constraints.maxWidth > constraints.maxHeight;
-
-        late final navigationRail = ValueListenableBuilder(
-          valueListenable: _currentIndex,
-          builder: (context, selectedIndex, child) {
-            return NavigationRail(
-              selectedIndex: selectedIndex,
-              onDestinationSelected: (value) {
-                _tabController.index = value;
-              },
-              labelType: NavigationRailLabelType.all,
-              scrollable: true,
-              destinations: [
-                NavigationRailDestination(
-                  icon: _TaskCountBadge(
-                    pod: queuedTasksPod(_queuedTasksSorting),
-                    child: const Icon(Icons.low_priority),
-                  ),
-                  label: Text(context.tr("queued.none")),
-                ),
-                NavigationRailDestination(
-                  icon: _TaskCountBadge(
-                    pod: pendingTasksPod(_pendingTasksSorting),
-                    child: const Icon(Icons.pending_actions),
-                  ),
-                  label: Text(context.tr("pending.none")),
-                ),
-                NavigationRailDestination(
-                  icon: _TaskCountBadge(
-                    pod: archivedTasksPod,
-                    child: const Icon(Icons.archive),
-                  ),
-                  label: Text(context.tr("archived.none")),
-                ),
-              ],
-              trailing: FloatingActionButton(
-                onPressed: _onFabPressed,
-                child: const Icon(Icons.add),
+    late final navigationRail = ValueListenableBuilder(
+      valueListenable: _currentIndex,
+      builder: (context, selectedIndex, child) {
+        return NavigationRail(
+          selectedIndex: selectedIndex,
+          onDestinationSelected: (value) {
+            _tabController.index = value;
+          },
+          labelType: NavigationRailLabelType.all,
+          scrollable: true,
+          destinations: [
+            NavigationRailDestination(
+              icon: _TaskCountBadge(
+                pod: queuedTasksPod(_queuedTasksSorting),
+                child: const Icon(Icons.low_priority),
               ),
-            );
-          },
-        );
-
-        late final navigationBar = ValueListenableBuilder(
-          valueListenable: _currentIndex,
-          builder: (context, selectedIndex, child) {
-            return NavigationBar(
-              selectedIndex: selectedIndex,
-              onDestinationSelected: (value) {
-                _tabController.index = value;
-              },
-              destinations: [
-                NavigationDestination(
-                  icon: _TaskCountBadge(
-                    pod: queuedTasksPod(_queuedTasksSorting),
-                    child: const Icon(Icons.low_priority),
-                  ),
-                  label: context.tr("queued.none"),
-                ),
-                NavigationDestination(
-                  icon: _TaskCountBadge(
-                    pod: pendingTasksPod(_pendingTasksSorting),
-                    child: const Icon(Icons.pending_actions),
-                  ),
-                  label: context.tr("pending.none"),
-                ),
-                NavigationDestination(
-                  icon: _TaskCountBadge(
-                    pod: archivedTasksPod,
-                    child: const Icon(Icons.archive),
-                  ),
-                  label: context.tr("archived.none"),
-                ),
-              ],
-            );
-          },
-        );
-
-        return Scaffold(
-          body: SafeArea(
-            child: Column(
-              children: [
-                searchBar,
-                Expanded(
-                  child: isWideScreen
-                      ? Row(
-                          children: [
-                            navigationRail,
-                            const VerticalDivider(),
-                            Expanded(child: tabViewContent),
-                          ],
-                        )
-                      : tabViewContent,
-                ),
-              ],
+              label: Text(context.tr("queued.none")),
             ),
+            NavigationRailDestination(
+              icon: _TaskCountBadge(
+                pod: pendingTasksPod(_pendingTasksSorting),
+                child: const Icon(Icons.pending_actions),
+              ),
+              label: Text(context.tr("pending.none")),
+            ),
+            NavigationRailDestination(
+              icon: _TaskCountBadge(
+                pod: archivedTasksPod,
+                child: const Icon(Icons.archive),
+              ),
+              label: Text(context.tr("archived.none")),
+            ),
+          ],
+          trailing: FloatingActionButton(
+            onPressed: _onFabPressed,
+            child: const Icon(Icons.add),
           ),
-          bottomNavigationBar: isWideScreen ? null : navigationBar,
-          floatingActionButton: isWideScreen
-              ? null
-              : FloatingActionButton(
-                  onPressed: _onFabPressed,
-                  child: const Icon(Icons.add),
-                ),
         );
       },
+    );
+
+    late final navigationBar = ValueListenableBuilder(
+      valueListenable: _currentIndex,
+      builder: (context, selectedIndex, child) {
+        return NavigationBar(
+          selectedIndex: selectedIndex,
+          onDestinationSelected: (value) {
+            _tabController.index = value;
+          },
+          destinations: [
+            NavigationDestination(
+              icon: _TaskCountBadge(
+                pod: queuedTasksPod(_queuedTasksSorting),
+                child: const Icon(Icons.low_priority),
+              ),
+              label: context.tr("queued.none"),
+            ),
+            NavigationDestination(
+              icon: _TaskCountBadge(
+                pod: pendingTasksPod(_pendingTasksSorting),
+                child: const Icon(Icons.pending_actions),
+              ),
+              label: context.tr("pending.none"),
+            ),
+            NavigationDestination(
+              icon: _TaskCountBadge(
+                pod: archivedTasksPod,
+                child: const Icon(Icons.archive),
+              ),
+              label: context.tr("archived.none"),
+            ),
+          ],
+        );
+      },
+    );
+
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
+          children: [
+            searchBar,
+            Expanded(
+              child: isWideScreen
+                  ? Row(
+                      children: [
+                        navigationRail,
+                        const VerticalDivider(),
+                        Expanded(child: tabViewContent),
+                      ],
+                    )
+                  : tabViewContent,
+            ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: isWideScreen ? null : navigationBar,
+      floatingActionButton: isWideScreen
+          ? null
+          : FloatingActionButton(
+              onPressed: _onFabPressed,
+              child: const Icon(Icons.add),
+            ),
     );
   }
 }

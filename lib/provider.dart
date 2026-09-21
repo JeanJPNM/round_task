@@ -212,7 +212,8 @@ class DatabaseNotifier extends Notifier<db.AppDatabase> {
   }
 
   Future<void> importData(String path) async {
-    await state.close();
+    final oldDb = state;
+    await oldDb.executor.close();
     List<FutureOr<void> Function()> cleanups = [];
 
     try {
@@ -242,6 +243,7 @@ class DatabaseNotifier extends Notifier<db.AppDatabase> {
       }
       state = db.AppDatabase(_makeNativeDatabase());
       await state.init();
+      await oldDb.close();
     }
   }
 }

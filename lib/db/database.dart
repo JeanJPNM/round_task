@@ -92,9 +92,11 @@ class AppDatabase extends _$AppDatabase {
   // After generating code, this class needs to define a `schemaVersion` getter
   // and a constructor telling drift where the database should be stored.
   // These are described in the getting started guide: https://drift.simonbinder.eu/setup/
-  AppDatabase(super.e);
+  AppDatabase(super.e, {bool immediate = false}) {
+    _queuer = immediate ? ImmediateTaskQueuer(this) : AutomaticTaskQueuer(this);
+  }
 
-  late final AutomaticTaskQueuer _queuer = AutomaticTaskQueuer(this);
+  late final TaskQueuer _queuer;
 
   static const _defaultSettings = AppSettings(
     id: 0,
@@ -122,10 +124,10 @@ class AppDatabase extends _$AppDatabase {
           await m.alterTable(TableMigration(schema.userTasks));
         },
         from3To4: (m, schema) async {
-          await m.createTable(taskFts);
-          await m.createTrigger(taskFtsOnTaskInsert);
-          await m.createTrigger(taskFtsOnTaskUpdate);
-          await m.createTrigger(taskFtsOnTaskDelete);
+          await m.createTable(schema.taskFts);
+          await m.createTrigger(schema.taskFtsOnTaskInsert);
+          await m.createTrigger(schema.taskFtsOnTaskUpdate);
+          await m.createTrigger(schema.taskFtsOnTaskDelete);
 
           await customStatement(
             "INSERT INTO task_fts(task_fts) VALUES('rebuild')",
@@ -350,7 +352,7 @@ class AppDatabase extends _$AppDatabase {
       return task;
     });
 
-    _queuer.tryUpdate(task.autoInsertDate);
+    await _queuer.tryUpdate(task.autoInsertDate);
 
     return task;
   }
@@ -573,32 +575,60 @@ class AppDatabase extends _$AppDatabase {
   }
 }
 
-class AutomaticTaskQueuer {
+sealed class TaskQueuer {
+  Future<void> init();
+  Future<void> tryUpdate(DateTime? date);
+  void dispose() {}
+}
+
+class ImmediateTaskQueuer extends TaskQueuer {
+  ImmediateTaskQueuer(this.database);
+
+  final AppDatabase database;
+
+  @override
+  Future<void> init() async {
+    await database.addScheduledTasks();
+  }
+
+  @override
+  Future<void> tryUpdate(DateTime? date) async {
+    if (date == null) return;
+
+    if (date.isAfter(DateTime.now())) {
+      return;
+    }
+    await database.addScheduledTasks();
+  }
+}
+
+class AutomaticTaskQueuer extends TaskQueuer {
   AutomaticTaskQueuer(this.database);
 
   final AppDatabase database;
 
-  DateTime? _value;
+  DateTime? _nextTaskDate;
   Timer? _timer;
 
+  @override
   Future<void> init() async {
     await _runUpdate(force: true);
   }
 
-  void tryUpdate(DateTime? date) {
+  @override
+  Future<void> tryUpdate(DateTime? date) async {
     if (date == null) return;
 
-    if (value == null || date.isBefore(value!)) {
-      value = date;
+    if (_nextTaskDate == null || date.isBefore(_nextTaskDate!)) {
+      await _scheduleUpdate(date);
     }
   }
 
-  DateTime? get value => _value;
-  set value(DateTime? date) {
-    _value = date;
+  Future<void> _scheduleUpdate(DateTime? date) async {
+    _nextTaskDate = date;
 
     if (date?.isBefore(DateTime.now()) ?? false) {
-      _runUpdate();
+      await _runUpdate();
     }
   }
 
@@ -612,15 +642,16 @@ class AutomaticTaskQueuer {
 
     final now = DateTime.now();
 
-    if (value?.isBefore(now) ?? force) {
+    if (_nextTaskDate?.isBefore(now) ?? force) {
       final date = await database.addScheduledTasks();
       _timer = Timer(duration, _runUpdate);
-      value = date;
+      await _scheduleUpdate(date);
     } else {
       _timer = Timer(duration, _runUpdate);
     }
   }
 
+  @override
   void dispose() {
     _timer?.cancel();
   }

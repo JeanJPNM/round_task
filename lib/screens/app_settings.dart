@@ -111,6 +111,8 @@ class _AppSettingsState extends ConsumerState<SettingsScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         data: (settings) {
           return SafeArea(
+            top: false,
+            bottom: false,
             child: ListView(
               children: [
                 _SectionHeader(title: Text(context.tr("appearance"))),

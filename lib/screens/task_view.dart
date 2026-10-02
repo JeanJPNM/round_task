@@ -121,7 +121,7 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
   late ScaffoldMessengerState parentScaffoldMessenger;
   ScaffoldMessengerState get childScaffoldMessenger =>
       scaffoldMessengerKey.currentState!;
-  final _subTasksController = _SubTasksController([]);
+  final _subTasksController = SubTasksController([]);
 
   RecurrenceRule? recurrenceRule;
   @override
@@ -144,7 +144,7 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
         task?.status == TaskStatus.active || widget.addToQueue
         ? QueueInsertionPosition.preferred
         : null;
-    lockTaskInQueue = task?.autoInsertDate?.isBefore(DateTime.now()) ?? false;
+    lockTaskInQueue = isQueueLocked(task?.autoInsertDate, DateTime.now());
 
     Listenable.merge([startDateController, endDateController]).addListener(() {
       autoInserDateController.value = autoInsertDateOf(
@@ -153,21 +153,21 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
       );
     });
     startDateController.addListener(() {
-      final value = startDateController.value;
-      final previous = startDateController.previous;
-      final endDate = endDateController.value;
-
-      if (value == null || previous == null || endDate == null) return;
-
-      final duration = endDate.difference(previous);
-
-      endDateController.value = value.add(duration);
+      final shifted = getShiftedEndDate(
+        newStart: startDateController.value,
+        previousStart: startDateController.previous,
+        currentEnd: endDateController.value,
+      );
+      if (shifted != null) {
+        endDateController.value = shifted;
+      }
     });
     endDateController.addListener(() {
-      final value = endDateController.value;
-      if (value == null || startDateController.value != null) return;
-
-      startDateController.value = DateTime(value.year, value.month, value.day);
+      if (startDateController.value != null) return;
+      final defaultStart = getDefaultStartDate(endDateController.value);
+      if (defaultStart != null) {
+        startDateController.value = defaultStart;
+      }
     });
   }
 
@@ -216,12 +216,11 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
     final now = DateTime.now();
     final hasAutoInsertDate = (startDate, endDate) != (null, null);
 
-    final status = switch ((task?.status, done, hasAutoInsertDate)) {
-      (_, true, false) => TaskStatus.archived,
-      (_, true, true) => TaskStatus.pending,
-      (TaskStatus.archived, false, true) => TaskStatus.pending,
-      (final status, false, _) => status ?? TaskStatus.pending,
-    };
+    final status = getNextTaskStatus(
+      currentStatus: task?.status,
+      done: done,
+      hasAutoInsertDate: hasAutoInsertDate,
+    );
 
     return UserTasksCompanion.insert(
       id: Value.absentIfNull(task?.id),
@@ -250,7 +249,12 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
     List<TaskEditAction> extra = const [],
   }) async {
     final (:startDate, :endDate, :recurrence) = switch (markAsDone) {
-      true => _getNextOccurrence(),
+      true => getNextOccurrence(
+        startDate: startDateController.value,
+        endDate: endDateController.value,
+        recurrence: recurrenceRule,
+        now: DateTime.now(),
+      ),
       false => (
         startDate: startDateController.value,
         endDate: endDateController.value,
@@ -264,9 +268,9 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
     );
     final remove = _subTasksController.removedSubTaskIds();
 
-    final progress = put.isEmpty
-        ? null
-        : put.where((subTask) => subTask.done.value).length / put.length;
+    final progress = _subTasksController.getProgress(
+      resetDone: markAsDone && hasAutoInsertDate,
+    );
 
     final taskCompanion = _getTaskCompanion(
       done: markAsDone,
@@ -297,50 +301,7 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
     };
   }
 
-  ({DateTime? startDate, DateTime? endDate, RecurrenceRule? recurrence})
-  _getNextOccurrence() {
-    final startDate = startDateController.value;
-    final endDate = endDateController.value;
-    final recurrence = recurrenceRule;
-
-    switch ((startDate, endDate, recurrence)) {
-      case (final startDate?, final endDate, final recurrence?):
-        final newStart = _nextDate(recurrence, startDate);
-
-        final newEnd = switch ((newStart, endDate)) {
-          (final newStart?, final endDate?) => newStart.add(
-            endDate.difference(startDate),
-          ),
-          _ => null,
-        };
-
-        final newRecurrence = switch (recurrence.count) {
-          null => recurrence,
-          final count when count > 1 => recurrence.copyWith(count: count - 1),
-          _ => null,
-        };
-
-        return (
-          startDate: newStart,
-          endDate: newEnd,
-          recurrence: newRecurrence,
-        );
-      case (null, final endDate?, final recurrence?):
-        final newEnd = _nextDate(recurrence, endDate);
-
-        final newRecurrence = switch (recurrence.count) {
-          null => recurrence,
-          final count when count > 1 => recurrence.copyWith(count: count - 1),
-          _ => null,
-        };
-
-        return (startDate: null, endDate: newEnd, recurrence: newRecurrence);
-      default:
-        return (startDate: null, endDate: null, recurrence: recurrence);
-    }
-  }
-
-  void _onRemoveSubTask(_SubTaskController controller) {
+  void _onRemoveSubTask(SubTaskController controller) {
     childScaffoldMessenger.showSnackBar(
       SnackBar(
         content: Text(context.tr('subtask_deleted')),
@@ -355,14 +316,10 @@ class _TaskEditorState extends ConsumerState<_TaskEditor> {
   }
 
   TaskEditAction? _getTaskEditAction() {
-    return switch ((positionController.value, widget.task?.status)) {
-      (null, TaskStatus.active) => const RemoveTaskFromQueue(),
-      // remove from queue + already not in queue
-      (null, _) => null,
-      // put somewhere in queue + already in queue
-      (QueueInsertionPosition.preferred, TaskStatus.active) => null,
-      (final position?, _) => PutTaskInQueue(position),
-    };
+    return getQueueEditAction(
+      position: positionController.value,
+      taskStatus: widget.task?.status,
+    );
   }
 
   @override
@@ -733,20 +690,20 @@ class _SubTasksSliver extends StatefulWidget {
 
   final ScrollController scrollController;
   final List<SubTask> subTasks;
-  final _SubTasksController subTasksController;
-  final void Function(_SubTaskController) onRemoveSubTask;
+  final SubTasksController subTasksController;
+  final void Function(SubTaskController) onRemoveSubTask;
   @override
   State<_SubTasksSliver> createState() => _SubTasksSliverState();
 }
 
 class _SubTasksSliverState extends State<_SubTasksSliver> {
-  void _removeSubTask(_SubTaskController controller) {
+  void _removeSubTask(SubTaskController controller) {
     widget.subTasksController.markAsRemoved(controller);
     widget.onRemoveSubTask(controller);
   }
 
   void _addSubTask() async {
-    final controller = _SubTaskController(title: "", done: false);
+    final controller = SubTaskController(title: "", done: false);
 
     final added = await controller.openView(context);
     if (!added) {
@@ -855,9 +812,7 @@ class __QueuePositionPickerState extends State<_QueuePositionPicker> {
   }
 
   void _updateQueueLock() {
-    final startDate = widget.startDate;
-
-    if (startDate?.isBefore(DateTime.now()) ?? false) {
+    if (isQueueLocked(widget.startDate, DateTime.now())) {
       if (_mustBeInQueue) return;
       setState(() {
         _mustBeInQueue = true;
@@ -926,12 +881,12 @@ class __QueuePositionPickerState extends State<_QueuePositionPicker> {
   }
 }
 
-class _SubTasksController extends ChangeNotifier {
-  _SubTasksController(this.controllers);
+class SubTasksController extends ChangeNotifier {
+  SubTasksController(this.controllers);
 
-  final List<_SubTaskController> controllers;
+  final List<SubTaskController> controllers;
 
-  Iterable<_SubTaskController> get activeControllers =>
+  Iterable<SubTaskController> get activeControllers =>
       controllers.whereNot((c) => c.removed);
 
   List<int> removedSubTaskIds() => controllers
@@ -939,6 +894,13 @@ class _SubTasksController extends ChangeNotifier {
       .map((c) => c.id)
       .whereType<int>()
       .toList();
+
+  double? getProgress({bool resetDone = false}) {
+    final active = activeControllers.toList();
+    if (active.isEmpty) return null;
+    if (resetDone) return 0.0;
+    return active.where((c) => c.doneController.value).length / active.length;
+  }
 
   List<SubTasksCompanion> toCompanions({bool resetDone = false}) =>
       activeControllers
@@ -951,7 +913,7 @@ class _SubTasksController extends ChangeNotifier {
   void setSubTasks(List<SubTask> subTasks) {
     clear();
     for (final subTask in subTasks) {
-      final controller = _SubTaskController(
+      final controller = SubTaskController(
         id: subTask.id,
         title: subTask.title,
         done: subTask.done,
@@ -962,17 +924,17 @@ class _SubTasksController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void add(_SubTaskController controller) {
+  void add(SubTaskController controller) {
     controllers.add(controller);
     notifyListeners();
   }
 
-  void markAsRemoved(_SubTaskController controller) {
+  void markAsRemoved(SubTaskController controller) {
     controller.removed = true;
     notifyListeners();
   }
 
-  void markAsActive(_SubTaskController controller) {
+  void markAsActive(SubTaskController controller) {
     controller.removed = false;
     notifyListeners();
   }
@@ -986,8 +948,8 @@ class _SubTasksController extends ChangeNotifier {
   }
 
   void reorderActiveController(int oldIndex, int newIndex) {
-    oldIndex = _mapSubtaskIndex(oldIndex, controllers);
-    newIndex = _mapSubtaskIndex(newIndex, controllers);
+    oldIndex = mapSubtaskIndex(oldIndex, controllers);
+    newIndex = mapSubtaskIndex(newIndex, controllers);
     if (oldIndex < newIndex) {
       newIndex--;
     }
@@ -1003,8 +965,8 @@ class _SubTasksController extends ChangeNotifier {
   }
 }
 
-class _SubTaskController {
-  _SubTaskController({this.id, required String title, required bool done}) {
+class SubTaskController {
+  SubTaskController({this.id, required String title, required bool done}) {
     textController.value = title;
     doneController.value = done;
   }
@@ -1059,7 +1021,7 @@ class _SubTaskCard extends StatefulWidget {
   const _SubTaskCard({required this.controller, required this.onDelete});
 
   final void Function() onDelete;
-  final _SubTaskController controller;
+  final SubTaskController controller;
   @override
   State<_SubTaskCard> createState() => _SubTaskCardState();
 }
@@ -1317,14 +1279,27 @@ class _TaskPriorityPickerState extends State<_TaskPriorityPicker> {
   }
 }
 
-DateTime? _nextDate(RecurrenceRule rule, DateTime date) {
-  final now = DateTime.now();
+@visibleForTesting
+TaskStatus getNextTaskStatus({
+  required TaskStatus? currentStatus,
+  required bool done,
+  required bool hasAutoInsertDate,
+}) {
+  return switch ((currentStatus, done, hasAutoInsertDate)) {
+    (_, true, false) => TaskStatus.archived,
+    (_, true, true) => TaskStatus.pending,
+    (TaskStatus.archived, false, true) => TaskStatus.pending,
+    (final status, false, _) => status ?? TaskStatus.pending,
+  };
+}
 
-  final after = date.isBefore(now) ? now : date;
+@visibleForTesting
+DateTime? getNextDate(RecurrenceRule rule, DateTime currentDate, DateTime now) {
+  final after = currentDate.isBefore(now) ? now : currentDate;
   return rule
       .copyWith(count: null) // we do our own count tracking
       .getInstances(
-        start: date.copyWith(isUtc: true),
+        start: currentDate.copyWith(isUtc: true),
         after: after.copyWith(isUtc: true),
         includeAfter: after == now,
       )
@@ -1332,9 +1307,90 @@ DateTime? _nextDate(RecurrenceRule rule, DateTime date) {
       ?.copyWith(isUtc: false);
 }
 
-int _mapSubtaskIndex(
+@visibleForTesting
+({DateTime? startDate, DateTime? endDate, RecurrenceRule? recurrence})
+getNextOccurrence({
+  required DateTime? startDate,
+  required DateTime? endDate,
+  required RecurrenceRule? recurrence,
+  required DateTime now,
+}) {
+  switch ((startDate, endDate, recurrence)) {
+    case (final startDate?, final endDate, final recurrence?):
+      final newStart = getNextDate(recurrence, startDate, now);
+
+      final newEnd = switch ((newStart, endDate)) {
+        (final newStart?, final endDate?) => newStart.add(
+          endDate.difference(startDate),
+        ),
+        _ => null,
+      };
+
+      final newRecurrence = switch (recurrence.count) {
+        null => recurrence,
+        final count when count > 1 => recurrence.copyWith(count: count - 1),
+        _ => null,
+      };
+
+      return (startDate: newStart, endDate: newEnd, recurrence: newRecurrence);
+    case (null, final endDate?, final recurrence?):
+      final newEnd = getNextDate(recurrence, endDate, now);
+
+      final newRecurrence = switch (recurrence.count) {
+        null => recurrence,
+        final count when count > 1 => recurrence.copyWith(count: count - 1),
+        _ => null,
+      };
+
+      return (startDate: null, endDate: newEnd, recurrence: newRecurrence);
+    default:
+      return (startDate: null, endDate: null, recurrence: recurrence);
+  }
+}
+
+@visibleForTesting
+TaskEditAction? getQueueEditAction({
+  required QueueInsertionPosition? position,
+  required TaskStatus? taskStatus,
+}) {
+  return switch ((position, taskStatus)) {
+    (null, TaskStatus.active) => const RemoveTaskFromQueue(),
+    // remove from queue + already not in queue
+    (null, _) => null,
+    // put somewhere in queue + already in queue
+    (QueueInsertionPosition.preferred, TaskStatus.active) => null,
+    (final pos?, _) => PutTaskInQueue(pos),
+  };
+}
+
+@visibleForTesting
+DateTime? getShiftedEndDate({
+  required DateTime? newStart,
+  required DateTime? previousStart,
+  required DateTime? currentEnd,
+}) {
+  if (newStart == null || previousStart == null || currentEnd == null) {
+    return null;
+  }
+  final duration = currentEnd.difference(previousStart);
+  return newStart.add(duration);
+}
+
+@visibleForTesting
+DateTime? getDefaultStartDate(DateTime? endDate) {
+  if (endDate == null) return null;
+  return DateTime(endDate.year, endDate.month, endDate.day);
+}
+
+@visibleForTesting
+bool isQueueLocked(DateTime? date, DateTime now) {
+  return date?.isBefore(now) ?? false;
+}
+
+@visibleForTesting
+int mapSubtaskIndex(
   int relativeIndex,
-  List<_SubTaskController> subTaskControllers,
+  List<SubTaskController> subTaskControllers,
 ) {
   var lastValidIndex = 0;
   var count = 0;

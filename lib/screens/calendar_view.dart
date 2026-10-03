@@ -475,7 +475,7 @@ class __CalendarViewScreenControlsState
     final date = await showDatePicker(
       context: context,
       initialDate: widget.controller.visibleDateTimeRange.value.start,
-      firstDate: DateTime(now.year),
+      firstDate: DateTime(2020),
       lastDate: DateTime(now.year + 1),
     );
 

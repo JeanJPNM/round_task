@@ -7,6 +7,7 @@ import 'package:easy_localization/easy_localization.dart' hide TextDirection;
 import 'package:flutter/gestures.dart';
 import 'package:material_ui/material_ui.dart' hide DateTimeRange, TimeOfDay;
 import 'package:flutter/services.dart';
+import 'package:flutter/material.dart' as old_material;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kalender/kalender.dart';
@@ -158,7 +159,9 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
   final _calendarBodyKey = GlobalKey();
   _ViewMode _viewMode = _ViewMode.singleDay;
   final eventsController = DefaultEventsController();
-  final calendarController = KalenderController();
+  final calendarController = KalenderController(
+    viewConfiguration: _getViewConfiguration(_ViewMode.singleDay),
+  );
 
   @override
   void initState() {
@@ -210,25 +213,17 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
     final theme = Theme.of(context);
 
     final eventsController = ref.watch(eventsControllerPod);
-    final viewConfiguration = switch (_viewMode) {
-      _ViewMode.singleDay => MultiDayViewConfiguration.singleDay(
-        initialHeightPerMinute: 2,
-        firstDayOfWeek: DateTime.sunday,
-        initialTimeOfDay: KalenderTime.now(),
-      ),
-      _ViewMode.threeDays => MultiDayViewConfiguration.custom(
-        numberOfDays: 3,
-        firstDayOfWeek: DateTime.sunday,
-        initialHeightPerMinute: 2,
-        initialTimeOfDay: KalenderTime.now(),
-      ),
-      _ViewMode.week => MultiDayViewConfiguration.week(
-        initialHeightPerMinute: 2,
-        firstDayOfWeek: DateTime.sunday,
-        initialTimeOfDay: KalenderTime.now(),
-      ),
-      _ViewMode.schedule => ScheduleViewConfiguration.continuous(),
-    };
+
+    final calendarViewScreenControls = _CalendarViewScreenControls(
+      controller: calendarController,
+      viewMode: _viewMode,
+      onViewModeChanged: (value) => setState(() {
+        _viewMode = value;
+        calendarController.viewConfiguration = _getViewConfiguration(value);
+      }),
+      getBodyHeight: _getCalendarBodyHeight,
+    );
+
     return Scaffold(
       appBar: AppBar(
         leading: const AppDrawerButton(),
@@ -248,7 +243,6 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
           child: KalenderView(
             eventsController: eventsController,
             kalenderController: calendarController,
-            viewConfiguration: viewConfiguration,
             components: KalenderComponents(
               multiDayComponents: MultiDayComponents(
                 headerComponents: MultiDayHeaderComponents(
@@ -257,46 +251,58 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
                 ),
               ),
             ),
-            header: Material(
-              color: theme.colorScheme.surface,
-              child: Column(
-                children: [
-                  _CalendarViewScreenControls(
-                    controller: calendarController,
-                    viewMode: _viewMode,
-                    onViewModeChanged: (value) => setState(() {
-                      _viewMode = value;
-                    }),
-                    getBodyHeight: _getCalendarBodyHeight,
+            views: [
+              MultiDayViewParts(
+                header: Material(
+                  color: theme.colorScheme.surface,
+                  child: Column(
+                    children: [
+                      calendarViewScreenControls,
+                      MultiDayHeader(
+                        tileComponents: _multidayTileComponents(
+                          context: context,
+                          body: false,
+                          theme: theme,
+                        ),
+                      ),
+                    ],
                   ),
-                  KalenderHeader(
-                    multiDayTileComponents: _multidayTileComponents(
+                ),
+                body: SafeArea(
+                  child: MultiDayBody(
+                    tileComponents: _multidayTileComponents(
                       context: context,
-                      body: false,
                       theme: theme,
                     ),
+                    configuration: MultiDayBodyConfiguration(
+                      showMultiDayEvents: true,
+                      minimumTileHeight: _getMinimumTileHeight(context, theme),
+                      horizontalPadding: EdgeInsets.zero,
+                    ),
                   ),
-                ],
-              ),
-            ),
-            body: SafeArea(
-              child: KalenderBody(
-                key: _calendarBodyKey,
-                multiDayTileComponents: _multidayTileComponents(
-                  context: context,
-                  theme: theme,
-                ),
-                scheduleTileComponents: _scheduleTileComponents(
-                  context: context,
-                  theme: theme,
-                ),
-                multiDayBodyConfiguration: MultiDayBodyConfiguration(
-                  showMultiDayEvents: true,
-                  minimumTileHeight: _getMinimumTileHeight(context, theme),
-                  horizontalPadding: EdgeInsets.zero,
                 ),
               ),
-            ),
+              ScheduleViewParts(
+                header: Material(
+                  color: theme.colorScheme.surface,
+                  child: calendarViewScreenControls,
+                ),
+                body: SafeArea(
+                  // TODO: remove this when kalender starts using
+                  // the new material_ui library
+                  child: old_material.Material(
+                    child: Material(
+                      child: ScheduleBody(
+                        tileComponents: _scheduleTileComponents(
+                          context: context,
+                          theme: theme,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -468,7 +474,7 @@ class __CalendarViewScreenControlsState
     final now = DateTime.now();
     final date = await showDatePicker(
       context: context,
-      initialDate: widget.controller.visibleDateTimeRange.value?.start,
+      initialDate: widget.controller.visibleDateTimeRange.value.start,
       firstDate: DateTime(now.year),
       lastDate: DateTime(now.year + 1),
     );
@@ -520,7 +526,6 @@ class __CalendarViewScreenControlsState
           ValueListenableBuilder(
             valueListenable: controller.visibleDateTimeRange,
             builder: (context, range, child) {
-              if (range == null) return const SizedBox.shrink();
               final start = range.start;
               final year = start.year;
               final month = start.monthNameLocalized(locale);
@@ -820,4 +825,26 @@ class _DetailsSheet extends StatelessWidget {
       ),
     );
   }
+}
+
+ViewConfiguration _getViewConfiguration(_ViewMode viewMode) {
+  return switch (viewMode) {
+    _ViewMode.singleDay => MultiDayViewConfiguration.singleDay(
+      initialHeightPerMinute: 2,
+      firstDayOfWeek: DateTime.sunday,
+      initialTimeOfDay: KalenderTime.now(),
+    ),
+    _ViewMode.threeDays => MultiDayViewConfiguration.custom(
+      numberOfDays: 3,
+      firstDayOfWeek: DateTime.sunday,
+      initialHeightPerMinute: 2,
+      initialTimeOfDay: KalenderTime.now(),
+    ),
+    _ViewMode.week => MultiDayViewConfiguration.week(
+      initialHeightPerMinute: 2,
+      firstDayOfWeek: DateTime.sunday,
+      initialTimeOfDay: KalenderTime.now(),
+    ),
+    _ViewMode.schedule => ScheduleViewConfiguration.continuous(),
+  };
 }

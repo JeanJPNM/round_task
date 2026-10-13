@@ -452,7 +452,7 @@ class AppDatabase extends _$AppDatabase {
         .subtract(const Duration(days: 30))
         .millisecondsSinceEpoch;
 
-    // delete all tasks that were soft deleted more than an hour ago
+    // delete all tasks that were soft deleted more than 30 days ago
     await (delete(userTasks)..where(
           (t) =>
               t.deletedAt.isNotNull() &

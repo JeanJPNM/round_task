@@ -370,7 +370,8 @@ class AppDatabase extends _$AppDatabase {
       ..addColumns([userTasks.autoInsertDate])
       ..where(
         userTasks.status.equalsValue(TaskStatus.pending) &
-            userTasks.autoInsertDate.isNotNull(),
+            userTasks.autoInsertDate.isNotNull() &
+            userTasks.deletedAt.isNull(),
       )
       ..limit(1)
       ..orderBy([OrderingTerm.asc(userTasks.autoInsertDate)]);
@@ -645,7 +646,7 @@ class AutomaticTaskQueuer extends TaskQueuer {
     if (_nextTaskDate?.isBefore(now) ?? force) {
       final date = await database.addScheduledTasks();
       _timer = Timer(duration, _runUpdate);
-      await _scheduleUpdate(date);
+      _nextTaskDate = date;
     } else {
       _timer = Timer(duration, _runUpdate);
     }

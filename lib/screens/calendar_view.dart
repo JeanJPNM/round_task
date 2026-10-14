@@ -517,7 +517,7 @@ class __CalendarViewScreenControlsState
                 label: context.tr("calendar_view.view_mode.schedule"),
               ),
             ],
-            initialSelection: _ViewMode.singleDay,
+            initialSelection: widget.viewMode,
             onSelected: (value) {
               if (value == null) return;
               widget.onViewModeChanged(value);
